@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -53,6 +53,27 @@ export function RobotCharacter({
     [agent.id]
   );
 
+  // Distance-tiered label LOD (near = full name, mid = compact initial badge, far = hidden unless selected)
+  const [labelTier, setLabelTier] = useState<"near" | "mid" | "far">("mid");
+  const labelTierRef = useRef<"near" | "mid" | "far">("mid");
+  const distCheckAccumRef = useRef(0);
+
+  const initials = useMemo(() => {
+    const parts = agent.name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return agent.name.slice(0, 2).toUpperCase();
+  }, [agent.name]);
+
+  const roleOffsetY = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < agent.id.length; i += 1) {
+      h = (h * 31 + agent.id.charCodeAt(i)) % 7;
+    }
+    return 1.98 + (h % 3) * 0.08;
+  }, [agent.id]);
+
   useEffect(() => {
     if (agent.targetWaypointId === lastTargetRef.current) return;
     lastTargetRef.current = agent.targetWaypointId;
@@ -87,6 +108,19 @@ export function RobotCharacter({
 
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime + phaseOffset;
+
+    // Throttled camera distance check for clean, non-overlapping billboard labels
+    distCheckAccumRef.current += dt;
+    if (distCheckAccumRef.current > 0.18) {
+      distCheckAccumRef.current = 0;
+      const camDist = state.camera.position.distanceTo(currentPosRef.current);
+      const nextTier: "near" | "mid" | "far" =
+        camDist < 17.5 ? "near" : camDist < 44 ? "mid" : "far";
+      if (nextTier !== labelTierRef.current) {
+        labelTierRef.current = nextTier;
+        setLabelTier(nextTier);
+      }
+    }
 
     let isMoving = false;
     if (isSimulationRunning && pathQueueRef.current.length > 0) {
@@ -234,12 +268,15 @@ export function RobotCharacter({
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {isSelected && (
-        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.42, 0.56, 28]} />
-          <meshBasicMaterial color={agent.accentColor} transparent opacity={0.9} />
-        </mesh>
-      )}
+      {/* Subtle Role-Colored Ground Presence Ring for Instant Visual Readability */}
+      <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[isSelected ? 0.42 : 0.34, isSelected ? 0.56 : 0.41, 24]} />
+        <meshBasicMaterial
+          color={agent.accentColor}
+          transparent
+          opacity={isSelected ? 0.92 : 0.42}
+        />
+      </mesh>
 
       {/* SCULPTED LEFT LEG + DRESS SHOE */}
       <group ref={leftLegRef} position={[-0.1, 0.79, 0]}>
@@ -293,15 +330,44 @@ export function RobotCharacter({
           <boxGeometry args={[0.11, 0.3, 0.035]} />
           <meshStandardMaterial color={shirtColor} roughness={0.55} />
         </mesh>
-        {/* Tie / Accent */}
+        {/* Role-Colored Accent Tie & Shoulder Trim for High Readability */}
         <mesh position={[0, 0.17, 0.132]}>
-          <boxGeometry args={[0.04, 0.24, 0.014]} />
-          <meshStandardMaterial color={agent.accentColor} roughness={0.42} />
+          <boxGeometry args={[0.044, 0.25, 0.016]} />
+          <meshStandardMaterial
+            color={agent.accentColor}
+            emissive={agent.accentColor}
+            emissiveIntensity={0.35}
+            roughness={0.36}
+          />
         </mesh>
-        {/* Corporate ID Lanyard Badge */}
+        {/* Crisp Role-Colored Collar Piping on Shoulders */}
+        <mesh position={[-0.17, 0.36, 0.02]} rotation={[0, 0, 0.16]}>
+          <boxGeometry args={[0.08, 0.025, 0.08]} />
+          <meshStandardMaterial
+            color={agent.accentColor}
+            emissive={agent.accentColor}
+            emissiveIntensity={0.45}
+            roughness={0.32}
+          />
+        </mesh>
+        <mesh position={[0.17, 0.36, 0.02]} rotation={[0, 0, -0.16]}>
+          <boxGeometry args={[0.08, 0.025, 0.08]} />
+          <meshStandardMaterial
+            color={agent.accentColor}
+            emissive={agent.accentColor}
+            emissiveIntensity={0.45}
+            roughness={0.32}
+          />
+        </mesh>
+        {/* Corporate ID Lanyard Badge with Role Accent */}
         <mesh position={[0.11, 0.21, 0.13]}>
-          <boxGeometry args={[0.06, 0.085, 0.012]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.3} />
+          <boxGeometry args={[0.062, 0.088, 0.014]} />
+          <meshStandardMaterial
+            color="#f8fafc"
+            emissive={agent.accentColor}
+            emissiveIntensity={0.25}
+            roughness={0.28}
+          />
         </mesh>
 
         {/* LEFT ARM (Smooth Capsule + Shirt Cuff + Hand) */}
@@ -434,44 +500,66 @@ export function RobotCharacter({
         </group>
       </group>
 
-      {showLabels && (
+      {showLabels && (isSelected || labelTier !== "far") && (
         <Html
-          position={[0, 1.98, 0]}
+          position={[0, roleOffsetY, 0]}
           center
-          distanceFactor={16}
-          zIndexRange={[10, 0]}
+          distanceFactor={12}
+          zIndexRange={isSelected ? [30, 20] : [12, 0]}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(agent.id);
-            }}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              onFocusPoint?.([
-                currentPosRef.current.x,
-                currentPosRef.current.y + 1.15,
-                currentPosRef.current.z,
-              ]);
-            }}
-            className={`pointer-events-auto flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-lg backdrop-blur-md transition ${
-              isSelected
-                ? "border-sky-300 bg-slate-900/92 text-white ring-2 ring-sky-400/50"
-                : "border-white/25 bg-slate-900/72 text-slate-100 hover:bg-slate-900/90"
-            }`}
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: statusDotColor }}
-            />
-            <span>{agent.name}</span>
-            {isSelected && (
-              <span className="rounded bg-white/15 px-1 text-[8px] font-bold uppercase tracking-wider text-sky-200">
-                SIM
-              </span>
-            )}
-          </button>
+          {isSelected || labelTier === "near" ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(agent.id);
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onFocusPoint?.([
+                  currentPosRef.current.x,
+                  currentPosRef.current.y + 1.15,
+                  currentPosRef.current.z,
+                ]);
+              }}
+              className={`pointer-events-auto flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-lg backdrop-blur-md transition ${
+                isSelected
+                  ? "border-cyan-300 bg-slate-950/92 text-white ring-2 ring-cyan-400/50"
+                  : "border-white/25 bg-slate-950/80 text-slate-100 hover:bg-slate-900/95"
+              }`}
+              style={{
+                borderColor: isSelected ? agent.accentColor : undefined,
+              }}
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full ring-1 ring-white/40"
+                style={{ backgroundColor: agent.accentColor }}
+              />
+              <span>{agent.name}</span>
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: statusDotColor }}
+              />
+              {isSelected && (
+                <span className="rounded bg-white/15 px-1 text-[8px] font-bold uppercase tracking-wider text-cyan-200">
+                  {agent.role}
+                </span>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              title={`${agent.name} — ${agent.role}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(agent.id);
+              }}
+              className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded-full border bg-slate-950/82 text-[8px] font-bold text-white shadow-md backdrop-blur-sm transition hover:scale-110"
+              style={{ borderColor: agent.accentColor }}
+            >
+              {initials}
+            </button>
+          )}
         </Html>
       )}
     </group>
