@@ -77,12 +77,12 @@ export function VirtualOfficeCanvas({
   }, []);
 
   const isEco = performanceMode === "eco";
-  // Sharp crisp DPR across Android phones and desktop monitors
+  // Tuned DPR per performance tier for smooth >=30fps on mid-range Android
   const dpr: [number, number] = isEco
-    ? [1.25, 1.65]
+    ? [1.0, 1.35]
     : performanceMode === "balanced"
-    ? [1.35, 2.0]
-    : [1.5, 2.5];
+    ? [1.2, 1.75]
+    : [1.4, 2.25];
 
   const readyToRender = mounted && performanceReady;
 
@@ -133,17 +133,17 @@ export function VirtualOfficeCanvas({
       ) : (
         <CanvasErrorBoundary>
           <Canvas
-            key={`${canvasKey}-${isEco ? "eco" : "std"}`}
+            key={`${canvasKey}-${performanceMode}`}
             className="h-full w-full touch-none"
-            shadows="percentage"
+            shadows={isEco ? false : "percentage"}
             dpr={dpr}
-            camera={{ position: [14, 12.2, 28.5], fov: 45, near: 0.4, far: 220 }}
+            camera={{ position: [14, 12.2, 28.5], fov: 45, near: 0.4, far: 360 }}
             gl={{
-              antialias: true,
+              antialias: !isEco,
               powerPreference: isEco ? "default" : "high-performance",
               alpha: false,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.05,
+              toneMappingExposure: 1.04,
             }}
             onCreated={({ gl }) => {
               const dom = gl.domElement;
