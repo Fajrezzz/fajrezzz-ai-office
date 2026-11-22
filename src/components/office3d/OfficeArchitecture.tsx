@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo } from "react";
-import type { ThreeEvent } from "@react-three/fiber";
+import React, { useMemo, useRef } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
+import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
 import {
@@ -157,6 +158,305 @@ function ExecutiveLeatherChair({
   );
 }
 
+/** Modern Frameless Sliding Double Glass Door Portal (for L1 Main Entrance & L2/L3 Balcony Doors) */
+function SlidingGlassDoorPortal({
+  position,
+  width = 3.2,
+  height = 2.85,
+  isNight = false,
+}: {
+  position: [number, number, number];
+  width?: number;
+  height?: number;
+  isNight?: boolean;
+}) {
+  const halfW = width / 2;
+  const leafW = width * 0.34;
+  return (
+    <group position={position}>
+      {/* Matte-Black Architectural Steel Portal Frame */}
+      <mesh position={[-halfW, height / 2, 0]} castShadow>
+        <boxGeometry args={[0.09, height, 0.14]} />
+        <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
+      </mesh>
+      <mesh position={[halfW, height / 2, 0]} castShadow>
+        <boxGeometry args={[0.09, height, 0.14]} />
+        <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
+      </mesh>
+      {/* Top Sliding Rail Track */}
+      <mesh position={[0, height, 0]} castShadow>
+        <boxGeometry args={[width + 0.12, 0.1, 0.16]} />
+        <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
+      </mesh>
+      {/* Warm Recessed Doorway Header LED Strip */}
+      <mesh position={[0, height - 0.06, 0.02]}>
+        <boxGeometry args={[width - 0.16, 0.025, 0.04]} />
+        <meshStandardMaterial
+          color="#fff7e6"
+          emissive="#ffd48a"
+          emissiveIntensity={isNight ? 2.4 : 0.7}
+        />
+      </mesh>
+      {/* Stainless Bottom Floor Threshold Track */}
+      <mesh position={[0, 0.015, 0]}>
+        <boxGeometry args={[width, 0.02, 0.12]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.82} roughness={0.22} />
+      </mesh>
+
+      {/* Left & Right Tempered Glass Sliding Door Panels (Slid Partially Open with Vertical Steel Handles) */}
+      {[-1, 1].map((side) => {
+        const panelCenterX = side * (halfW - leafW / 2 - 0.06);
+        const handleX = panelCenterX - side * (leafW / 2 - 0.12);
+        return (
+          <group key={side}>
+            {/* Tempered Glass Door Leaf */}
+            <mesh position={[panelCenterX, (height - 0.08) / 2, 0.015]}>
+              <boxGeometry args={[leafW, height - 0.12, 0.035]} />
+              <meshPhysicalMaterial
+                color="#dbeafe"
+                transparent
+                opacity={0.32}
+                roughness={0.05}
+                metalness={0.14}
+              />
+            </mesh>
+            {/* Slim Black Aluminum Door Edge Frame */}
+            <mesh position={[panelCenterX, height - 0.1, 0.015]}>
+              <boxGeometry args={[leafW + 0.02, 0.04, 0.05]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+            </mesh>
+            <mesh position={[panelCenterX, 0.04, 0.015]}>
+              <boxGeometry args={[leafW + 0.02, 0.05, 0.05]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+            </mesh>
+            {/* Vertical Brushed Stainless-Steel Pull Handles (Front & Back) */}
+            {[-0.045, 0.045].map((hz, hi) => (
+              <mesh key={hi} position={[handleX, 1.15, 0.015 + hz]}>
+                <cylinderGeometry args={[0.014, 0.014, 0.62, 10]} />
+                <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.16} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** 3-Floor Animated Panoramic Glass Elevator Shaft & Gliding Illuminated Cabin */
+function PanoramicGlassElevator({
+  position,
+  showL2,
+  showL3,
+  isNight,
+  isSimulationRunning,
+}: {
+  position: [number, number, number];
+  showL2: boolean;
+  showL3: boolean;
+  isNight: boolean;
+  isSimulationRunning: boolean;
+}) {
+  const cabinRef = useRef<THREE.Group>(null);
+  const topY = showL3 ? FLOOR_3_Y + 3.65 : showL2 ? FLOOR_2_Y + 3.7 : 3.75;
+
+  useFrame((state) => {
+    if (!cabinRef.current) return;
+    if (!isSimulationRunning) return;
+    const t = state.clock.elapsedTime * 0.28;
+    // Smooth elevator wave cycling L1 (0.22) -> L2 (3.94) -> L3 (7.84) with gentle floor pauses
+    const maxY = showL3 ? FLOOR_3_Y + 0.04 : showL2 ? FLOOR_2_Y + 0.04 : FLOOR_1_Y + 0.04;
+    const wave = (Math.sin(t) + 1) / 2;
+    cabinRef.current.position.y = FLOOR_1_Y + 0.04 + wave * (maxY - (FLOOR_1_Y + 0.04));
+  });
+
+  const floorLandings = [
+    { label: "L1", y: FLOOR_1_Y, visible: true },
+    { label: "L2", y: FLOOR_2_Y, visible: showL2 },
+    { label: "L3", y: FLOOR_3_Y, visible: showL3 },
+  ];
+
+  return (
+    <group position={position}>
+      {/* 4 Matte-Black Steel Corner Shaft Columns */}
+      {[
+        [-0.95, -0.95],
+        [0.95, -0.95],
+        [-0.95, 0.95],
+        [0.95, 0.95],
+      ].map(([cx, cz], i) => (
+        <mesh key={i} position={[cx, topY / 2, cz]} castShadow>
+          <boxGeometry args={[0.1, topY, 0.1]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.28} />
+        </mesh>
+      ))}
+      {/* Crystal-Clear Glass Shaft Enclosure Panels (Sides & Back) */}
+      <mesh position={[-0.95, topY / 2, 0]}>
+        <boxGeometry args={[0.04, topY, 1.85]} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.24} roughness={0.06} />
+      </mesh>
+      <mesh position={[0.95, topY / 2, 0]}>
+        <boxGeometry args={[0.04, topY, 1.85]} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.24} roughness={0.06} />
+      </mesh>
+      <mesh position={[0, topY / 2, -0.95]}>
+        <boxGeometry args={[1.85, topY, 0.04]} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.22} roughness={0.06} />
+      </mesh>
+
+      {/* Landing Glass Doors + Illuminated Floor Call Panels on L1, L2, L3 */}
+      {floorLandings
+        .filter((fl) => fl.visible)
+        .map((fl) => (
+          <group key={fl.label} position={[0, fl.y, 0.95]}>
+            {/* Door Frame Header */}
+            <mesh position={[0, 2.38, 0]}>
+              <boxGeometry args={[1.95, 0.14, 0.12]} />
+              <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
+            </mesh>
+            {/* Glowing Cyan Floor Indicator Display */}
+            <mesh position={[0, 2.38, 0.07]}>
+              <boxGeometry args={[0.56, 0.12, 0.02]} />
+              <meshStandardMaterial
+                color="#0f172a"
+                emissive="#22d3ee"
+                emissiveIntensity={isNight ? 1.4 : 0.7}
+              />
+            </mesh>
+            <Text
+              position={[0, 2.38, 0.09]}
+              fontSize={0.095}
+              color="#e0f2fe"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {`LIFT · ${fl.label}`}
+            </Text>
+            {/* Double Glass Elevator Landing Doors */}
+            {[-0.44, 0.44].map((dx, di) => (
+              <mesh key={di} position={[dx, 1.15, 0]}>
+                <boxGeometry args={[0.84, 2.28, 0.04]} />
+                <meshPhysicalMaterial
+                  color="#bae6fd"
+                  transparent
+                  opacity={0.34}
+                  roughness={0.06}
+                  metalness={0.15}
+                />
+              </mesh>
+            ))}
+            {/* Illuminated Call Button Panel on Right Jamb */}
+            <mesh position={[0.98, 1.18, 0.07]}>
+              <boxGeometry args={[0.1, 0.24, 0.03]} />
+              <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.25} />
+            </mesh>
+            <mesh position={[0.98, 1.22, 0.09]}>
+              <sphereGeometry args={[0.018, 8, 8]} />
+              <meshStandardMaterial
+                color="#38bdf8"
+                emissive="#38bdf8"
+                emissiveIntensity={1.6}
+              />
+            </mesh>
+          </group>
+        ))}
+
+      {/* Animated Illuminated Glass Elevator Cabin */}
+      <group ref={cabinRef} position={[0, FLOOR_1_Y + 0.04, 0]}>
+        {/* Cabin Oak Floor Platform */}
+        <mesh position={[0, 0.04, 0]} castShadow>
+          <boxGeometry args={[1.68, 0.08, 1.68]} />
+          <meshStandardMaterial color="#8b5e3c" roughness={0.45} />
+        </mesh>
+        {/* Cabin Ceiling Roof with Warm Recessed LED Panel */}
+        <mesh position={[0, 2.24, 0]}>
+          <boxGeometry args={[1.7, 0.08, 1.7]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.7} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 2.18, 0]}>
+          <boxGeometry args={[1.3, 0.02, 1.3]} />
+          <meshStandardMaterial
+            color="#fff9eb"
+            emissive="#ffe4b5"
+            emissiveIntensity={isNight ? 2.4 : 1.1}
+          />
+        </mesh>
+        {/* Brushed Stainless Interior Handrail */}
+        <mesh position={[0, 0.96, -0.76]}>
+          <boxGeometry args={[1.4, 0.035, 0.035]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.18} />
+        </mesh>
+        {/* Subtle Glass Cabin Sides */}
+        <mesh position={[0, 1.14, -0.8]}>
+          <boxGeometry args={[1.64, 2.12, 0.03]} />
+          <meshPhysicalMaterial color="#e0f2fe" transparent opacity={0.26} roughness={0.05} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Modern Floating Warm-Oak & Glass Staircase (connects L1->L2 and L2->L3) */
+function ArchitecturalOakStaircase({
+  position,
+  riseHeight = 3.72,
+}: {
+  position: [number, number, number];
+  riseHeight?: number;
+}) {
+  const steps = 12;
+  const stepRise = riseHeight / steps;
+  const stepRun = 0.36;
+  const totalRun = steps * stepRun;
+  const diagLen = Math.hypot(riseHeight, totalRun);
+  const slopeAngle = Math.atan2(riseHeight, totalRun);
+
+  return (
+    <group position={position}>
+      {/* Twin Matte-Black Diagonal Steel Stringer Beams */}
+      {[-0.78, 0.78].map((sx, si) => (
+        <mesh
+          key={si}
+          position={[sx, riseHeight / 2 - 0.08, totalRun / 2]}
+          rotation={[slopeAngle, 0, 0]}
+          castShadow
+        >
+          <boxGeometry args={[0.09, 0.16, diagLen]} />
+          <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.3} />
+        </mesh>
+      ))}
+      {/* 12 Warm Light-Oak Floating Treads */}
+      {Array.from({ length: steps }).map((_, step) => (
+        <mesh
+          key={step}
+          position={[0, step * stepRise + 0.14, step * stepRun]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[2.0, 0.085, 0.38]} />
+          <meshStandardMaterial color="#b08256" roughness={0.48} />
+        </mesh>
+      ))}
+      {/* Tempered Glass Side Balustrade + Warm Oak Handrail */}
+      <mesh
+        position={[-1.02, riseHeight / 2 + 0.42, totalRun / 2]}
+        rotation={[slopeAngle, 0, 0]}
+      >
+        <boxGeometry args={[0.045, 0.92, diagLen]} />
+        <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.32} roughness={0.06} />
+      </mesh>
+      <mesh
+        position={[-1.02, riseHeight / 2 + 0.9, totalRun / 2]}
+        rotation={[slopeAngle, 0, 0]}
+        castShadow
+      >
+        <boxGeometry args={[0.08, 0.055, diagLen + 0.1]} />
+        <meshStandardMaterial color="#8f5d34" roughness={0.46} />
+      </mesh>
+    </group>
+  );
+}
+
 export function OfficeArchitecture({
   activeFloor,
   performanceMode,
@@ -287,7 +587,7 @@ export function OfficeArchitecture({
           </group>
         ))}
 
-        {/* Front Grand Glass Curtain Wall + Open Center Double Entrance */}
+        {/* Front Grand Glass Curtain Wall + REAL FRAMELESS DOUBLE GLASS SLIDING ENTRANCE DOOR */}
         {[-9.8, 9.8].map((x, idx) => (
           <mesh key={idx} position={[x, 2.02, 4.0]}>
             <boxGeometry args={[8.4, 3.55, 0.08]} />
@@ -300,6 +600,40 @@ export function OfficeArchitecture({
             />
           </mesh>
         ))}
+        {/* Side glass sidelights flanking the 3.8m main sliding glass doorway */}
+        {[-3.75, 3.75].map((sx, si) => (
+          <mesh key={`l1-sidelight-${si}`} position={[sx, 2.02, 4.0]}>
+            <boxGeometry args={[3.7, 3.55, 0.07]} />
+            <meshPhysicalMaterial
+              color="#d8edf8"
+              transparent
+              opacity={0.2}
+              roughness={0.06}
+              metalness={0.12}
+            />
+          </mesh>
+        ))}
+        {/* Main Frameless Glass Sliding Double Entrance Doors (L1) */}
+        <SlidingGlassDoorPortal
+          position={[0, FLOOR_1_Y, 4.02]}
+          width={3.8}
+          height={2.88}
+          isNight={isNight}
+        />
+        {/* Luxury Slate Entrance Welcome Mat */}
+        <mesh position={[0, FLOOR_1_Y + 0.015, 4.05]} receiveShadow>
+          <boxGeometry args={[3.4, 0.02, 1.35]} />
+          <meshStandardMaterial color="#1f2937" roughness={0.94} />
+        </mesh>
+
+        {/* 3-STORY ANIMATED PANORAMIC GLASS ELEVATOR (L1 -> L2 -> L3) */}
+        <PanoramicGlassElevator
+          position={[-11.6, 0, -8.3]}
+          showL2={showL2}
+          showL3={showL3}
+          isNight={isNight}
+          isSimulationRunning={isSimulationRunning}
+        />
 
         {/* Dark Bronze Structural Columns (L1) */}
         {frontColumnsX.map((cx, i) => (
@@ -361,11 +695,21 @@ export function OfficeArchitecture({
           </mesh>
         </group>
 
-        {/* Wood-slat feature wall behind Reception + Brand Signage */}
-        <mesh position={[0, 2.08, -9.72]} castShadow>
-          <boxGeometry args={[9.8, 3.2, 0.18]} />
-          <meshStandardMaterial color="#6e4b2e" roughness={0.62} />
+        {/* Detailed Ribbed Warm-Oak Vertical Slat Feature Wall behind Reception + Brand Signage */}
+        <mesh position={[0, 2.08, -9.76]} castShadow>
+          <boxGeometry args={[10.2, 3.3, 0.14]} />
+          <meshStandardMaterial color="#3b2b1d" roughness={0.74} />
         </mesh>
+        {Array.from({ length: 25 }).map((_, si) => (
+          <mesh
+            key={`l1-slat-${si}`}
+            position={[-4.8 + si * 0.4, 2.08, -9.66]}
+            castShadow
+          >
+            <boxGeometry args={[0.14, 3.28, 0.08]} />
+            <meshStandardMaterial color="#a6794d" roughness={0.54} />
+          </mesh>
+        ))}
         <Text
           position={[0, 2.45, -9.58]}
           fontSize={0.56}
@@ -431,30 +775,8 @@ export function OfficeArchitecture({
           </group>
         ))}
 
-        {/* Architectural Floating Oak & Glass Staircase (East Rear Corner) */}
-        <group position={[11.2, FLOOR_1_Y, -8.2]}>
-          {Array.from({ length: 12 }).map((_, step) => (
-            <mesh
-              key={step}
-              position={[0, step * 0.3 + 0.16, step * 0.4]}
-              castShadow
-              receiveShadow
-            >
-              <boxGeometry args={[2.1, 0.1, 0.42]} />
-              <meshStandardMaterial color="#9a6e45" roughness={0.55} />
-            </mesh>
-          ))}
-          {/* Glass side balustrade */}
-          <mesh position={[-1.06, 2.0, 2.2]} rotation={[0.64, 0, 0]}>
-            <boxGeometry args={[0.05, 0.95, 5.8]} />
-            <meshPhysicalMaterial
-              color="#d8eef8"
-              transparent
-              opacity={0.32}
-              roughness={0.08}
-            />
-          </mesh>
-        </group>
+        {/* Modern Floating Oak & Glass Staircase (L1 -> L2 East Rear Corner) */}
+        <ArchitecturalOakStaircase position={[11.2, FLOOR_1_Y, -8.2]} riseHeight={3.72} />
 
         {/* Indoor Olive Planters (Lobby Entrance + Reception Flanks) */}
         <IndoorPlanter position={[-5.4, FLOOR_1_Y, 2.8]} />
@@ -672,10 +994,10 @@ export function OfficeArchitecture({
           <IndoorPlanter position={[-6.4, FLOOR_2_Y, 2.5]} />
           <IndoorPlanter position={[6.4, FLOOR_2_Y, 2.5]} />
 
-          {/* Compact High-Tech Server Cabinet tucked cleanly in Rear-Left Corner */}
-          <group position={[-13.0, FLOOR_2_Y + 1.15, -9.1]}>
+          {/* Compact High-Tech Server Cabinet tucked cleanly behind West Coffee Bar */}
+          <group position={[-13.2, FLOOR_2_Y + 1.15, -6.9]}>
             <mesh castShadow>
-              <boxGeometry args={[0.92, 2.25, 1.1]} />
+              <boxGeometry args={[0.72, 2.2, 0.92]} />
               <meshStandardMaterial
                 color="#1a2230"
                 metalness={0.68}
@@ -683,8 +1005,8 @@ export function OfficeArchitecture({
               />
             </mesh>
             {[-0.6, -0.1, 0.4, 0.8].map((ly, li) => (
-              <mesh key={li} position={[0.47, ly, 0]}>
-                <boxGeometry args={[0.02, 0.05, 0.82]} />
+              <mesh key={li} position={[0.37, ly, 0]}>
+                <boxGeometry args={[0.02, 0.05, 0.68]} />
                 <meshStandardMaterial
                   color={li % 2 === 0 ? "#38bdf8" : "#34d399"}
                   emissive={li % 2 === 0 ? "#38bdf8" : "#34d399"}
@@ -693,6 +1015,25 @@ export function OfficeArchitecture({
               </mesh>
             ))}
           </group>
+
+          {/* Modern Floating Oak & Glass Staircase (L2 -> L3 East Rear Corner) */}
+          <ArchitecturalOakStaircase position={[11.2, FLOOR_2_Y, -9.4]} riseHeight={3.9} />
+
+          {/* Warm Vertical Oak Slat Acoustic Side Accent Panels (L2 — GenRoom / Paintit.ai Style) */}
+          {[-13.76, 13.76].map((wx, wi) => (
+            <group key={`l2-wood-slats-${wi}`}>
+              {Array.from({ length: 10 }).map((_, si) => (
+                <mesh
+                  key={si}
+                  position={[wx, FLOOR_2_Y + 1.9, -9.2 + si * 0.65]}
+                  castShadow
+                >
+                  <boxGeometry args={[0.08, 3.55, 0.16]} />
+                  <meshStandardMaterial color="#a6794d" roughness={0.54} />
+                </mesh>
+              ))}
+            </group>
+          ))}
 
           {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -12.2) */}
           <group position={[-12.2, FLOOR_2_Y, -4.6]}>
@@ -902,18 +1243,39 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
+          {/* Segmented L2 Front Glass Curtain Wall leaving 2 REAL SLIDING GLASS BALCONY DOORS at X=-5.5 and X=+5.5 */}
           {activeFloor !== "l2" && (
-            <mesh position={[0, FLOOR_2_Y + 1.9, 4.0]}>
-              <boxGeometry args={[27.2, 3.62, 0.07]} />
-              <meshPhysicalMaterial
-                color="#d8eef8"
-                transparent
-                opacity={0.18}
-                roughness={0.05}
-                metalness={0.14}
-              />
-            </mesh>
+            <group>
+              {/* Far-left glass curtain (-13.6 to -6.9) */}
+              <mesh position={[-10.25, FLOOR_2_Y + 1.9, 4.0]}>
+                <boxGeometry args={[6.7, 3.62, 0.07]} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+              </mesh>
+              {/* Center panoramic glass curtain (-4.1 to +4.1) */}
+              <mesh position={[0, FLOOR_2_Y + 1.9, 4.0]}>
+                <boxGeometry args={[8.2, 3.62, 0.07]} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+              </mesh>
+              {/* Far-right glass curtain (+6.9 to +13.6) */}
+              <mesh position={[10.25, FLOOR_2_Y + 1.9, 4.0]}>
+                <boxGeometry args={[6.7, 3.62, 0.07]} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+              </mesh>
+            </group>
           )}
+          {/* 2 Real Frameless Sliding Glass Balcony Entrance Doors (L2) */}
+          <SlidingGlassDoorPortal
+            position={[-5.5, FLOOR_2_Y, 4.02]}
+            width={2.8}
+            height={2.85}
+            isNight={isNight}
+          />
+          <SlidingGlassDoorPortal
+            position={[5.5, FLOOR_2_Y, 4.02]}
+            width={2.8}
+            height={2.85}
+            isNight={isNight}
+          />
 
           {/* Cantilevered Front Glass Balcony Railing (at outer balcony edge Z = 6.12) */}
           <mesh position={[0, FLOOR_2_Y + 0.56, 6.12]}>
@@ -933,16 +1295,26 @@ export function OfficeArchitecture({
           <IndoorPlanter position={[-12.6, FLOOR_2_Y, 2.4]} />
           <IndoorPlanter position={[12.6, FLOOR_2_Y, 2.4]} />
 
-          {/* Linear Architectural Ceiling Light Bars for L2 */}
+          {/* Warm Oak Acoustic Ceiling Beams + Recessed Architectural Cove Light Trays (L2) */}
           {[-9, -3, 3, 9].map((lx, i) => (
-            <mesh key={i} position={[lx, FLOOR_3_Y - 0.18, -3.2]}>
-              <boxGeometry args={[4.4, 0.06, 0.18]} />
-              <meshStandardMaterial
-                color="#ffffff"
-                emissive="#fff3d6"
-                emissiveIntensity={interiorLightEmissive}
-              />
-            </mesh>
+            <group key={i} position={[lx, FLOOR_3_Y - 0.18, -3.2]}>
+              <mesh>
+                <boxGeometry args={[4.4, 0.06, 0.18]} />
+                <meshStandardMaterial
+                  color="#ffffff"
+                  emissive="#fff3d6"
+                  emissiveIntensity={interiorLightEmissive}
+                />
+              </mesh>
+              <mesh position={[0, 0.02, -3.0]}>
+                <boxGeometry args={[4.8, 0.1, 0.22]} />
+                <meshStandardMaterial color="#9a6c43" roughness={0.52} />
+              </mesh>
+              <mesh position={[0, 0.02, 3.0]}>
+                <boxGeometry args={[4.8, 0.1, 0.22]} />
+                <meshStandardMaterial color="#9a6c43" roughness={0.52} />
+              </mesh>
+            </group>
           ))}
 
           {/* L2 Bright Interior Illumination */}
@@ -1144,6 +1516,72 @@ export function OfficeArchitecture({
             <IndoorPlanter position={[4.2, 0, -2.0]} />
           </group>
 
+          {/* L3 GenRoom / Planner 5D Detail: Ribbed Oak Slat Wall + Built-in White/Oak Credenza + Glass Partition + Globe Pendants */}
+          {/* Warm Vertical Oak Slat Feature Wall along L3 Boardroom Rear */}
+          {Array.from({ length: 18 }).map((_, si) => (
+            <mesh
+              key={`l3-slat-${si}`}
+              position={[-9.2 + si * 0.52, FLOOR_3_Y + 1.85, -9.8]}
+              castShadow
+            >
+              <boxGeometry args={[0.14, 3.45, 0.08]} />
+              <meshStandardMaterial color="#9d7047" roughness={0.54} />
+            </mesh>
+          ))}
+
+          {/* Modern White & Light-Oak Credenza Sideboard Cabinet under Boardroom Screen */}
+          <group position={[-4.5, FLOOR_3_Y, -9.2]}>
+            <mesh position={[0, 0.36, 0]} castShadow receiveShadow>
+              <boxGeometry args={[5.4, 0.68, 0.62]} />
+              <meshStandardMaterial color="#f1f5f9" roughness={0.42} />
+            </mesh>
+            <mesh position={[0, 0.72, 0]} castShadow>
+              <boxGeometry args={[5.48, 0.05, 0.66]} />
+              <meshStandardMaterial color="#b08256" roughness={0.44} />
+            </mesh>
+            {[-1.8, -0.6, 0.6, 1.8].map((dx, di) => (
+              <mesh key={di} position={[dx, 0.36, 0.32]}>
+                <boxGeometry args={[0.02, 0.58, 0.015]} />
+                <meshStandardMaterial color="#cbd5e1" roughness={0.5} />
+              </mesh>
+            ))}
+          </group>
+
+          {/* Frameless Black-Mullion Glass Partition Wall separating Boardroom & CEO Suite (X = 0.8) */}
+          <group position={[0.8, FLOOR_3_Y, -5.2]}>
+            <mesh position={[0, 1.82, 0]}>
+              <boxGeometry args={[0.06, 3.6, 7.6]} />
+              <meshPhysicalMaterial
+                color="#e0f2fe"
+                transparent
+                opacity={0.22}
+                roughness={0.05}
+                metalness={0.14}
+              />
+            </mesh>
+            {[-3.8, -1.9, 0, 1.9, 3.8].map((mz, mi) => (
+              <mesh key={mi} position={[0, 1.82, mz]}>
+                <boxGeometry args={[0.09, 3.62, 0.08]} />
+                <meshStandardMaterial color="#1f2530" metalness={0.76} roughness={0.3} />
+              </mesh>
+            ))}
+            <mesh position={[0, 3.62, 0]}>
+              <boxGeometry args={[0.1, 0.08, 7.7]} />
+              <meshStandardMaterial color="#1f2530" metalness={0.76} roughness={0.3} />
+            </mesh>
+          </group>
+
+          {/* 3 Architectural Warm Globe Pendant Lamps over L3 Conference Table */}
+          {[-6.3, -4.5, -2.7].map((px, pi) => (
+            <PendantLight
+              key={`l3-pend-${pi}`}
+              position={[px, FLOOR_3_Y + 3.0, -3.5]}
+              isNight={isNight}
+              isSunset={isSunset}
+            />
+          ))}
+
+          {/* Segmented L3 Front Glass Curtain Wall + REAL SLIDING GLASS SKY BALCONY DOOR (X = 0) */}
           {frontColumnsX.map((cx, i) => (
             <mesh key={i} position={[cx, FLOOR_3_Y + 1.85, 4.02]} castShadow>
               <boxGeometry args={[0.28, 3.74, 0.28]} />
@@ -1151,17 +1589,23 @@ export function OfficeArchitecture({
             </mesh>
           ))}
           {activeFloor !== "l3" && (
-            <mesh position={[0, FLOOR_3_Y + 1.85, 4.0]}>
-              <boxGeometry args={[27.2, 3.55, 0.07]} />
-              <meshPhysicalMaterial
-                color="#d8eef8"
-                transparent
-                opacity={0.18}
-                roughness={0.05}
-                metalness={0.14}
-              />
-            </mesh>
+            <group>
+              <mesh position={[-7.6, FLOOR_3_Y + 1.85, 4.0]}>
+                <boxGeometry args={[12.0, 3.55, 0.07]} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+              </mesh>
+              <mesh position={[7.6, FLOOR_3_Y + 1.85, 4.0]}>
+                <boxGeometry args={[12.0, 3.55, 0.07]} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+              </mesh>
+            </group>
           )}
+          <SlidingGlassDoorPortal
+            position={[0, FLOOR_3_Y, 4.02]}
+            width={3.2}
+            height={2.85}
+            isNight={isNight}
+          />
 
           {/* Sky Balcony Glass Balustrade */}
           <mesh position={[0, FLOOR_3_Y + 0.56, 5.18]}>

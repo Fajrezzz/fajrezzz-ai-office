@@ -76,11 +76,54 @@ export function WorkstationCluster({
               </group>
             ))}
 
-            {/* Modesty Privacy Panel */}
+            {/* Modesty Privacy Panel + Acoustic Felt Desk Divider (GenRoom / Paintit.ai Style) */}
             <mesh position={[0, 0.56, -0.46]} castShadow>
               <boxGeometry args={[2.16, 0.34, 0.04]} />
               <meshStandardMaterial color="#2a313e" roughness={0.62} />
             </mesh>
+            <mesh position={[0, 0.96, -0.48]} castShadow>
+              <boxGeometry args={[2.28, 0.38, 0.045]} />
+              <meshStandardMaterial color="#64748b" roughness={0.92} />
+            </mesh>
+
+            {/* Under-Desk 3-Drawer White Rolling Filing Pedestal Cabinet */}
+            <group position={[0.76, 0, 0.04]}>
+              <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.44, 0.58, 0.54]} />
+                <meshStandardMaterial color="#f1f5f9" roughness={0.44} />
+              </mesh>
+              {/* 3 Drawer Front Seams & Brushed Silver Pull Handles */}
+              {[0.17, 0.34, 0.51].map((dy, di) => (
+                <mesh key={di} position={[0, dy, 0.28]}>
+                  <boxGeometry args={[0.16, 0.018, 0.02]} />
+                  <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.22} />
+                </mesh>
+              ))}
+              {/* 4 Caster Wheels */}
+              {[
+                [-0.16, -0.2],
+                [0.16, -0.2],
+                [-0.16, 0.2],
+                [0.16, 0.2],
+              ].map(([wx, wz], wi) => (
+                <mesh key={wi} position={[wx, 0.03, wz]}>
+                  <cylinderGeometry args={[0.025, 0.025, 0.03, 8]} />
+                  <meshStandardMaterial color="#1e293b" roughness={0.6} />
+                </mesh>
+              ))}
+            </group>
+
+            {/* Mini Potted Green Desk Plant beside Dual Monitors */}
+            <group position={[-0.96, 0.78, -0.22]}>
+              <mesh position={[0, 0.06, 0]} castShadow>
+                <cylinderGeometry args={[0.065, 0.052, 0.12, 10]} />
+                <meshStandardMaterial color="#e2e8f0" roughness={0.35} />
+              </mesh>
+              <mesh position={[0, 0.16, 0]} castShadow>
+                <sphereGeometry args={[0.095, 10, 8]} />
+                <meshStandardMaterial color="#2f7d43" roughness={0.82} />
+              </mesh>
+            </group>
 
             {/* Dual Ultra-Sharp Widescreen Monitors */}
             {[-0.48, 0.48].map((mx, idx) => (
