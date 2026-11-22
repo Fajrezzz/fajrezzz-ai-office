@@ -125,11 +125,11 @@ export function DashboardOverview() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold tracking-wide text-white">
-                Virtual Office 3D — Cyberpunk 3-Floor HQ & Pool Deck
+                Virtual Office 3D — Modern Architectural 3-Floor HQ
               </h2>
               <p className="text-xs text-slate-400">
-                Gedung kaca 3 lantai, kolam neon, supercar, atap helipad &
-                interior L2 berhologram • Low-poly Android Eco
+                Pencahayaan realistis (Siang / Sore / Malam), gedung kaca 3
+                lantai, kolam resort, supercar, atap helipad & interior L2
               </p>
             </div>
             <button

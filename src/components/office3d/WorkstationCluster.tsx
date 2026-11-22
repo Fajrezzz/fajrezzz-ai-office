@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Html } from "@react-three/drei";
-import type { OfficeAgent, Workstation } from "@/types/office";
+import { getChartScreenTexture } from "@/components/office3d/realisticTextures";
+import type { LightingPreset, OfficeAgent, Workstation } from "@/types/office";
 
 interface WorkstationClusterProps {
   workstations: Workstation[];
   agents: OfficeAgent[];
+  lightingPreset: LightingPreset;
   showLabels: boolean;
   onSelectWorkstation?: (ws: Workstation) => void;
 }
@@ -14,11 +16,15 @@ interface WorkstationClusterProps {
 function WorkstationUnit({
   ws,
   assignedAgent,
+  chartTex,
+  lampGlow,
   showLabels,
   onSelect,
 }: {
   ws: Workstation;
   assignedAgent?: OfficeAgent;
+  chartTex: ReturnType<typeof getChartScreenTexture>;
+  lampGlow: number;
   showLabels: boolean;
   onSelect?: (ws: Workstation) => void;
 }) {
@@ -33,156 +39,146 @@ function WorkstationUnit({
         onSelect?.(ws);
       }}
     >
-      {/* Glowing circular floor ring around workstation (inspired by reference interior) */}
-      <mesh position={[0, 0.02, 0.55]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.18, 1.32, 24]} />
+      {/* Subtle modern accent floor ring (like Screenshots 4 & 5) */}
+      <mesh position={[0, 0.018, 0.55]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.18, 1.28, 32]} />
         <meshBasicMaterial
-          color={ws.accentColor}
+          color={occupied ? ws.accentColor : "#94a3b8"}
           transparent
-          opacity={occupied ? 0.65 : 0.25}
+          opacity={occupied ? 0.55 : 0.2}
           depthWrite={false}
         />
       </mesh>
 
-      {/* ================= CYBER DESK ================= */}
-      {/* Sleek bright cyber tabletop */}
+      {/* ================= MODERN WHITE ARCHITECTURAL OFFICE DESK ================= */}
+      {/* Crisp matte-white tabletop */}
       <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
-        <boxGeometry args={[2.35, 0.08, 1.05]} />
-        <meshStandardMaterial color="#182542" metalness={0.55} roughness={0.25} />
+        <boxGeometry args={[2.35, 0.075, 1.05]} />
+        <meshStandardMaterial color="#f5f5f4" roughness={0.35} metalness={0.05} />
       </mesh>
-      {/* Bright glowing front neon trim strip */}
-      <mesh position={[0, 0.74, 0.53]}>
-        <boxGeometry args={[2.32, 0.04, 0.03]} />
-        <meshStandardMaterial
-          color={ws.accentColor}
-          emissive={ws.accentColor}
-          emissiveIntensity={2.0}
-          toneMapped={false}
-        />
+      {/* Brushed aluminum legs */}
+      <mesh position={[-1.02, 0.39, 0]} castShadow>
+        <boxGeometry args={[0.08, 0.78, 0.86]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.75} roughness={0.28} />
       </mesh>
-      {/* Desk metallic T-legs */}
-      <mesh position={[-1.02, 0.39, 0]}>
-        <boxGeometry args={[0.1, 0.78, 0.88]} />
-        <meshStandardMaterial color="#0b1326" metalness={0.8} roughness={0.28} />
-      </mesh>
-      <mesh position={[1.02, 0.39, 0]}>
-        <boxGeometry args={[0.1, 0.78, 0.88]} />
-        <meshStandardMaterial color="#0b1326" metalness={0.8} roughness={0.28} />
+      <mesh position={[1.02, 0.39, 0]} castShadow>
+        <boxGeometry args={[0.08, 0.78, 0.86]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.75} roughness={0.28} />
       </mesh>
 
-      {/* ================= DUAL / TRIPLE GLOWING MONITORS ================= */}
-      {/* Monitor stand */}
-      <mesh position={[-0.08, 0.92, -0.26]}>
-        <boxGeometry args={[0.14, 0.24, 0.08]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.25} />
+      {/* ================= REALISTIC DUAL CHART MONITORS ================= */}
+      <mesh position={[-0.1, 0.92, -0.26]}>
+        <boxGeometry args={[0.12, 0.24, 0.08]} />
+        <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
       </mesh>
-      {/* Primary ultrawide monitor */}
-      <mesh position={[-0.08, 1.18, -0.22]}>
-        <boxGeometry args={[1.28, 0.54, 0.05]} />
-        <meshStandardMaterial color="#070d1c" metalness={0.75} roughness={0.22} />
+      <mesh position={[-0.1, 1.18, -0.22]} castShadow>
+        <boxGeometry args={[1.28, 0.54, 0.045]} />
+        <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.25} />
       </mesh>
-      {/* Primary glowing dark chart screen */}
-      <mesh position={[-0.08, 1.18, -0.19]}>
-        <planeGeometry args={[1.2, 0.46]} />
+      <mesh position={[-0.1, 1.18, -0.194]}>
+        <planeGeometry args={[1.21, 0.47]} />
         <meshStandardMaterial
-          color="#061428"
-          emissive={ws.accentColor}
-          emissiveIntensity={occupied ? 0.55 : 0.25}
-          toneMapped={false}
+          map={chartTex ?? undefined}
+          emissive="#ffffff"
+          emissiveMap={chartTex ?? undefined}
+          emissiveIntensity={occupied ? 0.85 : 0.25}
+          roughness={0.2}
         />
       </mesh>
-      {/* Candlestick / telemetry wave bars on screen */}
-      {[-0.48, -0.32, -0.16, 0.0, 0.16, 0.32].map((bx, i) => (
-        <mesh key={bx} position={[bx, 1.14 + (i % 3) * 0.04, -0.185]}>
-          <planeGeometry args={[0.09, 0.12 + ((i * 3) % 4) * 0.05]} />
-          <meshBasicMaterial
-            color={i % 2 === 0 ? "#34d399" : i === 3 ? "#f43f5e" : "#38bdf8"}
+
+      {/* Secondary Angled Monitor */}
+      <group position={[0.72, 1.16, -0.1]} rotation={[0, -0.36, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.46, 0.52, 0.04]} />
+          <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0, 0.024]}>
+          <planeGeometry args={[0.41, 0.46]} />
+          <meshStandardMaterial
+            map={chartTex ?? undefined}
+            emissive="#ffffff"
+            emissiveMap={chartTex ?? undefined}
+            emissiveIntensity={occupied ? 0.75 : 0.2}
+            roughness={0.2}
           />
         </mesh>
-      ))}
+      </group>
 
-      {/* Secondary angled monitor */}
-      <group position={[0.72, 1.16, -0.1]} rotation={[0, -0.38, 0]}>
-        <mesh>
-          <boxGeometry args={[0.42, 0.54, 0.04]} />
-          <meshStandardMaterial color="#070d1c" metalness={0.75} roughness={0.22} />
+      {/* Matte Aluminum Desktop Workstation Tower */}
+      <mesh position={[-0.92, 1.02, -0.12]} castShadow>
+        <boxGeometry args={[0.24, 0.42, 0.46]} />
+        <meshStandardMaterial color="#27272a" metalness={0.65} roughness={0.32} />
+      </mesh>
+
+      {/* Modern Articulated Designer Desk Lamp with Warm Light */}
+      <group position={[0.96, 0.82, -0.3]}>
+        <mesh position={[0, 0.02, 0]}>
+          <cylinderGeometry args={[0.09, 0.1, 0.04, 14]} />
+          <meshStandardMaterial color="#1f2937" metalness={0.75} roughness={0.28} />
         </mesh>
-        <mesh position={[0, 0, 0.025]}>
-          <planeGeometry args={[0.36, 0.46]} />
+        <mesh position={[0, 0.24, 0]} rotation={[0, 0, 0.12]}>
+          <cylinderGeometry args={[0.016, 0.018, 0.44, 8]} />
+          <meshStandardMaterial color="#374151" metalness={0.8} roughness={0.25} />
+        </mesh>
+        <mesh position={[-0.08, 0.44, 0.06]} rotation={[0.2, 0, 0.35]}>
+          <coneGeometry args={[0.1, 0.14, 14]} />
+          <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.3} />
+        </mesh>
+        <mesh position={[-0.1, 0.4, 0.08]}>
+          <sphereGeometry args={[0.045, 10, 10]} />
           <meshStandardMaterial
-            color="#1e1b4b"
-            emissive="#a855f7"
-            emissiveIntensity={occupied ? 0.95 : 0.3}
+            color="#fffbeb"
+            emissive="#ffd68a"
+            emissiveIntensity={lampGlow}
             toneMapped={false}
           />
         </mesh>
       </group>
 
-      {/* Cyber PC Tower on left */}
-      <group position={[-0.92, 1.03, -0.12]}>
-        <mesh>
-          <boxGeometry args={[0.26, 0.44, 0.48]} />
-          <meshStandardMaterial color="#091124" metalness={0.78} roughness={0.28} />
-        </mesh>
-        <mesh position={[0, 0.02, 0.245]}>
-          <boxGeometry args={[0.045, 0.34, 0.015]} />
-          <meshStandardMaterial
-            color={ws.accentColor}
-            emissive={ws.accentColor}
-            emissiveIntensity={2.0}
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
-
-      {/* Keyboard & Mouse */}
-      <mesh position={[-0.12, 0.84, 0.18]}>
-        <boxGeometry args={[0.56, 0.025, 0.18]} />
-        <meshStandardMaterial
-          color="#1e293b"
-          emissive={ws.accentColor}
-          emissiveIntensity={0.65}
-        />
+      {/* Keyboard, Mouse & Ceramic Coffee Mug */}
+      <mesh position={[-0.12, 0.83, 0.18]}>
+        <boxGeometry args={[0.52, 0.02, 0.17]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} />
       </mesh>
-      <mesh position={[0.28, 0.84, 0.2]}>
-        <boxGeometry args={[0.09, 0.025, 0.14]} />
-        <meshStandardMaterial
-          color="#1e293b"
-          emissive="#a855f7"
-          emissiveIntensity={0.65}
-        />
+      <mesh position={[0.26, 0.83, 0.2]}>
+        <boxGeometry args={[0.08, 0.02, 0.13]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.45} />
+      </mesh>
+      <mesh position={[-0.56, 0.86, 0.26]}>
+        <cylinderGeometry args={[0.042, 0.038, 0.09, 12]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.25} />
       </mesh>
 
-      {/* Ergonomic Cyber Swivel Chair */}
-      <group position={[0.72, 0, 0.9]} rotation={[0, -0.45, 0]}>
-        <mesh position={[0, 0.08, 0]}>
-          <cylinderGeometry args={[0.25, 0.29, 0.06, 5]} />
-          <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.3} />
+      {/* ================= REALISTIC BLACK ERGONOMIC OFFICE CHAIR ================= */}
+      <group position={[0.72, 0, 0.88]} rotation={[0, -0.42, 0]}>
+        <mesh position={[0, 0.07, 0]}>
+          <cylinderGeometry args={[0.25, 0.29, 0.05, 5]} />
+          <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.35} />
         </mesh>
         <mesh position={[0, 0.26, 0]}>
-          <cylinderGeometry args={[0.04, 0.05, 0.34, 6]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+          <cylinderGeometry args={[0.035, 0.045, 0.36, 10]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.22} />
         </mesh>
-        <mesh position={[0, 0.45, 0]}>
+        <mesh position={[0, 0.46, 0]} castShadow>
           <boxGeometry args={[0.48, 0.08, 0.46]} />
-          <meshStandardMaterial color="#111c36" roughness={0.45} />
+          <meshStandardMaterial color="#18181b" roughness={0.68} />
         </mesh>
-        <mesh position={[0, 0.78, 0.2]} rotation={[0.12, 0, 0]}>
-          <boxGeometry args={[0.44, 0.62, 0.08]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.45} />
+        <mesh position={[0, 0.82, 0.2]} rotation={[0.1, 0, 0]} castShadow>
+          <boxGeometry args={[0.44, 0.68, 0.08]} />
+          <meshStandardMaterial color="#18181b" roughness={0.68} />
         </mesh>
-        <mesh position={[0, 0.92, 0.25]} rotation={[0.12, 0, 0]}>
-          <boxGeometry args={[0.3, 0.04, 0.02]} />
-          <meshStandardMaterial
-            color={ws.accentColor}
-            emissive={ws.accentColor}
-            emissiveIntensity={1.6}
-            toneMapped={false}
-          />
+        {/* Armrests */}
+        <mesh position={[-0.26, 0.62, 0.02]}>
+          <boxGeometry args={[0.05, 0.04, 0.32]} />
+          <meshStandardMaterial color="#27272a" roughness={0.5} />
+        </mesh>
+        <mesh position={[0.26, 0.62, 0.02]}>
+          <boxGeometry args={[0.05, 0.04, 0.32]} />
+          <meshStandardMaterial color="#27272a" roughness={0.5} />
         </mesh>
       </group>
 
-      {/* ================= FLOATING HOLOGRAPHIC STATUS CARD (Reference Style!) ================= */}
+      {/* ================= CLEAN FLOATING GLASS STATUS CARD ================= */}
       {showLabels && (
         <Html
           position={[0, 2.15, -0.15]}
@@ -193,19 +189,15 @@ function WorkstationUnit({
         >
           {assignedAgent ? (
             <div
-              className="w-36 overflow-hidden rounded-xl border bg-[#050b1d]/88 shadow-xl backdrop-blur-sm"
-              style={{
-                borderColor: `${ws.accentColor}bb`,
-                boxShadow: `0 0 18px ${ws.accentColor}44`,
-              }}
+              className="w-36 overflow-hidden rounded-xl border bg-slate-950/82 shadow-xl backdrop-blur-md"
+              style={{ borderColor: `${ws.accentColor}99` }}
             >
-              {/* Bright colored top header bar (like Screenshots 3, 4, 5) */}
               <div
                 className="flex items-center justify-between px-2 py-0.5 text-[9px] font-black tracking-wider text-slate-950 uppercase"
                 style={{ backgroundColor: ws.accentColor }}
               >
                 <span>{assignedAgent.code}</span>
-                <span className="rounded bg-slate-950/85 px-1 text-[8px] text-cyan-200">
+                <span className="rounded bg-slate-950/85 px-1 text-[8px] text-white">
                   SIM LIVE
                 </span>
               </div>
@@ -227,15 +219,15 @@ function WorkstationUnit({
                     }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-[8px] uppercase text-slate-400">
+                <div className="flex items-center justify-between text-[8px] uppercase text-slate-300">
                   <span>{ws.code}</span>
-                  <span className="text-purple-300">Placeholder</span>
+                  <span className="text-amber-300">Placeholder</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-fuchsia-400/50 bg-[#050b1d]/85 px-2 py-0.5 text-[9px] font-bold tracking-wider text-fuchsia-200 shadow-lg whitespace-nowrap">
-              {ws.code} • OPEN SLOT
+            <div className="rounded-lg border border-slate-500/50 bg-slate-950/80 px-2 py-0.5 text-[9px] font-bold tracking-wider text-slate-200 shadow-lg whitespace-nowrap">
+              {ws.code} • OPEN
             </div>
           )}
         </Html>
@@ -247,9 +239,14 @@ function WorkstationUnit({
 export function WorkstationCluster({
   workstations,
   agents,
+  lightingPreset,
   showLabels,
   onSelectWorkstation,
 }: WorkstationClusterProps) {
+  const chartTex = useMemo(() => getChartScreenTexture(), []);
+  const lampGlow =
+    lightingPreset === "night" ? 2.4 : lightingPreset === "sunset" ? 1.8 : 0.6;
+
   return (
     <group>
       {workstations.map((ws) => {
@@ -261,6 +258,8 @@ export function WorkstationCluster({
             key={ws.id}
             ws={ws}
             assignedAgent={assignedAgent}
+            chartTex={chartTex}
+            lampGlow={lampGlow}
             showLabels={showLabels}
             onSelect={onSelectWorkstation}
           />

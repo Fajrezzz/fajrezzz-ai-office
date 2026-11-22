@@ -4,6 +4,8 @@ export type RobotAnimationState = "idle" | "working" | "walking" | "standby";
 
 export type PerformanceMode = "eco" | "balanced" | "high";
 
+export type LightingPreset = "day" | "sunset" | "night";
+
 export type FloorView = "all" | "l1" | "l2" | "l3" | "roof";
 
 export type CameraPreset =

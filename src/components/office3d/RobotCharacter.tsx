@@ -40,10 +40,8 @@ export function RobotCharacter({
   const rightArmRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
-  const haloRef = useRef<THREE.Mesh>(null);
   const coreMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
-  // Navigation state kept in refs for allocation-free 60fps useFrame updates
   const initialPos =
     OFFICE_WAYPOINTS[agent.currentWaypointId]?.position ?? [0, 0, 0];
   const initialYaw = OFFICE_WAYPOINTS[agent.currentWaypointId]?.facingYaw ?? 0;
@@ -54,7 +52,7 @@ export function RobotCharacter({
   const activeTargetIdRef = useRef<string>(agent.targetWaypointId);
   const walkPhaseRef = useRef<number>(0);
 
-  // Set initial transform once on mount (subsequent transforms are driven by useFrame so React re-renders never snap walking robots back)
+  // Set initial transform once on mount so React re-renders never snap walking robots back
   useEffect(() => {
     if (rootRef.current) {
       rootRef.current.position.copy(posRef.current);
@@ -64,7 +62,10 @@ export function RobotCharacter({
 
   // Recalculate corridor path whenever targetWaypointId changes
   useEffect(() => {
-    if (agent.targetWaypointId === activeTargetIdRef.current && pathQueueRef.current.length > 0) {
+    if (
+      agent.targetWaypointId === activeTargetIdRef.current &&
+      pathQueueRef.current.length > 0
+    ) {
       return;
     }
 
@@ -75,7 +76,6 @@ export function RobotCharacter({
       return;
     }
 
-    // Find nearest waypoint to current actual world position as path start
     let nearestId = agent.currentWaypointId;
     let minDist = Infinity;
     for (const wp of Object.values(OFFICE_WAYPOINTS)) {
@@ -99,7 +99,6 @@ export function RobotCharacter({
 
     let moving = false;
 
-    // 1) Waypoint Corridor Navigation
     if (isSimulationRunning && !isStandby && pathQueueRef.current.length > 0) {
       const nextId = pathQueueRef.current[0];
       const nextNode = OFFICE_WAYPOINTS[nextId];
@@ -117,17 +116,20 @@ export function RobotCharacter({
           }
         } else {
           moving = true;
-          const speed = 2.15;
+          const speed = 2.1;
           const step = Math.min(dist, speed * dt);
           posRef.current.x += (dx / dist) * step;
           posRef.current.z += (dz / dist) * step;
 
           const desiredYaw = Math.atan2(dx, dz);
-          yawRef.current = lerpAngle(yawRef.current, desiredYaw, Math.min(1, dt * 10));
+          yawRef.current = lerpAngle(
+            yawRef.current,
+            desiredYaw,
+            Math.min(1, dt * 10)
+          );
         }
       }
     } else if (!moving) {
-      // Align smoothly with current waypoint facing direction (e.g., toward desk monitor)
       const restingNode = OFFICE_WAYPOINTS[agent.currentWaypointId];
       if (restingNode) {
         yawRef.current = lerpAngle(
@@ -143,28 +145,27 @@ export function RobotCharacter({
       rootRef.current.rotation.y = yawRef.current;
     }
 
-    // 2) Procedural Articulated Animations (Walking / Working / Idle / Standby)
     if (moving) {
-      walkPhaseRef.current += dt * 9.5;
+      walkPhaseRef.current += dt * 9.2;
       const swing = Math.sin(walkPhaseRef.current);
-      const bob = Math.abs(Math.cos(walkPhaseRef.current)) * 0.055;
+      const bob = Math.abs(Math.cos(walkPhaseRef.current)) * 0.05;
 
       if (bodyRef.current) {
         bodyRef.current.position.y = bob;
-        bodyRef.current.rotation.x = 0.08;
+        bodyRef.current.rotation.x = 0.07;
       }
       if (leftLegRef.current && rightLegRef.current) {
-        leftLegRef.current.rotation.x = swing * 0.55;
-        rightLegRef.current.rotation.x = -swing * 0.55;
+        leftLegRef.current.rotation.x = swing * 0.52;
+        rightLegRef.current.rotation.x = -swing * 0.52;
       }
       if (leftArmRef.current && rightArmRef.current) {
-        leftArmRef.current.rotation.x = -swing * 0.48;
-        rightArmRef.current.rotation.x = swing * 0.48;
+        leftArmRef.current.rotation.x = -swing * 0.44;
+        rightArmRef.current.rotation.x = swing * 0.44;
       }
       if (headRef.current) {
         headRef.current.rotation.y = THREE.MathUtils.lerp(
           headRef.current.rotation.y,
-          Math.sin(walkPhaseRef.current * 0.5) * 0.1,
+          Math.sin(walkPhaseRef.current * 0.5) * 0.08,
           dt * 8
         );
         headRef.current.rotation.x = THREE.MathUtils.lerp(
@@ -174,13 +175,12 @@ export function RobotCharacter({
         );
       }
     } else if (agent.status === "working" && isSimulationRunning) {
-      // Active simulated typing & dual-monitor scan animation
-      const breathe = Math.sin(t * 2.6) * 0.02;
+      const breathe = Math.sin(t * 2.5) * 0.018;
       if (bodyRef.current) {
         bodyRef.current.position.y = breathe;
         bodyRef.current.rotation.x = THREE.MathUtils.lerp(
           bodyRef.current.rotation.x,
-          0.12,
+          0.11,
           dt * 6
         );
       }
@@ -197,36 +197,35 @@ export function RobotCharacter({
         );
       }
       if (leftArmRef.current && rightArmRef.current) {
-        leftArmRef.current.rotation.x = -0.75 + Math.sin(t * 11) * 0.12;
-        rightArmRef.current.rotation.x = -0.75 + Math.cos(t * 11.5) * 0.12;
+        leftArmRef.current.rotation.x = -0.72 + Math.sin(t * 10.5) * 0.11;
+        rightArmRef.current.rotation.x = -0.72 + Math.cos(t * 11) * 0.11;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 1.4) * 0.24;
+        headRef.current.rotation.y = Math.sin(t * 1.35) * 0.22;
         headRef.current.rotation.x = 0.08;
       }
     } else if (isStandby) {
-      // Low-power standby pose
       if (bodyRef.current) {
         bodyRef.current.position.y = THREE.MathUtils.lerp(
           bodyRef.current.position.y,
-          -0.03,
+          -0.025,
           dt * 4
         );
         bodyRef.current.rotation.x = THREE.MathUtils.lerp(
           bodyRef.current.rotation.x,
-          0.06,
+          0.05,
           dt * 4
         );
       }
       if (leftArmRef.current && rightArmRef.current) {
         leftArmRef.current.rotation.x = THREE.MathUtils.lerp(
           leftArmRef.current.rotation.x,
-          0.08,
+          0.06,
           dt * 5
         );
         rightArmRef.current.rotation.x = THREE.MathUtils.lerp(
           rightArmRef.current.rotation.x,
-          0.08,
+          0.06,
           dt * 5
         );
       }
@@ -245,7 +244,7 @@ export function RobotCharacter({
       if (headRef.current) {
         headRef.current.rotation.x = THREE.MathUtils.lerp(
           headRef.current.rotation.x,
-          0.28,
+          0.25,
           dt * 4
         );
         headRef.current.rotation.y = THREE.MathUtils.lerp(
@@ -255,8 +254,7 @@ export function RobotCharacter({
         );
       }
     } else {
-      // Calm Idle animation: smooth breathing + head scan
-      const breathe = Math.sin(t * 2.1 + posRef.current.x) * 0.028;
+      const breathe = Math.sin(t * 2.0 + posRef.current.x) * 0.024;
       if (bodyRef.current) {
         bodyRef.current.position.y = breathe;
         bodyRef.current.rotation.x = THREE.MathUtils.lerp(
@@ -278,29 +276,23 @@ export function RobotCharacter({
         );
       }
       if (leftArmRef.current && rightArmRef.current) {
-        leftArmRef.current.rotation.x = Math.sin(t * 1.6) * 0.08;
-        rightArmRef.current.rotation.x = -Math.sin(t * 1.6) * 0.08;
+        leftArmRef.current.rotation.x = Math.sin(t * 1.5) * 0.07;
+        rightArmRef.current.rotation.x = -Math.sin(t * 1.5) * 0.07;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.85) * 0.32;
-        headRef.current.rotation.x = Math.sin(t * 1.2) * 0.05;
+        headRef.current.rotation.y = Math.sin(t * 0.8) * 0.3;
+        headRef.current.rotation.x = Math.sin(t * 1.15) * 0.05;
       }
     }
 
-    // Pulse overhead halo & reactor core
-    if (haloRef.current) {
-      haloRef.current.rotation.z = t * (moving ? 2.2 : 0.9);
-      const pulse = 1 + Math.sin(t * 3.5) * 0.07;
-      haloRef.current.scale.set(pulse, pulse, 1);
-    }
     if (coreMatRef.current) {
       coreMatRef.current.emissiveIntensity = isStandby
-        ? 0.25
-        : 1.3 + Math.sin(t * 4) * 0.45;
+        ? 0.2
+        : 1.15 + Math.sin(t * 3.5) * 0.35;
     }
   });
 
-  const visorIntensity = agent.status === "standby" ? 0.25 : 1.7;
+  const visorGlow = agent.status === "standby" ? 0.25 : 1.5;
 
   return (
     <group
@@ -310,261 +302,190 @@ export function RobotCharacter({
         onSelect(agent.id);
       }}
     >
-      {/* Floor selection & presence ring */}
-      <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry
-          args={[isSelected ? 0.44 : 0.32, isSelected ? 0.56 : 0.39, 20]}
-        />
+      {/* Subtle selection ring + contact shadow */}
+      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.3, 18]} />
         <meshBasicMaterial
-          color={agent.accentColor}
+          color="#000000"
           transparent
-          opacity={isSelected ? 0.92 : 0.45}
+          opacity={0.28}
           depthWrite={false}
         />
       </mesh>
+      {isSelected && (
+        <mesh position={[0, 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.38, 0.48, 24]} />
+          <meshBasicMaterial
+            color={agent.accentColor}
+            transparent
+            opacity={0.9}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
 
-      {/* Articulated Robot Body Group */}
+      {/* Sleek Rounded Real-World Ceramic-White & Titanium Humanoid Droid */}
       <group ref={bodyRef}>
-        {/* ================= LEGS ================= */}
-        <group ref={leftLegRef} position={[-0.13, 0.52, 0]}>
-          <mesh position={[0, -0.22, 0]} castShadow>
-            <boxGeometry args={[0.14, 0.44, 0.15]} />
-            <meshStandardMaterial
-              color="#111c36"
-              metalness={0.75}
-              roughness={0.28}
+        {/* ================= LEGS (Smooth Rounded Cylinders + Joints) ================= */}
+        <group ref={leftLegRef} position={[-0.12, 0.56, 0]}>
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[0.065, 10, 10]} />
+            <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+          </mesh>
+          <mesh position={[0, -0.24, 0]} castShadow>
+            <cylinderGeometry args={[0.068, 0.055, 0.44, 12]} />
+            <meshPhysicalMaterial
+              color="#f1f5f9"
+              roughness={0.22}
+              metalness={0.1}
+              clearcoat={0.85}
             />
           </mesh>
-          <mesh position={[0, -0.45, 0.03]}>
-            <boxGeometry args={[0.16, 0.08, 0.22]} />
-            <meshStandardMaterial
-              color="#070d1f"
-              metalness={0.8}
-              roughness={0.25}
-            />
-          </mesh>
-          <mesh position={[0, -0.38, 0.08]}>
-            <boxGeometry args={[0.12, 0.03, 0.02]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity * 0.8}
-              toneMapped={false}
-            />
+          <mesh position={[0, -0.49, 0.03]} castShadow>
+            <boxGeometry args={[0.14, 0.08, 0.22]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.6} roughness={0.35} />
           </mesh>
         </group>
 
-        <group ref={rightLegRef} position={[0.13, 0.52, 0]}>
-          <mesh position={[0, -0.22, 0]} castShadow>
-            <boxGeometry args={[0.14, 0.44, 0.15]} />
-            <meshStandardMaterial
-              color="#111c36"
-              metalness={0.75}
-              roughness={0.28}
+        <group ref={rightLegRef} position={[0.12, 0.56, 0]}>
+          <mesh position={[0, 0, 0]}>
+            <sphereGeometry args={[0.065, 10, 10]} />
+            <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+          </mesh>
+          <mesh position={[0, -0.24, 0]} castShadow>
+            <cylinderGeometry args={[0.068, 0.055, 0.44, 12]} />
+            <meshPhysicalMaterial
+              color="#f1f5f9"
+              roughness={0.22}
+              metalness={0.1}
+              clearcoat={0.85}
             />
           </mesh>
-          <mesh position={[0, -0.45, 0.03]}>
-            <boxGeometry args={[0.16, 0.08, 0.22]} />
-            <meshStandardMaterial
-              color="#070d1f"
-              metalness={0.8}
-              roughness={0.25}
-            />
-          </mesh>
-          <mesh position={[0, -0.38, 0.08]}>
-            <boxGeometry args={[0.12, 0.03, 0.02]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity * 0.8}
-              toneMapped={false}
-            />
+          <mesh position={[0, -0.49, 0.03]} castShadow>
+            <boxGeometry args={[0.14, 0.08, 0.22]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.6} roughness={0.35} />
           </mesh>
         </group>
 
-        {/* ================= TORSO ================= */}
-        {/* Pelvis */}
-        <mesh position={[0, 0.58, 0]}>
-          <boxGeometry args={[0.38, 0.14, 0.22]} />
-          <meshStandardMaterial
-            color="#0b1429"
-            metalness={0.8}
-            roughness={0.25}
+        {/* ================= TORSO (Tapered Ceramic Shell + Brushed Titanium) ================= */}
+        <mesh position={[0, 0.62, 0]}>
+          <cylinderGeometry args={[0.15, 0.17, 0.14, 14]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0.94, 0]} castShadow>
+          <cylinderGeometry args={[0.23, 0.16, 0.52, 16]} />
+          <meshPhysicalMaterial
+            color="#f8fafc"
+            roughness={0.18}
+            metalness={0.08}
+            clearcoat={0.95}
+            clearcoatRoughness={0.08}
           />
         </mesh>
-        {/* Main chest chassis */}
-        <mesh position={[0, 0.9, 0]} castShadow>
-          <boxGeometry args={[0.48, 0.5, 0.28]} />
-          <meshStandardMaterial
-            color="#152242"
-            metalness={0.72}
-            roughness={0.26}
-          />
-        </mesh>
-        {/* Shoulder armor pauldrons */}
-        <mesh position={[-0.31, 1.07, 0]}>
-          <boxGeometry args={[0.16, 0.14, 0.24]} />
-          <meshStandardMaterial
-            color={agent.secondaryColor}
-            metalness={0.7}
-            roughness={0.3}
-          />
-        </mesh>
-        <mesh position={[0.31, 1.07, 0]}>
-          <boxGeometry args={[0.16, 0.14, 0.24]} />
-          <meshStandardMaterial
-            color={agent.secondaryColor}
-            metalness={0.7}
-            roughness={0.3}
-          />
-        </mesh>
-        {/* Glowing chest reactor core */}
-        <mesh position={[0, 0.92, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.08, 0.08, 0.03, 6]} />
+        {/* Subtle color-coded titanium chest badge */}
+        <mesh position={[0, 0.96, 0.195]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.03, 14]} />
           <meshStandardMaterial
             ref={coreMatRef}
             color={agent.accentColor}
             emissive={agent.accentColor}
-            emissiveIntensity={1.6}
+            emissiveIntensity={1.2}
             toneMapped={false}
-          />
-        </mesh>
-        {/* Back power pack */}
-        <mesh position={[0, 0.92, -0.17]}>
-          <boxGeometry args={[0.3, 0.36, 0.1]} />
-          <meshStandardMaterial
-            color="#091022"
-            metalness={0.8}
-            roughness={0.25}
           />
         </mesh>
 
         {/* ================= ARMS ================= */}
-        <group ref={leftArmRef} position={[-0.32, 1.02, 0]}>
-          <mesh position={[0, -0.2, 0]} castShadow>
-            <boxGeometry args={[0.12, 0.42, 0.13]} />
-            <meshStandardMaterial
-              color="#111c36"
-              metalness={0.75}
-              roughness={0.28}
+        <group ref={leftArmRef} position={[-0.28, 1.1, 0]}>
+          <mesh>
+            <sphereGeometry args={[0.072, 12, 12]} />
+            <meshStandardMaterial color="#475569" metalness={0.75} roughness={0.25} />
+          </mesh>
+          <mesh position={[0, -0.22, 0]} castShadow>
+            <cylinderGeometry args={[0.056, 0.045, 0.4, 12]} />
+            <meshPhysicalMaterial
+              color="#f1f5f9"
+              roughness={0.2}
+              clearcoat={0.85}
             />
           </mesh>
-          <mesh position={[0, -0.36, 0.04]}>
-            <boxGeometry args={[0.13, 0.05, 0.06]} />
+          <mesh position={[0, -0.43, 0]}>
+            <sphereGeometry args={[0.05, 10, 10]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.65} roughness={0.3} />
+          </mesh>
+        </group>
+
+        <group ref={rightArmRef} position={[0.28, 1.1, 0]}>
+          <mesh>
+            <sphereGeometry args={[0.072, 12, 12]} />
+            <meshStandardMaterial color="#475569" metalness={0.75} roughness={0.25} />
+          </mesh>
+          <mesh position={[0, -0.22, 0]} castShadow>
+            <cylinderGeometry args={[0.056, 0.045, 0.4, 12]} />
+            <meshPhysicalMaterial
+              color="#f1f5f9"
+              roughness={0.2}
+              clearcoat={0.85}
+            />
+          </mesh>
+          <mesh position={[0, -0.43, 0]}>
+            <sphereGeometry args={[0.05, 10, 10]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.65} roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* ================= SMOOTH ROUNDED HEAD & OBSIDIAN GLASS VISOR ================= */}
+        <group ref={headRef} position={[0, 1.26, 0]}>
+          <mesh position={[0, -0.02, 0]}>
+            <cylinderGeometry args={[0.06, 0.07, 0.1, 10]} />
+            <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+          </mesh>
+          {/* Smooth rounded helmet head */}
+          <mesh position={[0, 0.16, 0]} castShadow>
+            <sphereGeometry args={[0.19, 18, 16]} />
+            <meshPhysicalMaterial
+              color="#f8fafc"
+              roughness={0.14}
+              metalness={0.08}
+              clearcoat={1}
+              clearcoatRoughness={0.06}
+            />
+          </mesh>
+          {/* Glossy curved dark obsidian visor */}
+          <mesh position={[0, 0.16, 0.07]} scale={[0.92, 0.56, 0.85]}>
+            <sphereGeometry args={[0.175, 16, 12]} />
+            <meshPhysicalMaterial
+              color="#0b1120"
+              metalness={0.9}
+              roughness={0.06}
+              clearcoat={1}
+            />
+          </mesh>
+          {/* Expressive soft glowing eyes */}
+          <mesh position={[-0.06, 0.165, 0.21]}>
+            <sphereGeometry args={[0.024, 10, 10]} />
             <meshStandardMaterial
               color={agent.accentColor}
               emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity}
+              emissiveIntensity={visorGlow}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh position={[0.06, 0.165, 0.21]}>
+            <sphereGeometry args={[0.024, 10, 10]} />
+            <meshStandardMaterial
+              color={agent.accentColor}
+              emissive={agent.accentColor}
+              emissiveIntensity={visorGlow}
               toneMapped={false}
             />
           </mesh>
         </group>
-
-        <group ref={rightArmRef} position={[0.32, 1.02, 0]}>
-          <mesh position={[0, -0.2, 0]} castShadow>
-            <boxGeometry args={[0.12, 0.42, 0.13]} />
-            <meshStandardMaterial
-              color="#111c36"
-              metalness={0.75}
-              roughness={0.28}
-            />
-          </mesh>
-          <mesh position={[0, -0.36, 0.04]}>
-            <boxGeometry args={[0.13, 0.05, 0.06]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-
-        {/* ================= CYBER HEAD ================= */}
-        <group ref={headRef} position={[0, 1.24, 0]}>
-          {/* Neck */}
-          <mesh position={[0, -0.04, 0]}>
-            <cylinderGeometry args={[0.07, 0.08, 0.1, 6]} />
-            <meshStandardMaterial color="#0b1224" metalness={0.8} roughness={0.3} />
-          </mesh>
-          {/* Head casing */}
-          <mesh position={[0, 0.14, 0]} castShadow>
-            <boxGeometry args={[0.36, 0.3, 0.32]} />
-            <meshStandardMaterial
-              color="#162447"
-              metalness={0.72}
-              roughness={0.24}
-            />
-          </mesh>
-          {/* Dark cyber visor plate */}
-          <mesh position={[0, 0.14, 0.165]}>
-            <boxGeometry args={[0.3, 0.14, 0.02]} />
-            <meshStandardMaterial
-              color="#030712"
-              metalness={0.95}
-              roughness={0.08}
-            />
-          </mesh>
-          {/* Glowing dual cyber eyes */}
-          <mesh position={[-0.075, 0.14, 0.18]}>
-            <boxGeometry args={[0.08, 0.045, 0.015]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity}
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh position={[0.075, 0.14, 0.18]}>
-            <boxGeometry args={[0.08, 0.045, 0.015]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity}
-              toneMapped={false}
-            />
-          </mesh>
-          {/* Twin antenna fins */}
-          <mesh position={[-0.19, 0.24, -0.02]} rotation={[0, 0, 0.2]}>
-            <boxGeometry args={[0.03, 0.18, 0.05]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity * 0.9}
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh position={[0.19, 0.24, -0.02]} rotation={[0, 0, -0.2]}>
-            <boxGeometry args={[0.03, 0.18, 0.05]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={visorIntensity * 0.9}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-
-        {/* Overhead Holographic Status Halo */}
-        <mesh
-          ref={haloRef}
-          position={[0, 1.72, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <ringGeometry args={[0.14, 0.19, 6]} />
-          <meshBasicMaterial
-            color={agent.status === "standby" ? "#64748b" : agent.accentColor}
-            transparent
-            opacity={0.85}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
       </group>
 
-      {/* Floating Compact Robot Nameplate */}
+      {/* Compact Nameplate */}
       {showLabel && (
         <Html
-          position={[0, 2.08, 0]}
+          position={[0, 1.85, 0]}
           center
           distanceFactor={13}
           zIndexRange={[20, 0]}
@@ -573,8 +494,8 @@ export function RobotCharacter({
           <div
             className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide shadow-lg backdrop-blur-sm whitespace-nowrap transition-all ${
               isSelected
-                ? "border-cyan-300 bg-[#07142e]/95 text-white scale-105"
-                : "border-slate-600/60 bg-[#050b1c]/85 text-slate-200"
+                ? "border-amber-300 bg-slate-950/92 text-white scale-105"
+                : "border-slate-600/60 bg-slate-950/80 text-slate-200"
             }`}
           >
             <span
@@ -582,7 +503,7 @@ export function RobotCharacter({
               style={{ backgroundColor: agent.accentColor }}
             />
             <span>{agent.name}</span>
-            <span className="rounded bg-purple-500/25 px-1 text-[8px] uppercase text-purple-200">
+            <span className="rounded bg-amber-400/20 px-1 text-[8px] uppercase text-amber-200">
               SIM
             </span>
           </div>
