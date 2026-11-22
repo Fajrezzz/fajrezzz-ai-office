@@ -15,13 +15,16 @@ import {
   Film,
   ImageDown,
   Loader2,
+  Lock,
   Pause,
   Play,
   RotateCcw,
   Send,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Trash2,
+  Upload,
   Volume2,
   VolumeX,
   XCircle,
@@ -33,12 +36,18 @@ import {
   speakSceneTracks,
 } from "@/lib/pipeline/browser-divisions";
 import {
+  buildScriptSummaryArchive,
+  pickFreshVariationBlueprint,
+} from "@/lib/pipeline/variation-engine";
+import {
+  hasBossOriginalElement,
   PIPELINE_DIVISIONS,
   type PipelineDivisionKey,
   type RealDivisionStatus,
 } from "@/types/pipeline";
 import { useAgency } from "@/store/AgencyContext";
 import { useOffice } from "@/store/OfficeContext";
+import { YouTubeUploadModal } from "@/components/kids/YouTubeUploadModal";
 
 const STATUS_BADGE: Record<
   RealDivisionStatus,
@@ -111,6 +120,8 @@ export function KidsStudioPanel() {
     selectIdeaAndContinue,
     runDivision,
     runProductionAndExport,
+    updateBossOriginality,
+    updateEpisodeMetrics,
     deleteEpisode,
   } = useAgency();
 
@@ -118,6 +129,7 @@ export function KidsStudioPanel() {
   const [platform, setPlatform] = useState<PublishPlatform>("youtube_shorts");
   const [aiStatus, setAiStatus] = useState<AiServerStatus | null>(null);
   const [expandedDiv, setExpandedDiv] = useState<PipelineDivisionKey | null>(null);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   // Playback & TTS preview refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -254,6 +266,28 @@ export function KidsStudioPanel() {
   const editingOut = activeEpisode?.divisions.editing.output ?? null;
   const qcOut = activeEpisode?.divisions.qc.output ?? null;
   const activeVideoUrl = activeEpisode ? videoBlobUrls[activeEpisode.id] : undefined;
+
+  const summaryArchive = useMemo(
+    () => buildScriptSummaryArchive(episodes),
+    [episodes]
+  );
+  const variationBlueprint = useMemo(
+    () =>
+      pickFreshVariationBlueprint(
+        episodes.filter((e) => e.id !== activeEpisode?.id)
+      ),
+    [episodes, activeEpisode?.id]
+  );
+
+  const bossHasOriginal = activeEpisode
+    ? hasBossOriginalElement(activeEpisode.bossOriginality)
+    : false;
+  const canOpenManualPublish = Boolean(
+    activeEpisode &&
+      qcOut?.passed &&
+      bossHasOriginal &&
+      activeEpisode.bossOriginality.confirmedByBoss
+  );
 
   return (
     <div className="space-y-5">
@@ -932,15 +966,28 @@ export function KidsStudioPanel() {
                           </p>
                         </div>
                       </div>
-                      <a
-                        href="https://studio.youtube.com"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-slate-200 hover:border-cyan-400"
+                      <button
+                        type="button"
+                        disabled={!canOpenManualPublish}
+                        onClick={() => setPublishModalOpen(true)}
+                        title={
+                          canOpenManualPublish
+                            ? "Buka paket upload manual ke YouTube Studio"
+                            : "Publish terkunci: butuh QC Lolos + minimal 1 elemen orisinal Bos + centang ACC"
+                        }
+                        className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition ${
+                          canOpenManualPublish
+                            ? "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                            : "cursor-not-allowed border border-slate-700 bg-slate-900 text-slate-500"
+                        }`}
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        <span>YouTube Studio (Upload Manual)</span>
-                      </a>
+                        {canOpenManualPublish ? (
+                          <Upload className="h-3.5 w-3.5" />
+                        ) : (
+                          <Lock className="h-3.5 w-3.5" />
+                        )}
+                        <span>Publish Manual</span>
+                      </button>
                     </div>
 
                     <div className="mt-3 space-y-1.5">
@@ -963,9 +1010,226 @@ export function KidsStudioPanel() {
                     </div>
                   </section>
                 )}
+
+                {/* WAJIB: KONTRIBUSI ORISINAL BOS SEBELUM ACC & PUBLISH MANUAL */}
+                <section className="rounded-3xl border border-amber-400/40 bg-amber-950/15 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="flex items-center gap-1.5 text-xs font-black tracking-wide text-amber-300 uppercase">
+                        <Sparkles className="h-4 w-4" />
+                        <span>Kontribusi Orisinal Bos (Wajib Anti-Konten Massal)</span>
+                      </h3>
+                      <p className="mt-0.5 text-[11px] text-slate-300">
+                        YouTube menolak monetisasi konten massal berbasis template.
+                        Isi minimal <strong>1 elemen orisinal</strong> di bawah &amp;
+                        centang ACC agar tombol <strong>Publish Manual</strong> aktif.
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
+                        bossHasOriginal
+                          ? "bg-emerald-500/20 text-emerald-200"
+                          : "bg-rose-500/20 text-rose-200"
+                      }`}
+                    >
+                      {bossHasOriginal ? "✓ Elemen Orisinal Terisi" : "Wajib Isi Min. 1"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold text-slate-300">
+                        1. Ide Orisinal / Pengalaman Bos
+                      </label>
+                      <input
+                        type="text"
+                        value={activeEpisode.bossOriginality.customIdea}
+                        onChange={(e) =>
+                          updateBossOriginality(activeEpisode.id, {
+                            customIdea: e.target.value,
+                          })
+                        }
+                        placeholder="Misal: Kucingnya ternyata suka bunyi lonceng sepeda..."
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold text-slate-300">
+                        2. Twist Cerita Unik
+                      </label>
+                      <input
+                        type="text"
+                        value={activeEpisode.bossOriginality.customTwist}
+                        onChange={(e) =>
+                          updateBossOriginality(activeEpisode.id, {
+                            customTwist: e.target.value,
+                          })
+                        }
+                        placeholder="Misal: Jembatannya berubah jadi perosotan pelangi!"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold text-slate-300">
+                        3. Kalimat / Suara Khas Bos
+                      </label>
+                      <input
+                        type="text"
+                        value={activeEpisode.bossOriginality.customVoiceLine}
+                        onChange={(e) =>
+                          updateBossOriginality(activeEpisode.id, {
+                            customVoiceLine: e.target.value,
+                          })
+                        }
+                        placeholder="Misal: Ayo hitung sama-sama ya teman-teman!"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold text-slate-300">
+                        4. Karakter Pendukung Baru dari Bos
+                      </label>
+                      <input
+                        type="text"
+                        value={activeEpisode.bossOriginality.customCharacter}
+                        onChange={(e) =>
+                          updateBossOriginality(activeEpisode.id, {
+                            customCharacter: e.target.value,
+                          })
+                        }
+                        placeholder="Misal: Piko si anak kucing belang oranye"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-amber-400/20 pt-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={activeEpisode.bossOriginality.confirmedByBoss}
+                        disabled={!bossHasOriginal}
+                        onChange={(e) =>
+                          updateBossOriginality(activeEpisode.id, {
+                            confirmedByBoss: e.target.checked,
+                            confirmedAt: e.target.checked
+                              ? new Date().toISOString()
+                              : null,
+                          })
+                        }
+                        className="h-4 w-4 accent-amber-400"
+                      />
+                      <span>
+                        Saya (Bos) ACC naskah &amp; menjamin episode ini memuat elemen
+                        orisinal manusia.
+                      </span>
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      {bossHasOriginal && scriptOut && (
+                        <button
+                          type="button"
+                          disabled={Boolean(runningDivision)}
+                          onClick={async () => {
+                            const updated = await runDivision(
+                              activeEpisode.id,
+                              "script"
+                            );
+                            if (updated?.divisions.script.status === "done") {
+                              await runDivision(activeEpisode.id, "qc", updated);
+                            }
+                          }}
+                          className="rounded-xl border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-[11px] font-bold text-amber-200 hover:bg-amber-500/25 disabled:opacity-40"
+                        >
+                          Terapkan ke Naskah + Cek QC Ulang
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={!canOpenManualPublish}
+                        onClick={() => setPublishModalOpen(true)}
+                        className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition ${
+                          canOpenManualPublish
+                            ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 hover:brightness-110"
+                            : "cursor-not-allowed border border-slate-700 bg-slate-900 text-slate-500"
+                        }`}
+                      >
+                        {canOpenManualPublish ? (
+                          <ExternalLink className="h-4 w-4" />
+                        ) : (
+                          <Lock className="h-4 w-4" />
+                        )}
+                        <span>
+                          {canOpenManualPublish
+                            ? "Publish Manual ke YouTube"
+                            : "Publish Nonaktif (Belum ACC / QC)"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* VARIATION ENGINE & ARSIP RINGKASAN NASKAH */}
+                <section className="rounded-3xl border border-slate-800 bg-slate-900/75 p-4 text-xs">
+                  <div className="font-black text-cyan-300">
+                    🧬 Variation Engine &amp; Arsip Ringkasan Naskah (
+                    {summaryArchive.length} Episode Tersimpan)
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    Rekomendasi variasi segar untuk episode berikutnya agar tidak
+                    terdeteksi sebagai konten massal seragam:
+                  </p>
+                  <div className="mt-2 grid gap-2 text-[11px] text-slate-300 sm:grid-cols-2">
+                    <div className="rounded-xl bg-slate-950/75 p-2.5">
+                      <span className="font-bold text-white">Struktur Baru:</span>{" "}
+                      {variationBlueprint.recommendedStructures[0]}
+                    </div>
+                    <div className="rounded-xl bg-slate-950/75 p-2.5">
+                      <span className="font-bold text-white">Latar Baru:</span>{" "}
+                      {variationBlueprint.recommendedSettings[0]}
+                    </div>
+                    <div className="rounded-xl bg-slate-950/75 p-2.5">
+                      <span className="font-bold text-white">Karakter Baru:</span>{" "}
+                      {variationBlueprint.recommendedCharacters[0]}
+                    </div>
+                    <div className="rounded-xl bg-slate-950/75 p-2.5">
+                      <span className="font-bold text-white">Pesan Baru:</span>{" "}
+                      {variationBlueprint.recommendedMorals[0]}
+                    </div>
+                  </div>
+                  {summaryArchive.length > 0 && (
+                    <div className="mt-2.5 max-h-32 space-y-1.5 overflow-y-auto">
+                      {summaryArchive.slice(0, 6).map((rec) => (
+                        <div
+                          key={rec.episodeId}
+                          className="rounded-xl border border-slate-800 bg-slate-950/60 px-2.5 py-1.5 text-[10px] text-slate-300"
+                        >
+                          <span className="font-bold text-amber-300">
+                            Ep #{rec.episodeNumber}: {rec.title}
+                          </span>{" "}
+                          — {rec.summary}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
             </div>
           )}
+
+          {/* Strictly Manual Publish Handoff Modal */}
+          <YouTubeUploadModal
+            open={publishModalOpen}
+            onClose={() => setPublishModalOpen(false)}
+            episode={activeEpisode}
+            videoBlobUrl={activeVideoUrl}
+            onConfirmManualUpload={(youtubeUrl) => {
+              updateEpisodeMetrics(activeEpisode.id, {
+                youtubeUrl,
+                uploadedAt: new Date().toISOString(),
+              });
+            }}
+          />
         </div>
       )}
     </div>

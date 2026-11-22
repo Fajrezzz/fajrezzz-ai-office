@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
+import {
+  MORAL_LESSON_CATALOG,
+  SETTING_CATALOG,
+  STORY_STRUCTURES,
+  SUPPORTING_CHARACTER_CATALOG,
+} from "@/lib/pipeline/variation-engine";
 import type { KidsThemeId } from "@/lib/kids-studio/episode-brain";
 import type {
   PipelineScene,
@@ -281,14 +287,40 @@ Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 }
 WAJIB hasilkan tepat 5 ide yang masing-masing berbeda struktur cerita, latar, karakter pendukung, dan sudut pandang.`;
 
+      const avoidStructSet = new Set(
+        (input.avoidStructures ?? []).map((s) => s.toLowerCase().trim())
+      );
+      const avoidSettingSet = new Set(
+        (input.avoidSettings ?? []).map((s) => s.toLowerCase().trim())
+      );
+      const avoidCharSet = new Set(
+        (input.avoidCharacters ?? []).map((s) => s.toLowerCase().trim())
+      );
+
+      const freshStructures = STORY_STRUCTURES.filter(
+        (s) => !avoidStructSet.has(s.toLowerCase())
+      ).slice(0, 5);
+      const freshSettings = SETTING_CATALOG.filter(
+        (s) => !avoidSettingSet.has(s.toLowerCase())
+      ).slice(0, 5);
+      const freshChars = SUPPORTING_CHARACTER_CATALOG.filter(
+        (s) => !avoidCharSet.has(s.toLowerCase())
+      ).slice(0, 5);
+
       const userPrompt = `Tema dari Bos: "${input.theme}"
 Platform: ${input.platform}
 Judul episode lama yang WAJIB dihindari sudutnya: ${JSON.stringify(input.previousEpisodeTitles ?? [])}
-Struktur cerita lama yang dihindari: ${JSON.stringify(input.avoidStructures ?? [])}
-Latar lama yang dihindari: ${JSON.stringify(input.avoidSettings ?? [])}
-Karakter pendukung lama yang dihindari: ${JSON.stringify(input.avoidCharacters ?? [])}
+Struktur cerita lama yang DILARANG diulang: ${JSON.stringify(input.avoidStructures ?? [])}
+Latar lama yang DILARANG diulang: ${JSON.stringify(input.avoidSettings ?? [])}
+Karakter pendukung lama yang DILARANG diulang: ${JSON.stringify(input.avoidCharacters ?? [])}
 
-Hasilkan 5 ide episode baru yang segar, orisinal, aman untuk anak, dan tidak terasa seperti template berulang.`;
+VARIATION ENGINE — Gunakan variasi baru berbeda untuk tiap ide dari 5 ide:
+- Rekomendasi Struktur Cerita Baru: ${JSON.stringify(freshStructures)}
+- Rekomendasi Latar Baru: ${JSON.stringify(freshSettings)}
+- Rekomendasi Karakter Pendukung Baru: ${JSON.stringify(freshChars)}
+- Rekomendasi Pesan Moral Baru: ${JSON.stringify(MORAL_LESSON_CATALOG.slice(0, 5))}
+
+Hasilkan tepat 5 ide episode baru yang segar, orisinal, aman untuk anak, masing-masing berbeda struktur cerita, latar, karakter pendukung, dan pesan moral.`;
 
       const llm = await callFreeTierLLM<{ ideas?: Partial<ResearchIdeaItem>[] }>({
         systemPrompt,
