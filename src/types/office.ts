@@ -4,7 +4,15 @@ export type RobotAnimationState = "idle" | "working" | "walking" | "standby";
 
 export type PerformanceMode = "eco" | "balanced" | "high";
 
-export type CameraPreset = "isometric" | "overview" | "workstations" | "holohub";
+export type FloorView = "all" | "l1" | "l2" | "l3" | "roof";
+
+export type CameraPreset =
+  | "front"
+  | "isometric"
+  | "interior"
+  | "pool"
+  | "supercar"
+  | "rooftop";
 
 export type TaskStatus = "backlog" | "in_progress" | "review" | "done";
 
