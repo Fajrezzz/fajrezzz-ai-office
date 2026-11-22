@@ -39,6 +39,7 @@ export function AgentManagementPanel({ compact = false }: { compact?: boolean })
     sendAgentToWaypoint,
     assignAgentWorkstation,
     setActiveSection,
+    setCameraPreset,
   } = useOffice();
 
   return (
@@ -272,6 +273,7 @@ export function AgentManagementPanel({ compact = false }: { compact?: boolean })
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedAgentId(agent.id);
+                      setCameraPreset("interior");
                       setActiveSection("office");
                     }}
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20"

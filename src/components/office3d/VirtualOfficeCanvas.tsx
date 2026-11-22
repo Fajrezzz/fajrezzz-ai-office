@@ -135,7 +135,7 @@ export function VirtualOfficeCanvas({
             className="h-full w-full touch-none"
             shadows={!isEco}
             dpr={dpr}
-            camera={{ position: [13.5, 11.2, 13.5], fov: 32, near: 0.5, far: 80 }}
+            camera={{ position: [2.5, 11.2, 26.5], fov: 38, near: 0.5, far: 120 }}
             gl={{
               antialias: !isEco,
               powerPreference: isEco ? "low-power" : "high-performance",

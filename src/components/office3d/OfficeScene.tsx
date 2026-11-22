@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
+import { CyberOutdoorCampus } from "@/components/office3d/CyberOutdoorCampus";
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
@@ -15,36 +16,50 @@ const CAMERA_PRESETS: Record<
   CameraPreset,
   { position: [number, number, number]; target: [number, number, number] }
 > = {
+  front: {
+    position: [2.5, 11.2, 26.5],
+    target: [0, 3.8, 0.5],
+  },
   isometric: {
-    position: [13.5, 11.2, 13.5],
-    target: [0, 0.5, 0],
+    position: [21.5, 15.8, 22.5],
+    target: [0, 3.8, 0.0],
   },
-  overview: {
-    position: [0.5, 16.5, 12.5],
-    target: [0, 0.2, 0],
+  interior: {
+    position: [0.6, 5.7, 4.4],
+    target: [0, 4.5, -3.6],
   },
-  workstations: {
-    position: [4.8, 7.6, 8.6],
-    target: [-2.0, 0.7, -1.6],
+  pool: {
+    position: [-10.5, 4.4, 17.0],
+    target: [-1.5, 2.2, 5.2],
   },
-  holohub: {
-    position: [6.5, 5.2, 6.8],
-    target: [0.4, 1.0, 0.8],
+  supercar: {
+    position: [12.4, 3.0, 14.2],
+    target: [5.2, 1.0, 7.8],
+  },
+  rooftop: {
+    position: [12.5, 16.5, 10.5],
+    target: [0, 9.8, -3.0],
   },
 };
 
 function CameraRig({
   preset,
   resetTick,
+  autoRotate,
 }: {
   preset: CameraPreset;
   resetTick: number;
+  autoRotate: boolean;
 }) {
   const { camera } = useThree();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const animatingRef = useRef<boolean>(false);
-  const goalPosRef = useRef(new THREE.Vector3(...CAMERA_PRESETS.isometric.position));
-  const goalTargetRef = useRef(new THREE.Vector3(...CAMERA_PRESETS.isometric.target));
+  const goalPosRef = useRef(
+    new THREE.Vector3(...CAMERA_PRESETS.front.position)
+  );
+  const goalTargetRef = useRef(
+    new THREE.Vector3(...CAMERA_PRESETS.front.target)
+  );
 
   useEffect(() => {
     const cfg = CAMERA_PRESETS[preset];
@@ -78,19 +93,20 @@ function CameraRig({
       enableRotate
       enableZoom
       enablePan
+      autoRotate={autoRotate}
+      autoRotateSpeed={0.85}
       rotateSpeed={0.85}
-      zoomSpeed={0.9}
-      panSpeed={0.75}
-      minDistance={6.5}
-      maxDistance={26}
-      minPolarAngle={0.35}
-      maxPolarAngle={Math.PI / 2.15}
+      zoomSpeed={0.95}
+      panSpeed={0.8}
+      minDistance={5.5}
+      maxDistance={46}
+      minPolarAngle={0.25}
+      maxPolarAngle={Math.PI / 2.08}
       touches={{
         ONE: THREE.TOUCH.ROTATE,
         TWO: THREE.TOUCH.DOLLY_PAN,
       }}
       onStart={() => {
-        // Yield immediately when user interacts via mouse or touch
         animatingRef.current = false;
       }}
     />
@@ -105,6 +121,8 @@ export function OfficeScene() {
     setSelectedAgentId,
     cameraPreset,
     cameraResetTick,
+    activeFloor,
+    autoRotate,
     performanceMode,
     isSimulationRunning,
     showLabelsIn3D,
@@ -113,69 +131,97 @@ export function OfficeScene() {
   } = useOffice();
 
   const enableShadows = performanceMode !== "eco";
+  const showOperationsFloorContent = activeFloor !== "l1";
 
   return (
     <>
-      <color attach="background" args={["#040814"]} />
-      <fog attach="fog" args={["#040814", 20, 40]} />
+      {/* Deep Cyberpunk Night Sky Backdrop */}
+      <color attach="background" args={["#050a1a"]} />
+      <fog attach="fog" args={["#050a1a", 34, 72]} />
 
-      {/* Cyberpunk Balanced Lighting (Android-friendly light count) */}
-      <hemisphereLight args={["#38bdf8", "#0b1120", 0.65]} />
+      {/* Bright Cyberpunk Futuristic Illumination (tuned so lights & glass shine vividly) */}
+      <hemisphereLight args={["#7dd3fc", "#1e1b4b", 0.95]} />
       <directionalLight
-        position={[10, 16, 10]}
-        intensity={1.15}
+        position={[16, 26, 20]}
+        intensity={1.35}
         color="#e0f2fe"
         castShadow={enableShadows}
         shadow-mapSize-width={performanceMode === "high" ? 1024 : 512}
         shadow-mapSize-height={performanceMode === "high" ? 1024 : 512}
-        shadow-camera-near={1}
-        shadow-camera-far={36}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
+        shadow-camera-near={2}
+        shadow-camera-far={65}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
       />
-      {/* Electric blue & purple neon accent fill lights (1 light in Eco mode for Android GPU savings) */}
+
+      {/* Bright Interior Floor 2 Neon Glow Light */}
       <pointLight
-        position={[-4.5, 3.6, -4.2]}
-        intensity={performanceMode === "eco" ? 7 : 6}
-        distance={16}
+        position={[0, 5.8, -2.5]}
+        intensity={18}
+        distance={22}
+        color="#bae6fd"
+      />
+
+      {/* Pool & Supercar Vibrant Cyber Accent Light */}
+      <pointLight
+        position={[2.0, 4.5, 9.0]}
+        intensity={15}
+        distance={22}
         color="#00e5ff"
       />
+
+      {/* Extra Purple Rim Light on Balanced/High modes */}
       {performanceMode !== "eco" && (
         <pointLight
-          position={[3.8, 3.4, 2.8]}
-          intensity={6}
-          distance={14}
-          color="#a855f7"
+          position={[-7.5, 8.0, 2.0]}
+          intensity={14}
+          distance={24}
+          color="#c084fc"
         />
       )}
 
-      <CameraRig preset={cameraPreset} resetTick={cameraResetTick} />
-
-      <OfficeArchitecture performanceMode={performanceMode} />
-
-      <WorkstationCluster
-        workstations={workstations}
-        showLabels={showLabelsIn3D}
-        onSelectWorkstation={(ws) => {
-          if (selectedAgentId) {
-            sendAgentToWaypoint(selectedAgentId, ws.waypointId);
-          }
-        }}
+      <CameraRig
+        preset={cameraPreset}
+        resetTick={cameraResetTick}
+        autoRotate={autoRotate}
       />
 
-      {agents.map((agent) => (
-        <RobotCharacter
-          key={agent.id}
-          agent={agent}
-          isSelected={agent.id === selectedAgentId}
-          isSimulationRunning={isSimulationRunning}
-          showLabel={showLabelsIn3D}
-          onSelect={setSelectedAgentId}
-          onArrived={notifyAgentArrived}
-        />
-      ))}
+      <CyberOutdoorCampus performanceMode={performanceMode} />
+
+      <OfficeArchitecture
+        performanceMode={performanceMode}
+        activeFloor={activeFloor}
+        showLabels={showLabelsIn3D}
+      />
+
+      {showOperationsFloorContent && (
+        <>
+          <WorkstationCluster
+            workstations={workstations}
+            agents={agents}
+            showLabels={showLabelsIn3D}
+            onSelectWorkstation={(ws) => {
+              if (selectedAgentId) {
+                sendAgentToWaypoint(selectedAgentId, ws.waypointId);
+              }
+            }}
+          />
+
+          {agents.map((agent) => (
+            <RobotCharacter
+              key={agent.id}
+              agent={agent}
+              isSelected={agent.id === selectedAgentId}
+              isSimulationRunning={isSimulationRunning}
+              showLabel={showLabelsIn3D}
+              onSelect={setSelectedAgentId}
+              onArrived={notifyAgentArrived}
+            />
+          ))}
+        </>
+      )}
     </>
   );
 }

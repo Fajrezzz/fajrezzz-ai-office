@@ -20,6 +20,7 @@ import type {
   ActivityEvent,
   ActivitySeverity,
   CameraPreset,
+  FloorView,
   NavSection,
   OfficeAgent,
   OfficeTask,
@@ -50,6 +51,10 @@ interface OfficeContextValue {
   cameraPreset: CameraPreset;
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
+  activeFloor: FloorView;
+  setActiveFloor: (floor: FloorView) => void;
+  autoRotate: boolean;
+  setAutoRotate: (rotate: boolean) => void;
   performanceMode: PerformanceMode;
   performanceReady: boolean;
   setPerformanceMode: (mode: PerformanceMode) => void;
@@ -89,11 +94,34 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     "unit-01"
   );
   const [cameraPreset, setCameraPresetState] =
-    useState<CameraPreset>("isometric");
+    useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
+  const [activeFloor, setActiveFloorState] = useState<FloorView>("all");
+  const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
   const setCameraPreset = useCallback((preset: CameraPreset) => {
     setCameraPresetState(preset);
+    setCameraResetTick((tick) => tick + 1);
+    if (preset === "interior") {
+      setActiveFloorState("l2");
+    } else if (preset === "rooftop") {
+      setActiveFloorState("roof");
+    } else if (preset === "front" || preset === "isometric" || preset === "pool" || preset === "supercar") {
+      setActiveFloorState("all");
+    }
+  }, []);
+
+  const setActiveFloor = useCallback((floor: FloorView) => {
+    setActiveFloorState(floor);
+    if (floor === "l2") {
+      setCameraPresetState("interior");
+    } else if (floor === "roof") {
+      setCameraPresetState("rooftop");
+    } else if (floor === "all") {
+      setCameraPresetState("front");
+    } else if (floor === "l1" || floor === "l3") {
+      setCameraPresetState("isometric");
+    }
     setCameraResetTick((tick) => tick + 1);
   }, []);
   const [performanceMode, setPerformanceModeState] =
@@ -567,6 +595,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
+      activeFloor,
+      setActiveFloor,
+      autoRotate,
+      setAutoRotate,
       performanceMode,
       performanceReady,
       setPerformanceMode,
@@ -595,6 +627,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
+      activeFloor,
+      setActiveFloor,
+      autoRotate,
       performanceMode,
       performanceReady,
       setPerformanceMode,
