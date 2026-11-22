@@ -6,12 +6,12 @@ import { useOffice } from "@/store/OfficeContext";
 import type { NavSection } from "@/types/office";
 
 const SECTION_TITLES: Record<NavSection, string> = {
-  dashboard: "🎬 Studio YouTube Animasi Anak",
+  dashboard: "📱 Komando Bos & Agensi AI",
   office: "🏢 Kantor 3D & Bos FAJREZ",
-  studio: "🎬 Studio YouTube Animasi Anak",
-  agents: "👥 Tim 10 Karyawan & Aktivitas",
-  tasks: "👥 Tim 10 Karyawan & Aktivitas",
-  activity: "👥 Tim 10 Karyawan & Aktivitas",
+  studio: "📱 Komando Bos & Agensi AI",
+  agents: "👥 Tim 10 Divisi AI & Aktivitas",
+  tasks: "👥 Tim 10 Divisi AI & Aktivitas",
+  activity: "👥 Tim 10 Divisi AI & Aktivitas",
 };
 
 export function TopHeader({

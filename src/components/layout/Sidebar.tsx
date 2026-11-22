@@ -28,8 +28,8 @@ const NAV_ITEMS: {
 }[] = [
   {
     id: "dashboard",
-    label: "Studio YT Anak",
-    shortLabel: "Studio YT",
+    label: "Komando Bos",
+    shortLabel: "Komando",
     icon: Film,
   },
   {
@@ -40,7 +40,7 @@ const NAV_ITEMS: {
   },
   {
     id: "agents",
-    label: "Tim (10 Staff)",
+    label: "Tim & Divisi",
     shortLabel: "Tim 10",
     icon: Users,
   },
