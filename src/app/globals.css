@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --bg-navy: #030712;
+  --surface-navy: #070f23;
+  --neon-blue: #00e5ff;
+  --neon-purple: #a855f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--bg-navy);
+  color: #f1f5f9;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Subtle cyberpunk ambient grid backdrop */
+body {
+  background-image: radial-gradient(
+      circle at 15% 10%,
+      rgba(0, 229, 255, 0.08),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(168, 85, 247, 0.09),
+      transparent 38%
+    );
+}
+
+/* Sleek cyber scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #040814;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.55);
+}
