@@ -594,19 +594,98 @@ export function OfficeArchitecture({
                 roughness={0.08}
               />
             </mesh>
-            {[-1.3, 0, 1.3].map((sz, i) => (
-              <group key={i} position={[-0.78, 0, sz]}>
-                <mesh position={[0, 0.36, 0]}>
-                  <cylinderGeometry args={[0.04, 0.04, 0.72, 8]} />
-                  <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+            {/* Espresso Counter Coffee Cups */}
+            {[-1.3, 0, 1.3].map((cz, ci) => (
+              <group key={`bar-cup-${ci}`} position={[-0.28, 1.17, cz]}>
+                <mesh>
+                  <cylinderGeometry args={[0.05, 0.042, 0.09, 10]} />
+                  <meshStandardMaterial color="#f8fafc" roughness={0.25} />
                 </mesh>
-                <mesh position={[0, 0.74, 0]} castShadow>
-                  <cylinderGeometry args={[0.22, 0.22, 0.08, 12]} />
-                  <meshStandardMaterial color="#4b5563" roughness={0.78} />
+                <mesh position={[0, 0.04, 0]}>
+                  <cylinderGeometry args={[0.043, 0.043, 0.015, 10]} />
+                  <meshStandardMaterial color="#3b1f0e" roughness={0.2} />
+                </mesh>
+              </group>
+            ))}
+            {/* 3 Comfortable Espresso Bar Lounge Chairs (Seated Height for Idle Staff) */}
+            {[-1.3, 0, 1.3].map((sz, i) => (
+              <group key={i} position={[-0.85, 0, sz]}>
+                <mesh position={[0, 0.24, 0]}>
+                  <cylinderGeometry args={[0.04, 0.06, 0.48, 8]} />
+                  <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+                </mesh>
+                <mesh position={[0, 0.02, 0]}>
+                  <cylinderGeometry args={[0.24, 0.24, 0.03, 12]} />
+                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+                </mesh>
+                {/* Seat Cushion at Y=0.49 */}
+                <mesh position={[0, 0.49, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.48, 0.08, 0.48]} />
+                  <meshStandardMaterial color="#5c4033" roughness={0.76} />
+                </mesh>
+                {/* Low Curved Backrest on Left (-X) so Agent Sits Facing +X Counter */}
+                <mesh position={[-0.22, 0.72, 0]} castShadow>
+                  <boxGeometry args={[0.07, 0.44, 0.46]} />
+                  <meshStandardMaterial color="#4a3328" roughness={0.78} />
                 </mesh>
               </group>
             ))}
           </group>
+
+          {/* 5 Panoramic Glass Cafe Lounge Chairs + Coffee Tables (Z = 3.05, Facing North) */}
+          {[-9.0, -3.0, 0.0, 3.0, 9.0].map((cx, idx) => (
+            <group key={`l2-cafe-seat-${idx}`} position={[cx, FLOOR_2_Y, 3.05]}>
+              {/* Modern Walnut & Charcoal Lounge Armchair */}
+              <mesh position={[0, 0.48, 0]} castShadow receiveShadow>
+                <boxGeometry args={[0.62, 0.1, 0.56]} />
+                <meshStandardMaterial color="#334155" roughness={0.78} />
+              </mesh>
+              {/* Backrest on South Side (+Z) so Seated Agent Faces North (-Z) */}
+              <mesh position={[0, 0.78, 0.24]} castShadow>
+                <boxGeometry args={[0.62, 0.56, 0.09]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.74} />
+              </mesh>
+              {/* Armrests */}
+              {[-0.28, 0.28].map((ax, ai) => (
+                <mesh key={ai} position={[ax, 0.63, 0.02]} castShadow>
+                  <boxGeometry args={[0.07, 0.22, 0.52]} />
+                  <meshStandardMaterial color="#1e293b" roughness={0.72} />
+                </mesh>
+              ))}
+              {/* 4 Tapered Oak Legs */}
+              {[
+                [-0.24, -0.22],
+                [0.24, -0.22],
+                [-0.24, 0.22],
+                [0.24, 0.22],
+              ].map(([lx, lz], li) => (
+                <mesh key={li} position={[lx, 0.23, lz]}>
+                  <cylinderGeometry args={[0.026, 0.02, 0.46, 8]} />
+                  <meshStandardMaterial color="#8b5e3c" roughness={0.55} />
+                </mesh>
+              ))}
+              {/* Round Cafe Side Coffee Table right in front of the chair */}
+              <group position={[0.56, 0, -0.45]}>
+                <mesh position={[0, 0.29, 0]}>
+                  <cylinderGeometry args={[0.032, 0.04, 0.58, 10]} />
+                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+                </mesh>
+                <mesh position={[0, 0.015, 0]}>
+                  <cylinderGeometry args={[0.22, 0.22, 0.03, 12]} />
+                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+                </mesh>
+                <mesh position={[0, 0.59, 0]} castShadow receiveShadow>
+                  <cylinderGeometry args={[0.34, 0.34, 0.04, 18]} />
+                  <meshStandardMaterial color="#9a6c43" roughness={0.44} />
+                </mesh>
+                {/* Ceramic Saucer on Cafe Table */}
+                <mesh position={[-0.08, 0.62, 0.04]}>
+                  <cylinderGeometry args={[0.075, 0.06, 0.014, 12]} />
+                  <meshStandardMaterial color="#f8fafc" roughness={0.25} />
+                </mesh>
+              </group>
+            </group>
+          ))}
 
           {/* Side Walls & Timber Louver Fins */}
           {[-14, 14].map((x, idx) => (

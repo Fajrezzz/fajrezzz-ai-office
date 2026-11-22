@@ -36,6 +36,9 @@ export function RobotCharacter({
   const rightArmRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
+  const coffeeMugRef = useRef<THREE.Group>(null);
+  const steam1Ref = useRef<THREE.Mesh>(null);
+  const steam2Ref = useRef<THREE.Mesh>(null);
 
   const initialPos = useMemo(() => {
     const wp = OFFICE_WAYPOINTS[agent.currentWaypointId];
@@ -154,19 +157,31 @@ export function RobotCharacter({
           root.rotation.y += diff * Math.min(1, dt * 10);
         }
       }
-    } else if (agent.status === "working") {
+    } else if (agent.status === "working" || agent.status === "error") {
       const targetAngle = Math.PI;
       let diff = targetAngle - root.rotation.y;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       root.rotation.y += diff * Math.min(1, dt * 8);
+    } else if (agent.status === "idle") {
+      // Face the lounge chair / coffee table direction cleanly
+      const seatWp = OFFICE_WAYPOINTS[agent.currentWaypointId];
+      const targetAngle = seatWp?.facingYaw ?? Math.PI;
+      let diff = targetAngle - root.rotation.y;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      root.rotation.y += diff * Math.min(1, dt * 6);
     }
 
-    const isWorkingSeated = !isMoving && agent.status === "working";
+    const isWorkingSeated =
+      !isMoving && (agent.status === "working" || agent.status === "error");
+    const isIdleSeatedCoffee = !isMoving && agent.status === "idle";
     const verticalOffset = isMoving
       ? Math.abs(Math.sin(t * 7.2)) * 0.04
       : isWorkingSeated
       ? -0.22
+      : isIdleSeatedCoffee
+      ? -0.23
       : 0;
 
     root.position.set(
@@ -174,6 +189,10 @@ export function RobotCharacter({
       currentPosRef.current.y + verticalOffset,
       currentPosRef.current.z
     );
+
+    if (coffeeMugRef.current) {
+      coffeeMugRef.current.visible = isIdleSeatedCoffee;
+    }
 
     if (isMoving) {
       const stride = Math.sin(t * 7.2);
@@ -193,6 +212,7 @@ export function RobotCharacter({
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 1.5) * 0.1;
+        headRef.current.rotation.x = 0;
       }
     } else if (isWorkingSeated) {
       if (leftLegRef.current) leftLegRef.current.rotation.x = -1.25;
@@ -211,25 +231,60 @@ export function RobotCharacter({
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 0.9) * 0.18;
+        headRef.current.rotation.x = 0.08;
       }
     } else {
-      const breathe = Math.sin(t * 2.1);
-      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+      // REAL SEATED RELAXED POSE WITH COFFEE MUG & PERIODIC SIPPING
+      const breathe = Math.sin(t * 1.9);
+      const sipCycle = (t * 0.22) % 1; // 1 sip every ~4.5 seconds
+      const sipLift =
+        sipCycle < 0.28 ? Math.sin((sipCycle / 0.28) * Math.PI) : 0;
+
+      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.32;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.32;
+
+      // Left arm rests relaxed on armrest / lap
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = 0.04 + breathe * 0.02;
-        leftArmRef.current.rotation.z = 0.08;
+        leftArmRef.current.rotation.x = -0.58 + breathe * 0.03;
+        leftArmRef.current.rotation.z = 0.14;
       }
+
+      // Right arm holds real 3D coffee mug and lifts periodically to sip
+      const rightArmX = -0.96 - sipLift * 0.56 + breathe * 0.02;
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = 0.04 - breathe * 0.02;
-        rightArmRef.current.rotation.z = -0.08;
+        rightArmRef.current.rotation.x = rightArmX;
+        rightArmRef.current.rotation.z = 0.18 + sipLift * 0.16;
       }
+
+      // Keep coffee mug upright so espresso never spills
+      if (coffeeMugRef.current) {
+        coffeeMugRef.current.rotation.x = -rightArmX;
+      }
+
+      // Animate rising warm coffee steam puffs
+      if (steam1Ref.current) {
+        const s1 = (t * 0.7) % 1;
+        steam1Ref.current.position.y = 0.08 + s1 * 0.13;
+        steam1Ref.current.position.x = Math.sin(t * 2.4) * 0.014;
+        const sc1 = 0.6 + s1 * 0.8;
+        steam1Ref.current.scale.set(sc1, sc1, sc1);
+      }
+      if (steam2Ref.current) {
+        const s2 = (t * 0.7 + 0.5) % 1;
+        steam2Ref.current.position.y = 0.08 + s2 * 0.13;
+        steam2Ref.current.position.x = Math.cos(t * 2.1) * 0.014;
+        const sc2 = 0.6 + s2 * 0.8;
+        steam2Ref.current.scale.set(sc2, sc2, sc2);
+      }
+
       if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0;
-        torsoRef.current.position.y = 1.02 + breathe * 0.012;
+        torsoRef.current.rotation.x = -0.05;
+        torsoRef.current.position.y = 1.02 + breathe * 0.01;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.7) * 0.24;
+        headRef.current.rotation.y =
+          (1 - sipLift) * Math.sin(t * 0.55) * 0.24;
+        headRef.current.rotation.x = -sipLift * 0.12;
       }
     }
   });
@@ -402,6 +457,49 @@ export function RobotCharacter({
             <sphereGeometry args={[0.05, 10, 10]} />
             <meshStandardMaterial color={skinColor} roughness={0.72} />
           </mesh>
+
+          {/* REAL 3D CERAMIC COFFEE MUG + DARK ESPRESSO + WARM STEAM (visible when seated IDLE) */}
+          <group ref={coffeeMugRef} position={[0, -0.52, 0.06]} visible={false}>
+            {/* Ceramic Mug Body */}
+            <mesh castShadow>
+              <cylinderGeometry args={[0.052, 0.045, 0.11, 14]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.22} metalness={0.05} />
+            </mesh>
+            {/* Accent Stripe Around Mug */}
+            <mesh position={[0, 0, 0]}>
+              <cylinderGeometry args={[0.053, 0.05, 0.024, 14]} />
+              <meshStandardMaterial color="#c2410c" roughness={0.35} />
+            </mesh>
+            {/* Dark Hot Espresso Surface */}
+            <mesh position={[0, 0.048, 0]}>
+              <cylinderGeometry args={[0.044, 0.044, 0.012, 12]} />
+              <meshStandardMaterial color="#3b1f0e" roughness={0.18} />
+            </mesh>
+            {/* Mug Handle */}
+            <mesh position={[0.055, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.028, 0.008, 8, 14, Math.PI]} />
+              <meshStandardMaterial color="#f1f5f9" roughness={0.25} />
+            </mesh>
+            {/* Rising Warm Coffee Steam Puffs */}
+            <mesh ref={steam1Ref} position={[0, 0.09, 0]}>
+              <sphereGeometry args={[0.018, 8, 8]} />
+              <meshStandardMaterial
+                color="#ffffff"
+                transparent
+                opacity={0.42}
+                depthWrite={false}
+              />
+            </mesh>
+            <mesh ref={steam2Ref} position={[0.01, 0.14, 0]}>
+              <sphereGeometry args={[0.014, 8, 8]} />
+              <meshStandardMaterial
+                color="#f8fafc"
+                transparent
+                opacity={0.3}
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
         </group>
 
         {/* NECK & SCULPTED REALISTIC HEAD */}

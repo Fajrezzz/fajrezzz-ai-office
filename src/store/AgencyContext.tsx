@@ -548,7 +548,7 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
               .slice(0, 8),
             bossOriginalElements: currentEp.bossOriginality,
           };
-          markRunning(input, `Menulis naskah bahasa Indonesia ramah anak per adegan...`);
+          markRunning(input, `Menulis naskah YouTube/TikTok bahasa Indonesia per segmen...`);
 
           const res = await fetch("/api/pipeline/script", {
             method: "POST",
@@ -681,7 +681,7 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
                   e.divisions.script.output?.supportingCharacter || "",
               })),
           };
-          markRunning(input, `Menjalankan audit QC (durasi, kata terlarang, keamanan anak, anti-duplikat)...`);
+          markRunning(input, `Menjalankan audit QC (durasi, kata terlarang, pedoman YouTube, anti-duplikat)...`);
 
           const res = await fetch("/api/pipeline/qc", {
             method: "POST",

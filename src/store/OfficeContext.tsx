@@ -163,14 +163,14 @@ interface OfficeContextValue {
 const OfficeContext = createContext<OfficeContextValue | null>(null);
 
 const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
-  "staff-01": "wp-l2-lounge",
-  "staff-02": "wp-l2-promenade",
-  "staff-03": "wp-l2-lounge",
-  "staff-04": "wp-l2-front-4",
-  "staff-05": "wp-l2-front-1",
-  "staff-06": "wp-l2-front-2",
-  "staff-07": "wp-l2-front-3",
-  "staff-08": "wp-l2-promenade",
+  "staff-01": "wp-seat-06",
+  "staff-02": "wp-seat-03",
+  "staff-03": "wp-seat-07",
+  "staff-04": "wp-seat-05",
+  "staff-05": "wp-seat-01",
+  "staff-06": "wp-seat-02",
+  "staff-07": "wp-seat-04",
+  "staff-08": "wp-seat-08",
 };
 
 export function OfficeProvider({ children }: { children: React.ReactNode }) {
