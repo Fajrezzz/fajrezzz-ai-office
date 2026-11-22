@@ -15,8 +15,10 @@ import {
   Crosshair,
   Crown,
   Eye,
+  Film,
   Gamepad2,
   Layers,
+  Loader2,
   Monitor,
   Moon,
   Move,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/data/initial-office-data";
 import { useOffice } from "@/store/OfficeContext";
 import { useAgency } from "@/store/AgencyContext";
+import { PIPELINE_DIVISIONS } from "@/types/pipeline";
 import type {
   BossFloor,
   CameraPreset,
@@ -172,6 +175,7 @@ function VirtualAnalogJoystick({
 export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const {
     agents,
+    setActiveSection,
     selectedAgentId,
     setSelectedAgentId,
     cameraPreset,
@@ -202,7 +206,13 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     moveBossToFloor,
   } = useOffice();
 
-  const { getAgentSnapshot, runDivision, runningDivision } = useAgency();
+  const {
+    activeEpisode,
+    editingProgressPct,
+    getAgentSnapshot,
+    runDivision,
+    runningDivision,
+  } = useAgency();
 
   const [clockText, setClockText] = useState("11:45");
   const [showMovePad, setShowMovePad] = useState(false);
@@ -439,6 +449,75 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             </button>
           </div>
         </div>
+
+        {/* LIVE AUTO-PIPELINE PROGRESS BANNER (while watching characters work in 3D!) */}
+        {!compact &&
+          activeEpisode &&
+          (runningDivision ||
+            activeEpisode.divisions.editing.status === "done") && (
+            <div className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-2 rounded-2xl border border-cyan-400/45 bg-slate-950/88 px-3 py-2 text-[11px] shadow-xl backdrop-blur-xl">
+              {runningDivision ? (
+                <>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-cyan-300" />
+                    <div className="min-w-0">
+                      <div className="truncate font-bold text-white">
+                        Auto-Produksi:{" "}
+                        {PIPELINE_DIVISIONS.find((d) => d.key === runningDivision)
+                          ?.label ?? runningDivision}
+                        {runningDivision === "editing" && editingProgressPct > 0
+                          ? ` (${editingProgressPct}%)`
+                          : ""}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1">
+                        {PIPELINE_DIVISIONS.map((d) => {
+                          const st = activeEpisode.divisions[d.key].status;
+                          return (
+                            <span
+                              key={d.key}
+                              title={d.label}
+                              className={`h-1.5 flex-1 rounded-full ${
+                                st === "done"
+                                  ? "bg-emerald-400"
+                                  : st === "running"
+                                  ? "animate-pulse bg-cyan-400"
+                                  : st === "failed"
+                                  ? "bg-rose-500"
+                                  : "bg-slate-700"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection("dashboard")}
+                    className="shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-2.5 py-1.5 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/30"
+                  >
+                    Detail
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex min-w-0 items-center gap-2 text-emerald-200">
+                    <Film className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <span className="truncate font-bold">
+                      Video Ep #{activeEpisode.episodeNumber} Selesai!
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection("dashboard")}
+                    className="shrink-0 rounded-xl bg-emerald-400 px-3 py-1.5 text-[10px] font-black text-slate-950 hover:brightness-110"
+                  >
+                    Lihat & Download
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
         {/* Collapsible Glassmorphism Neon Control Drawer (All Direct Pickers, >=44px Touch Targets) */}
         {isBarExpanded && (

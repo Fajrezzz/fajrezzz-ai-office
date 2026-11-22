@@ -122,9 +122,13 @@ const PROVIDER_TARGETS: ProviderTarget[] = [
     envVar: null,
     keyless: true,
     endpoint: "https://text.pollinations.ai/openai/chat/completions",
-    models: ["openai-fast", "gpt-oss-20b"],
+    models: ["openai-fast", "openai", "mistral"],
   },
 ];
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const FREE_TIER_SUMMARIES: Record<LlmProviderId, string> = {
   groq: "Gratis tanpa kartu kredit: 30 req/menit, hingga 1.000–14.400 req/hari (opsional untuk lebih cepat)",
@@ -222,7 +226,8 @@ export async function callFreeTierLLM<T = unknown>(
   for (const target of activeTargets) {
     const apiKey = target.envVar ? process.env[target.envVar]?.trim() ?? "" : "";
 
-    for (const model of target.models) {
+    for (let mIdx = 0; mIdx < target.models.length; mIdx += 1) {
+      const model = target.models[mIdx];
       const start = Date.now();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -237,6 +242,10 @@ export async function callFreeTierLLM<T = unknown>(
             { role: "user", content: userPrompt },
           ],
         };
+
+        if (target.provider === "pollinations") {
+          bodyPayload.seed = Math.floor(Math.random() * 900000) + 100000;
+        }
 
         if (
           expectJson &&
@@ -280,6 +289,11 @@ export async function callFreeTierLLM<T = unknown>(
             rateLimited: isRateLimit,
             error: `HTTP ${res.status}: ${shortErr}`,
           });
+
+          // For keyless public endpoints, wait briefly before trying next model so 429/502 clears
+          if (target.keyless && (res.status === 429 || res.status >= 500) && mIdx < target.models.length - 1) {
+            await sleepMs(4500);
+          }
           continue;
         }
 
@@ -374,6 +388,72 @@ export async function callFreeTierLLM<T = unknown>(
         clearTimeout(timeoutId);
       }
     }
+  }
+
+  // Final keyless plain-text POST lane fallback on text.pollinations.ai (separate route)
+  try {
+    await sleepMs(3000);
+    const start = Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch("https://text.pollinations.ai/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai",
+          jsonMode: expectJson,
+          seed: Math.floor(Math.random() * 900000) + 100000,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+        signal: controller.signal,
+      });
+      const durationMs = Date.now() - start;
+      if (res.ok) {
+        const rawText = (await res.text()).trim();
+        if (rawText) {
+          const parsed = expectJson
+            ? (JSON.parse(extractJsonString(rawText)) as T)
+            : (rawText as unknown as T);
+          attempts.push({
+            provider: "pollinations",
+            model: "text-post-openai",
+            ok: true,
+            status: res.status,
+            durationMs,
+          });
+          return {
+            ok: true,
+            rawText,
+            parsed,
+            provider: "pollinations",
+            model: "text-post-openai",
+            durationMs,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            estimatedCostUsd: 0,
+            tier: "free-tier",
+            attempts,
+          };
+        }
+      } else {
+        attempts.push({
+          provider: "pollinations",
+          model: "text-post-openai",
+          ok: false,
+          status: res.status,
+          durationMs,
+          rateLimited: res.status === 429,
+          error: `HTTP ${res.status}`,
+        });
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch {
+    // fall through to structured error
   }
 
   if (sawRateLimit) {

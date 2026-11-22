@@ -89,10 +89,10 @@ interface AgencyContextValue {
   videoBlobUrls: Record<string, string>;
   editingProgressPct: number;
   runningDivision: PipelineDivisionKey | null;
-  /** Create a new episode from Bos theme & immediately run Divisi 1: Riset */
+  /** Create a new episode from Bos theme & automatically run ALL 7 divisions straight to real video */
   startNewEpisode: (theme: string, platform: PublishPlatform) => Promise<RealEpisode | null>;
-  /** Select 1 of 5 Research ideas and run SEO -> Script -> Voice -> Motion -> QC */
-  selectIdeaAndContinue: (episodeId: string, ideaId: string) => Promise<void>;
+  /** Select 1 of 5 Research ideas and run SEO -> Script -> Voice -> Motion -> Editing (Video) -> QC */
+  selectIdeaAndContinue: (episodeId: string, ideaId: string) => Promise<RealEpisode | null>;
   /** Execute or retry a single division on an episode */
   runDivision: (
     episodeId: string,
@@ -454,6 +454,89 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
 
       const otherEpisodes = episodesRef.current.filter((e) => e.id !== episodeId);
 
+      const appendLiveLog = (
+        level: "info" | "success" | "warning" | "error",
+        message: string
+      ) => {
+        patchEpisode(episodeId, (ep) =>
+          updateDiv(ep, {
+            logs: [...ep.divisions[division].logs, makeLog(level, message)],
+          })
+        );
+      };
+
+      const fetchServerDivisionWithAutoRetry = async (
+        endpoint: string,
+        payload: unknown
+      ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> => {
+        const retryDelaysMs = [5000, 9000, 13000];
+        let lastStatus = 500;
+        let lastData: Record<string, unknown> = {};
+
+        for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
+          try {
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            lastStatus = res.status;
+            const data = (await res.json().catch(() => ({}))) as Record<
+              string,
+              unknown
+            >;
+            lastData = data;
+            if (res.ok && data.ok) {
+              return { ok: true, status: res.status, data };
+            }
+
+            const errStr = String(data.error ?? "");
+            const isTransient =
+              res.status === 429 ||
+              res.status === 502 ||
+              res.status === 503 ||
+              res.status === 504 ||
+              /limit|sibuk|gagal merespons|timeout/i.test(errStr);
+
+            if (!isTransient || attempt === retryDelaysMs.length) {
+              return { ok: false, status: res.status, data };
+            }
+
+            const waitMs = retryDelaysMs[attempt];
+            appendLiveLog(
+              "warning",
+              `Server AI gratis sedang antre (${res.status}) — otomatis coba ulang #${
+                attempt + 1
+              } dalam ${Math.round(waitMs / 1000)} detik...`
+            );
+            await new Promise((r) => setTimeout(r, waitMs));
+          } catch (netErr) {
+            if (attempt === retryDelaysMs.length) {
+              return {
+                ok: false,
+                status: 500,
+                data: {
+                  ok: false,
+                  error:
+                    netErr instanceof Error
+                      ? netErr.message
+                      : "Kesalahan jaringan saat memanggil server AI",
+                },
+              };
+            }
+            const waitMs = retryDelaysMs[attempt];
+            appendLiveLog(
+              "warning",
+              `Koneksi terganggu — otomatis coba ulang #${attempt + 1} dalam ${Math.round(
+                waitMs / 1000
+              )} detik...`
+            );
+            await new Promise((r) => setTimeout(r, waitMs));
+          }
+        }
+        return { ok: false, status: lastStatus, data: lastData };
+      };
+
       try {
         /* ==================== 1. RISET (SERVER LLM) ==================== */
         if (division === "research") {
@@ -479,27 +562,32 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           };
           markRunning(input, `Memanggil AI untuk riset 5 ide unik dari tema "${input.theme}"...`);
 
-          const res = await fetch("/api/pipeline/research", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
+          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
+            "/api/pipeline/research",
+            input
+          );
+          if (!ok) {
             return markFailed(
-              data.error || `HTTP ${res.status}`,
-              data.hint || null
+              String(data.error || `HTTP ${status}`),
+              (data.hint as string | null) || null
             );
           }
 
           const out = data.output as ResearchOutput;
+          const metaInfo = (data.meta ?? {}) as {
+            provider?: string;
+            model?: string;
+            durationMs?: number;
+            usage?: { totalTokens?: number };
+            estimatedCostUsd?: number;
+          };
           return markDone(out, {
-            provider: data.meta?.provider || "llm",
-            model: data.meta?.model || "unknown",
-            durationMs: data.meta?.durationMs || Date.now() - startMs,
-            tokensUsed: data.meta?.usage?.totalTokens || 0,
-            estimatedCostUsd: data.meta?.estimatedCostUsd || 0,
-            successMsg: `Berhasil menyusun ${out.ideas.length} ide episode unik (${data.meta?.provider}/${data.meta?.model}).`,
+            provider: metaInfo.provider || "llm",
+            model: metaInfo.model || "unknown",
+            durationMs: metaInfo.durationMs || Date.now() - startMs,
+            tokensUsed: metaInfo.usage?.totalTokens || 0,
+            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
+            successMsg: `Berhasil menyusun ${out.ideas.length} ide episode unik (${metaInfo.provider}/${metaInfo.model}).`,
           });
         }
 
@@ -519,23 +607,31 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           };
           markRunning(input, `Menyusun judul, deskripsi, tag & hashtag untuk "${selectedIdea.title}"...`);
 
-          const res = await fetch("/api/pipeline/seo", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
-            return markFailed(data.error || `HTTP ${res.status}`, data.hint || null);
+          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
+            "/api/pipeline/seo",
+            input
+          );
+          if (!ok) {
+            return markFailed(
+              String(data.error || `HTTP ${status}`),
+              (data.hint as string | null) || null
+            );
           }
 
           const out = data.output as SeoOutput;
+          const metaInfo = (data.meta ?? {}) as {
+            provider?: string;
+            model?: string;
+            durationMs?: number;
+            usage?: { totalTokens?: number };
+            estimatedCostUsd?: number;
+          };
           return markDone(out, {
-            provider: data.meta?.provider || "llm",
-            model: data.meta?.model || "unknown",
-            durationMs: data.meta?.durationMs || Date.now() - startMs,
-            tokensUsed: data.meta?.usage?.totalTokens || 0,
-            estimatedCostUsd: data.meta?.estimatedCostUsd || 0,
+            provider: metaInfo.provider || "llm",
+            model: metaInfo.model || "unknown",
+            durationMs: metaInfo.durationMs || Date.now() - startMs,
+            tokensUsed: metaInfo.usage?.totalTokens || 0,
+            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
             successMsg: `SEO selesai: "${out.title}" (${out.tags.length} tag, ${out.hashtags.length} hashtag).`,
           });
         }
@@ -563,23 +659,31 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           };
           markRunning(input, `Menulis naskah YouTube/TikTok bahasa Indonesia per segmen...`);
 
-          const res = await fetch("/api/pipeline/script", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
-            return markFailed(data.error || `HTTP ${res.status}`, data.hint || null);
+          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
+            "/api/pipeline/script",
+            input
+          );
+          if (!ok) {
+            return markFailed(
+              String(data.error || `HTTP ${status}`),
+              (data.hint as string | null) || null
+            );
           }
 
           const out = data.output as ScriptOutput;
+          const metaInfo = (data.meta ?? {}) as {
+            provider?: string;
+            model?: string;
+            durationMs?: number;
+            usage?: { totalTokens?: number };
+            estimatedCostUsd?: number;
+          };
           return markDone(out, {
-            provider: data.meta?.provider || "llm",
-            model: data.meta?.model || "unknown",
-            durationMs: data.meta?.durationMs || Date.now() - startMs,
-            tokensUsed: data.meta?.usage?.totalTokens || 0,
-            estimatedCostUsd: data.meta?.estimatedCostUsd || 0,
+            provider: metaInfo.provider || "llm",
+            model: metaInfo.model || "unknown",
+            durationMs: metaInfo.durationMs || Date.now() - startMs,
+            tokensUsed: metaInfo.usage?.totalTokens || 0,
+            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
             successMsg: `Naskah ${out.scenes.length} adegan (${out.totalDurationSec}d) selesai.`,
           });
         }
@@ -696,23 +800,31 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           };
           markRunning(input, `Menjalankan audit QC (durasi, kata terlarang, pedoman YouTube, anti-duplikat)...`);
 
-          const res = await fetch("/api/pipeline/qc", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(input),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
-            return markFailed(data.error || `HTTP ${res.status}`, data.hint || null);
+          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
+            "/api/pipeline/qc",
+            input
+          );
+          if (!ok) {
+            return markFailed(
+              String(data.error || `HTTP ${status}`),
+              (data.hint as string | null) || null
+            );
           }
 
           const out = data.output as QcOutput;
+          const metaInfo = (data.meta ?? {}) as {
+            provider?: string;
+            model?: string;
+            durationMs?: number;
+            usage?: { totalTokens?: number };
+            estimatedCostUsd?: number;
+          };
           return markDone(out, {
-            provider: data.meta?.provider || "qc",
-            model: data.meta?.model || "rules-v1",
-            durationMs: data.meta?.durationMs || Date.now() - startMs,
-            tokensUsed: data.meta?.usage?.totalTokens || 0,
-            estimatedCostUsd: data.meta?.estimatedCostUsd || 0,
+            provider: metaInfo.provider || "qc",
+            model: metaInfo.model || "rules-v1",
+            durationMs: metaInfo.durationMs || Date.now() - startMs,
+            tokensUsed: metaInfo.usage?.totalTokens || 0,
+            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
             qcPassed: out.passed,
             successMsg: out.passed
               ? `LOLOS QC (Skor ${out.score}/100, kemiripan ${out.similarityScore}%).`
@@ -728,6 +840,99 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [addActivity, patchEpisode, recordDivisionHistory, syncAgent3D]
+  );
+
+  const selectIdeaAndContinue = useCallback(
+    async (episodeId: string, ideaId: string): Promise<RealEpisode | null> => {
+      const epWithIdea = patchEpisode(episodeId, (ep) => ({
+        ...ep,
+        selectedIdeaId: ideaId,
+        updatedAt: new Date().toISOString(),
+      }));
+      if (!epWithIdea) return null;
+
+      // Research handoff done -> Raka returns to lounge coffee while production team works at desks!
+      syncAgent3D("research", "idle");
+      const activeStages: PipelineDivisionKey[] = [
+        "seo",
+        "script",
+        "voice",
+        "motion",
+        "editing",
+        "qc",
+      ];
+      activeStages.forEach((stage) => {
+        syncAgent3D(
+          stage,
+          "working",
+          `Bersiap di meja untuk ${stage.toUpperCase()} episode otomatis`
+        );
+      });
+
+      const releaseRemainingIdle = (ep: RealEpisode | null) => {
+        activeStages.forEach((stage) => {
+          const st = ep?.divisions[stage]?.status;
+          if (st !== "failed") {
+            syncAgent3D(stage, "idle");
+          }
+        });
+      };
+
+      const paceIfPollinations = async (provider?: string | null) => {
+        if (provider === "pollinations") {
+          await new Promise((r) => setTimeout(r, 6000));
+        }
+      };
+
+      await paceIfPollinations(epWithIdea.divisions.research.provider);
+      const afterSeo = await runDivision(episodeId, "seo", epWithIdea, true);
+      if (!afterSeo || afterSeo.divisions.seo.status !== "done") {
+        releaseRemainingIdle(afterSeo);
+        return afterSeo;
+      }
+      syncAgent3D("seo", "idle");
+
+      await paceIfPollinations(afterSeo.divisions.seo.provider);
+      const afterScript = await runDivision(episodeId, "script", afterSeo, true);
+      if (!afterScript || afterScript.divisions.script.status !== "done") {
+        releaseRemainingIdle(afterScript);
+        return afterScript;
+      }
+      syncAgent3D("script", "idle");
+
+      const afterVoice = await runDivision(episodeId, "voice", afterScript, true);
+      if (!afterVoice || afterVoice.divisions.voice.status !== "done") {
+        releaseRemainingIdle(afterVoice);
+        return afterVoice;
+      }
+      syncAgent3D("voice", "idle");
+
+      const afterMotion = await runDivision(episodeId, "motion", afterVoice, true);
+      if (!afterMotion || afterMotion.divisions.motion.status !== "done") {
+        releaseRemainingIdle(afterMotion);
+        return afterMotion;
+      }
+      syncAgent3D("motion", "idle");
+
+      // Automatically render the real downloadable .webm video + HD 1280x720 thumbnail!
+      const afterEditing = await runDivision(
+        episodeId,
+        "editing",
+        afterMotion,
+        true
+      );
+      if (!afterEditing || afterEditing.divisions.editing.status !== "done") {
+        releaseRemainingIdle(afterEditing);
+        return afterEditing;
+      }
+      syncAgent3D("editing", "idle");
+
+      await paceIfPollinations(afterScript.divisions.script.provider);
+      const afterQc = await runDivision(episodeId, "qc", afterEditing, true);
+      releaseRemainingIdle(afterQc);
+      return afterQc;
+    },
+    [patchEpisode, runDivision, syncAgent3D]
   );
 
   const startNewEpisode = useCallback(
@@ -789,75 +994,56 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       addActivity(
         "BOS FAJREZ",
         "user",
-        `Memulai Episode #${nextNumber} dengan tema: "${cleanTheme}".`,
+        `Memulai Produksi Otomatis 7 Divisi Episode #${nextNumber}: "${cleanTheme}".`,
         "info",
         "Komando Bos"
       );
 
-      return runDivision(newEpisode.id, "research", newEpisode);
-    },
-    [addActivity, runDivision]
-  );
-
-  const selectIdeaAndContinue = useCallback(
-    async (episodeId: string, ideaId: string) => {
-      const epWithIdea = patchEpisode(episodeId, (ep) => ({
-        ...ep,
-        selectedIdeaId: ideaId,
-        updatedAt: new Date().toISOString(),
-      }));
-      if (!epWithIdea) return;
-
-      // Research handoff done -> Raka returns to lounge coffee while production team mobilizes to desks!
-      syncAgent3D("research", "idle");
-      const activeStages: PipelineDivisionKey[] = [
-        "seo",
-        "script",
-        "voice",
-        "motion",
-        "qc",
-      ];
-      activeStages.forEach((stage) => {
-        syncAgent3D(stage, "working", `Bersiap di meja untuk ${stage.toUpperCase()} episode aktif`);
+      // Mobilize ALL 7 divisions immediately to walk from lounge chairs to desks!
+      PIPELINE_DIVISIONS.forEach((d) => {
+        syncAgent3D(
+          d.key,
+          "working",
+          d.key === "research"
+            ? `Sedang menjalankan ${d.label}`
+            : `Siaga di meja menunggu giliran ${d.shortLabel}`
+        );
       });
 
-      const releaseIdleIfDone = (ep: RealEpisode | null) => {
-        activeStages.forEach((stage) => {
-          const st = ep?.divisions[stage]?.status;
-          if (st !== "failed") {
-            syncAgent3D(stage, "idle");
-          }
+      const afterResearch = await runDivision(
+        newEpisode.id,
+        "research",
+        newEpisode,
+        true
+      );
+      if (
+        !afterResearch ||
+        afterResearch.divisions.research.status !== "done"
+      ) {
+        PIPELINE_DIVISIONS.forEach((d) => {
+          if (d.key !== "research") syncAgent3D(d.key, "idle");
         });
-      };
-
-      const afterSeo = await runDivision(episodeId, "seo", epWithIdea, true);
-      if (!afterSeo || afterSeo.divisions.seo.status !== "done") {
-        releaseIdleIfDone(afterSeo);
-        return;
+        return afterResearch;
       }
 
-      const afterScript = await runDivision(episodeId, "script", afterSeo, true);
-      if (!afterScript || afterScript.divisions.script.status !== "done") {
-        releaseIdleIfDone(afterScript);
-        return;
+      // Automatically pick best fresh Idea #1 and run straight through SEO -> Script -> Voice -> Motion -> Editing (Video) -> QC!
+      const bestIdea = afterResearch.divisions.research.output?.ideas?.[0];
+      if (!bestIdea) {
+        PIPELINE_DIVISIONS.forEach((d) => syncAgent3D(d.key, "idle"));
+        return afterResearch;
       }
 
-      const afterVoice = await runDivision(episodeId, "voice", afterScript, true);
-      if (!afterVoice || afterVoice.divisions.voice.status !== "done") {
-        releaseIdleIfDone(afterVoice);
-        return;
-      }
+      addActivity(
+        "AUTO-PIPELINE",
+        "system",
+        `Otomatis memilih ide terbaik #1 "${bestIdea.title}" → lanjut SEO sampai Video jadi!`,
+        "success",
+        "Otomatis"
+      );
 
-      const afterMotion = await runDivision(episodeId, "motion", afterVoice, true);
-      if (!afterMotion || afterMotion.divisions.motion.status !== "done") {
-        releaseIdleIfDone(afterMotion);
-        return;
-      }
-
-      const afterQc = await runDivision(episodeId, "qc", afterMotion, true);
-      releaseIdleIfDone(afterQc);
+      return selectIdeaAndContinue(newEpisode.id, bestIdea.id);
     },
-    [patchEpisode, runDivision, syncAgent3D]
+    [addActivity, runDivision, selectIdeaAndContinue, syncAgent3D]
   );
 
   const runProductionAndExport = useCallback(

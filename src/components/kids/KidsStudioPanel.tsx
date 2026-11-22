@@ -101,7 +101,7 @@ interface AiServerStatus {
 }
 
 export function KidsStudioPanel() {
-  const { setActiveSection } = useOffice();
+  const { setActiveSection, setActiveFloor, setCameraPreset } = useOffice();
   const {
     episodes,
     activeEpisode,
@@ -120,6 +120,7 @@ export function KidsStudioPanel() {
 
   const [themeInput, setThemeInput] = useState("");
   const [platform, setPlatform] = useState<PublishPlatform>("youtube_shorts");
+  const [autoWatch3D, setAutoWatch3D] = useState(true);
   const [aiStatus, setAiStatus] = useState<AiServerStatus | null>(null);
   const [expandedDiv, setExpandedDiv] = useState<PipelineDivisionKey | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -242,7 +243,13 @@ export function KidsStudioPanel() {
     if (!themeInput.trim() || runningDivision) return;
     const theme = themeInput.trim();
     setThemeInput("");
-    await startNewEpisode(theme, platform);
+    // Start full 7-division automatic pipeline (Riset -> SEO -> Naskah -> Suara -> Motion -> Editing Video -> QC)
+    void startNewEpisode(theme, platform);
+    if (autoWatch3D) {
+      setActiveFloor("l2");
+      setCameraPreset("interior");
+      setActiveSection("office");
+    }
   };
 
   const copyText = (key: string, text: string) => {
@@ -356,14 +363,26 @@ export function KidsStudioPanel() {
               disabled={!themeInput.trim() || Boolean(runningDivision)}
               className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {runningDivision === "research" ? (
+              {runningDivision ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              <span>Jalankan Riset AI</span>
+              <span>{runningDivision ? "Sedang Produksi..." : "Produksi Otomatis → Video"}</span>
             </button>
           </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-cyan-200/95">
+            <input
+              type="checkbox"
+              checked={autoWatch3D}
+              onChange={(e) => setAutoWatch3D(e.target.checked)}
+              className="h-4 w-4 rounded border-cyan-400/50 bg-slate-950 text-cyan-400"
+            />
+            <span>
+              <strong>Otomatis buka Kantor 3D</strong> — cukup 1 klik, tonton 7 karakter bekerja otomatis sampai video jadi!
+            </span>
+          </label>
 
           <div className="flex flex-wrap gap-1.5">
             {QUICK_THEMES.map((q) => (
