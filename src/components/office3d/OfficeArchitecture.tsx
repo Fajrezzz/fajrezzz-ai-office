@@ -557,17 +557,18 @@ export function OfficeArchitecture({
       </group>
 
       {/* ============================================================
-          FLOOR 2 — GRAND 8-WORKSTATION OPERATIONS HALL (Y=3.9)
+          FLOOR 2 — GRAND 8-WORKSTATION OPERATIONS HALL + LEFT/RIGHT COFFEE BARS + PANORAMIC BALCONY (Y=3.9)
           ============================================================ */}
       {showL2 && (
         <group>
+          {/* Expanded Slab (Z = -10.4 to +6.2) supporting the 2.15m Panoramic View Balcony */}
           <mesh
-            position={[0, FLOOR_2_Y - 0.14, -2.5]}
+            position={[0, FLOOR_2_Y - 0.14, -2.1]}
             castShadow
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[28.8, 0.28, 15.8]} />
+            <boxGeometry args={[28.8, 0.28, 16.6]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -590,8 +591,23 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Cyberpunk Cyan Neon Trim Line along L2 Cantilever Edge */}
-          <mesh position={[0, FLOOR_2_Y - 0.25, 5.36]}>
+          {/* Outdoor Panoramic View Balcony Teak Deck (Z = 4.08 to 6.12) */}
+          <mesh
+            position={[0, FLOOR_2_Y + 0.012, 5.1]}
+            receiveShadow
+            onDoubleClick={handleSurfaceDoubleClick}
+          >
+            <boxGeometry args={[28.2, 0.036, 2.04]} />
+            <meshStandardMaterial
+              map={textures.woodDeck}
+              bumpMap={textures.woodDeckBump}
+              bumpScale={0.04}
+              roughness={0.58}
+            />
+          </mesh>
+
+          {/* Cyberpunk Cyan Neon Trim Line along L2 Balcony Edge */}
+          <mesh position={[0, FLOOR_2_Y - 0.25, 6.2]}>
             <boxGeometry args={[28.6, 0.075, 0.09]} />
             <meshStandardMaterial
               color="#22d3ee"
@@ -656,37 +672,86 @@ export function OfficeArchitecture({
           <IndoorPlanter position={[-6.4, FLOOR_2_Y, 2.5]} />
           <IndoorPlanter position={[6.4, FLOOR_2_Y, 2.5]} />
 
-          {/* West Wing Glass Server Room (X = -12.2) */}
-          <group position={[-12.2, FLOOR_2_Y, -4.4]}>
-            <mesh position={[1.45, 1.85, 0]}>
-              <boxGeometry args={[0.06, 3.65, 5.4]} />
-              <meshPhysicalMaterial
-                color="#bae6fd"
-                transparent
-                opacity={0.22}
-                roughness={0.06}
+          {/* Compact High-Tech Server Cabinet tucked cleanly in Rear-Left Corner */}
+          <group position={[-13.0, FLOOR_2_Y + 1.15, -9.1]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.92, 2.25, 1.1]} />
+              <meshStandardMaterial
+                color="#1a2230"
+                metalness={0.68}
+                roughness={0.32}
               />
             </mesh>
-            {[-1.6, 0, 1.6].map((rz, idx) => (
-              <group key={idx} position={[0, 1.15, rz]}>
-                <mesh castShadow>
-                  <boxGeometry args={[0.92, 2.25, 1.15]} />
-                  <meshStandardMaterial
-                    color="#1a2230"
-                    metalness={0.68}
-                    roughness={0.32}
-                  />
+            {[-0.6, -0.1, 0.4, 0.8].map((ly, li) => (
+              <mesh key={li} position={[0.47, ly, 0]}>
+                <boxGeometry args={[0.02, 0.05, 0.82]} />
+                <meshStandardMaterial
+                  color={li % 2 === 0 ? "#38bdf8" : "#34d399"}
+                  emissive={li % 2 === 0 ? "#38bdf8" : "#34d399"}
+                  emissiveIntensity={1.6}
+                />
+              </mesh>
+            ))}
+          </group>
+
+          {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -12.2) */}
+          <group position={[-12.2, FLOOR_2_Y, -4.6]}>
+            <mesh position={[-0.2, 0.54, 0]} castShadow receiveShadow>
+              <boxGeometry args={[1.1, 1.06, 4.8]} />
+              <meshStandardMaterial color="#875d39" roughness={0.48} />
+            </mesh>
+            <mesh position={[-0.2, 1.09, 0]}>
+              <boxGeometry args={[1.18, 0.06, 4.9]} />
+              <meshStandardMaterial map={textures.marbleTile} roughness={0.2} />
+            </mesh>
+            {/* Artisan Espresso Machine */}
+            <mesh position={[-0.25, 1.38, -0.8]} castShadow>
+              <boxGeometry args={[0.52, 0.52, 0.68]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.82} roughness={0.2} />
+            </mesh>
+            {/* Pastry Display Dome */}
+            <mesh position={[-0.22, 1.24, 0.9]}>
+              <sphereGeometry args={[0.22, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshPhysicalMaterial
+                color="#e0f2fe"
+                transparent
+                opacity={0.45}
+                roughness={0.08}
+              />
+            </mesh>
+            {/* Counter Coffee Cups */}
+            {[-1.3, 0, 1.3].map((cz, ci) => (
+              <group key={`wbar-cup-${ci}`} position={[0.28, 1.17, cz]}>
+                <mesh>
+                  <cylinderGeometry args={[0.05, 0.042, 0.09, 10]} />
+                  <meshStandardMaterial color="#f8fafc" roughness={0.25} />
                 </mesh>
-                {[-0.6, -0.1, 0.4, 0.8].map((ly, li) => (
-                  <mesh key={li} position={[0.47, ly, 0]}>
-                    <boxGeometry args={[0.02, 0.05, 0.85]} />
-                    <meshStandardMaterial
-                      color={li % 2 === 0 ? "#38bdf8" : "#34d399"}
-                      emissive={li % 2 === 0 ? "#38bdf8" : "#34d399"}
-                      emissiveIntensity={1.6}
-                    />
-                  </mesh>
-                ))}
+                <mesh position={[0, 0.04, 0]}>
+                  <cylinderGeometry args={[0.043, 0.043, 0.015, 10]} />
+                  <meshStandardMaterial color="#3b1f0e" roughness={0.2} />
+                </mesh>
+              </group>
+            ))}
+            {/* 3 Comfortable West Coffee Bar Lounge Chairs (World X = -11.35, Facing West -X) */}
+            {[-1.3, 0, 1.3].map((sz, i) => (
+              <group key={i} position={[0.85, 0, sz]}>
+                <mesh position={[0, 0.24, 0]}>
+                  <cylinderGeometry args={[0.04, 0.06, 0.48, 8]} />
+                  <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+                </mesh>
+                <mesh position={[0, 0.02, 0]}>
+                  <cylinderGeometry args={[0.24, 0.24, 0.03, 12]} />
+                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+                </mesh>
+                <mesh position={[0, 0.49, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.48, 0.08, 0.48]} />
+                  <meshStandardMaterial color="#5c4033" roughness={0.76} />
+                </mesh>
+                {/* Backrest on Right (+X) so Seated Agent Faces West (-X) Coffee Bar */}
+                <mesh position={[0.22, 0.72, 0]} castShadow>
+                  <boxGeometry args={[0.07, 0.44, 0.46]} />
+                  <meshStandardMaterial color="#4a3328" roughness={0.78} />
+                </mesh>
               </group>
             ))}
           </group>
@@ -754,58 +819,59 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* 5 Panoramic Glass Cafe Lounge Chairs + Coffee Tables (Z = 3.05, Facing North) */}
-          {[-9.0, -3.0, 0.0, 3.0, 9.0].map((cx, idx) => (
-            <group key={`l2-cafe-seat-${idx}`} position={[cx, FLOOR_2_Y, 3.05]}>
-              {/* Modern Walnut & Charcoal Lounge Armchair */}
-              <mesh position={[0, 0.48, 0]} castShadow receiveShadow>
+          {/* OUTDOOR PANORAMIC VIEW BALCONY LOUNGE CHAIRS (Z = 4.95, Facing South toward Pool & Skyline!) */}
+          {[-5.5, -1.8, 1.8, 5.5].map((bx, idx) => (
+            <group key={`l2-balcony-seat-${idx}`} position={[bx, FLOOR_2_Y, 4.95]}>
+              {/* Outdoor Resort Teak & Cushioned Lounge Armchair */}
+              <mesh position={[0, 0.46, 0]} castShadow receiveShadow>
                 <boxGeometry args={[0.62, 0.1, 0.56]} />
-                <meshStandardMaterial color="#334155" roughness={0.78} />
+                <meshStandardMaterial color="#e2e8f0" roughness={0.82} />
               </mesh>
-              {/* Backrest on South Side (+Z) so Seated Agent Faces North (-Z) */}
-              <mesh position={[0, 0.78, 0.24]} castShadow>
+              {/* Backrest on North Side (-Z) so Seated Agent Faces South (+Z) View */}
+              <mesh position={[0, 0.76, -0.24]} castShadow>
                 <boxGeometry args={[0.62, 0.56, 0.09]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.74} />
+                <meshStandardMaterial color="#cbd5e1" roughness={0.8} />
               </mesh>
-              {/* Armrests */}
+              {/* Teak Armrests */}
               {[-0.28, 0.28].map((ax, ai) => (
-                <mesh key={ai} position={[ax, 0.63, 0.02]} castShadow>
+                <mesh key={ai} position={[ax, 0.62, 0]} castShadow>
                   <boxGeometry args={[0.07, 0.22, 0.52]} />
-                  <meshStandardMaterial color="#1e293b" roughness={0.72} />
+                  <meshStandardMaterial color="#8b5e3c" roughness={0.58} />
                 </mesh>
               ))}
-              {/* 4 Tapered Oak Legs */}
+              {/* 4 Tapered Teak Legs */}
               {[
                 [-0.24, -0.22],
                 [0.24, -0.22],
                 [-0.24, 0.22],
                 [0.24, 0.22],
               ].map(([lx, lz], li) => (
-                <mesh key={li} position={[lx, 0.23, lz]}>
-                  <cylinderGeometry args={[0.026, 0.02, 0.46, 8]} />
-                  <meshStandardMaterial color="#8b5e3c" roughness={0.55} />
+                <mesh key={li} position={[lx, 0.22, lz]}>
+                  <cylinderGeometry args={[0.026, 0.02, 0.44, 8]} />
+                  <meshStandardMaterial color="#7a5130" roughness={0.55} />
                 </mesh>
               ))}
-              {/* Round Cafe Side Coffee Table right in front of the chair */}
-              <group position={[0.56, 0, -0.45]}>
-                <mesh position={[0, 0.29, 0]}>
-                  <cylinderGeometry args={[0.032, 0.04, 0.58, 10]} />
-                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
-                </mesh>
-                <mesh position={[0, 0.015, 0]}>
-                  <cylinderGeometry args={[0.22, 0.22, 0.03, 12]} />
-                  <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
-                </mesh>
-                <mesh position={[0, 0.59, 0]} castShadow receiveShadow>
-                  <cylinderGeometry args={[0.34, 0.34, 0.04, 18]} />
-                  <meshStandardMaterial color="#9a6c43" roughness={0.44} />
-                </mesh>
-                {/* Ceramic Saucer on Cafe Table */}
-                <mesh position={[-0.08, 0.62, 0.04]}>
-                  <cylinderGeometry args={[0.075, 0.06, 0.014, 12]} />
-                  <meshStandardMaterial color="#f8fafc" roughness={0.25} />
-                </mesh>
-              </group>
+            </group>
+          ))}
+          {/* 2 Round Balcony Coffee Tables between Scenic Chairs */}
+          {[-3.65, 3.65].map((tx, ti) => (
+            <group key={`l2-balcony-table-${ti}`} position={[tx, FLOOR_2_Y, 5.1]}>
+              <mesh position={[0, 0.28, 0]}>
+                <cylinderGeometry args={[0.032, 0.04, 0.56, 10]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+              </mesh>
+              <mesh position={[0, 0.015, 0]}>
+                <cylinderGeometry args={[0.22, 0.22, 0.03, 12]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+              </mesh>
+              <mesh position={[0, 0.57, 0]} castShadow receiveShadow>
+                <cylinderGeometry args={[0.36, 0.36, 0.04, 18]} />
+                <meshStandardMaterial color="#9a6c43" roughness={0.44} />
+              </mesh>
+              <mesh position={[0, 0.6, 0]}>
+                <cylinderGeometry args={[0.08, 0.065, 0.014, 12]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.25} />
+              </mesh>
             </group>
           ))}
 
@@ -849,8 +915,8 @@ export function OfficeArchitecture({
             </mesh>
           )}
 
-          {/* Cantilevered Front Glass Balcony Railing */}
-          <mesh position={[0, FLOOR_2_Y + 0.56, 5.28]}>
+          {/* Cantilevered Front Glass Balcony Railing (at outer balcony edge Z = 6.12) */}
+          <mesh position={[0, FLOOR_2_Y + 0.56, 6.12]}>
             <boxGeometry args={[28.4, 1.06, 0.06]} />
             <meshPhysicalMaterial
               color="#d6eaf8"
@@ -859,7 +925,7 @@ export function OfficeArchitecture({
               roughness={0.08}
             />
           </mesh>
-          <mesh position={[0, FLOOR_2_Y + 1.1, 5.28]}>
+          <mesh position={[0, FLOOR_2_Y + 1.1, 6.12]}>
             <boxGeometry args={[28.5, 0.06, 0.1]} />
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>

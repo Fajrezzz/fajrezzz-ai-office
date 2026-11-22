@@ -371,6 +371,7 @@ export function RobotCharacter({
 
   const { skinColor, hairColor, hairStyle, suitColor, shirtColor, pantsColor } =
     agent.appearance;
+  const isFemale = hairStyle === "bob" || hairStyle === "ponytail";
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -455,44 +456,67 @@ export function RobotCharacter({
         </group>
       </group>
 
-      {/* SCULPTED ANATOMICAL TORSO & TAILORED BLAZER */}
+      {/* SCULPTED ANATOMICAL TORSO & GENDER-TAILORED BLAZER */}
       <group ref={torsoRef} position={[0, 1.02, 0]}>
-        {/* Sculpted waist / belt */}
+        {/* Sculpted waist / tailored skirt for female, straight trousers waist for male */}
         <mesh position={[0, -0.17, 0]} castShadow>
-          <cylinderGeometry args={[0.155, 0.165, 0.22, 14]} />
+          <cylinderGeometry
+            args={isFemale ? [0.14, 0.185, 0.25, 14] : [0.158, 0.168, 0.22, 14]}
+          />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        <mesh position={[0, -0.07, 0]}>
-          <cylinderGeometry args={[0.162, 0.162, 0.04, 14]} />
+        <mesh position={[0, -0.06, 0]}>
+          <cylinderGeometry args={[isFemale ? 0.146 : 0.164, isFemale ? 0.146 : 0.164, 0.04, 14]} />
           <meshStandardMaterial color="#18181b" roughness={0.4} />
         </mesh>
 
-        {/* Rounded Tapered Sculpted Blazer Chest & Shoulders */}
-        <mesh position={[0, 0.14, 0]} scale={[1.22, 1, 0.74]} castShadow>
-          <cylinderGeometry args={[0.185, 0.145, 0.5, 16]} />
+        {/* Blazer Chest & Shoulders (Slim feminine vs Broad masculine) */}
+        <mesh
+          position={[0, 0.14, 0]}
+          scale={isFemale ? [1.04, 1, 0.72] : [1.24, 1, 0.76]}
+          castShadow
+        >
+          <cylinderGeometry args={[0.185, 0.14, 0.5, 16]} />
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
-        {/* Rounded Shoulder Cap */}
-        <mesh position={[0, 0.35, 0]} scale={[1.28, 0.48, 0.74]} castShadow>
+        {/* Shoulder Cap */}
+        <mesh
+          position={[0, 0.35, 0]}
+          scale={isFemale ? [1.08, 0.44, 0.7] : [1.3, 0.48, 0.76]}
+          castShadow
+        >
           <sphereGeometry args={[0.185, 16, 12]} />
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
 
-        {/* Crisp Shirt V-Front & Collar */}
+        {/* Crisp Shirt / Blouse Front */}
         <mesh position={[0, 0.22, 0.112]}>
-          <boxGeometry args={[0.11, 0.3, 0.035]} />
+          <boxGeometry args={[isFemale ? 0.1 : 0.11, 0.3, 0.035]} />
           <meshStandardMaterial color={shirtColor} roughness={0.55} />
         </mesh>
-        {/* Role-Colored Accent Tie & Shoulder Trim for High Readability */}
-        <mesh position={[0, 0.17, 0.132]}>
-          <boxGeometry args={[0.044, 0.25, 0.016]} />
-          <meshStandardMaterial
-            color={agent.accentColor}
-            emissive={agent.accentColor}
-            emissiveIntensity={0.35}
-            roughness={0.36}
-          />
-        </mesh>
+        {/* Male Executive Tie vs Female Subtle Pendant Collar */}
+        {!isFemale ? (
+          <mesh position={[0, 0.17, 0.132]}>
+            <boxGeometry args={[0.044, 0.25, 0.016]} />
+            <meshStandardMaterial
+              color={agent.accentColor}
+              emissive={agent.accentColor}
+              emissiveIntensity={0.35}
+              roughness={0.36}
+            />
+          </mesh>
+        ) : (
+          <mesh position={[0, 0.27, 0.132]}>
+            <sphereGeometry args={[0.022, 10, 10]} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              emissive={agent.accentColor}
+              emissiveIntensity={0.45}
+              metalness={0.5}
+              roughness={0.2}
+            />
+          </mesh>
+        )}
         {/* Crisp Role-Colored Collar Piping on Shoulders */}
         <mesh position={[-0.17, 0.36, 0.02]} rotation={[0, 0, 0.16]}>
           <boxGeometry args={[0.08, 0.025, 0.08]} />

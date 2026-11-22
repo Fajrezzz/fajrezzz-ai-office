@@ -11,6 +11,9 @@ interface SeatedOrStandingPerson {
   id: string;
   name: string;
   title: string;
+  gender: "male" | "female";
+  hairStyle: "short" | "bob" | "ponytail" | "security_cap";
+  isSecurity?: boolean;
   floor: 1 | 3;
   position: [number, number, number];
   rotationY: number;
@@ -30,6 +33,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "vip-ceo",
     name: "Hendra Wijaya",
     title: "CEO Eksekutif",
+    gender: "male",
+    hairStyle: "short",
     floor: 3,
     position: [7.4, FLOOR_3_Y, -5.22],
     rotationY: 0,
@@ -45,6 +50,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "vip-manager",
     name: "Bagas Prakoso",
     title: "Manajer Senior",
+    gender: "male",
+    hairStyle: "short",
     floor: 3,
     position: [-4.5, FLOOR_3_Y, -5.0],
     rotationY: 0,
@@ -60,6 +67,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "vip-secretary",
     name: "Putri Larasati",
     title: "Sekretaris Eksekutif",
+    gender: "female",
+    hairStyle: "ponytail",
     floor: 3,
     position: [-2.7, FLOOR_3_Y, -5.0],
     rotationY: 0,
@@ -74,6 +83,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "vip-cfo",
     name: "Arman Santika",
     title: "Direktur Keuangan",
+    gender: "male",
+    hairStyle: "short",
     floor: 3,
     position: [-6.3, FLOOR_3_Y, -2.0],
     rotationY: Math.PI,
@@ -86,11 +97,49 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     badgeColor: "#10b981",
   },
 
-  // ================= LANTAI 1 — RESEPSIONIS & KARYAWAN DI KURSI LOUNGE KOSONG =================
+  // ================= LANTAI 1 — SECURITY COWOK (PINTU UTAMA), RESEPSIONIS & LOUNGE =================
+  {
+    id: "l1-security-1",
+    name: "Bambang Suryo",
+    title: "Security Pintu Utama",
+    gender: "male",
+    hairStyle: "security_cap",
+    isSecurity: true,
+    floor: 1,
+    position: [-3.8, FLOOR_1_Y, 4.5],
+    rotationY: 0,
+    pose: "standing",
+    suitColor: "#0f2442",
+    shirtColor: "#dbeafe",
+    tieColor: "#0f172a",
+    skinColor: "#c89572",
+    hairColor: "#171717",
+    badgeColor: "#f59e0b",
+  },
+  {
+    id: "l1-security-2",
+    name: "Hendro Wibowo",
+    title: "Security Lobby",
+    gender: "male",
+    hairStyle: "security_cap",
+    isSecurity: true,
+    floor: 1,
+    position: [3.8, FLOOR_1_Y, 4.5],
+    rotationY: 0,
+    pose: "standing",
+    suitColor: "#0f2442",
+    shirtColor: "#dbeafe",
+    tieColor: "#0f172a",
+    skinColor: "#cf9d78",
+    hairColor: "#18181b",
+    badgeColor: "#f59e0b",
+  },
   {
     id: "l1-recep-1",
     name: "Nabila Sari",
     title: "Resepsionis L1",
+    gender: "female",
+    hairStyle: "bob",
     floor: 1,
     position: [-1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
@@ -105,6 +154,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "l1-recep-2",
     name: "Arif Hidayat",
     title: "Admin Lobby L1",
+    gender: "male",
+    hairStyle: "short",
     floor: 1,
     position: [1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
@@ -120,6 +171,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "l1-sofa-w1",
     name: "Dina Oktavia",
     title: "Staf CS L1",
+    gender: "female",
+    hairStyle: "ponytail",
     floor: 1,
     position: [-9.2, FLOOR_1_Y, -2.7],
     rotationY: 0.14,
@@ -135,12 +188,15 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "l1-sofa-w2",
     name: "Gilang Ramadhan",
     title: "Staf Admin L1",
+    gender: "male",
+    hairStyle: "short",
     floor: 1,
     position: [-7.55, FLOOR_1_Y, -2.7],
     rotationY: -0.18,
     pose: "seated",
     suitColor: "#1e3a5f",
     shirtColor: "#f0f9ff",
+    tieColor: "#38bdf8",
     skinColor: "#cd9c7a",
     hairColor: "#18181b",
     badgeColor: "#38bdf8",
@@ -149,6 +205,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "l1-sofa-e1",
     name: "Maya Kusuma",
     title: "Staf Kreatif L1",
+    gender: "female",
+    hairStyle: "bob",
     floor: 1,
     position: [7.55, FLOOR_1_Y, -2.7],
     rotationY: 0.18,
@@ -164,12 +222,15 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     id: "l1-sofa-e2",
     name: "Hendra Saputra",
     title: "Staf Media L1",
+    gender: "male",
+    hairStyle: "short",
     floor: 1,
     position: [9.2, FLOOR_1_Y, -2.7],
     rotationY: -0.14,
     pose: "seated",
     suitColor: "#374151",
     shirtColor: "#fef3c7",
+    tieColor: "#f59e0b",
     skinColor: "#d19e7a",
     hairColor: "#1c1917",
     badgeColor: "#f59e0b",
@@ -218,13 +279,21 @@ function StaffFigure({
       headRef.current.rotation.x = Math.sin(t * 0.6) * 0.06;
     }
     if (leftArmRef.current && rightArmRef.current) {
-      const typing = Math.sin(t * 5.2) * 0.08;
-      leftArmRef.current.rotation.x = -0.82 + typing;
-      rightArmRef.current.rotation.x = -0.82 - typing;
+      if (person.isSecurity) {
+        // Alert guard stance with arms relaxed at sides
+        const sway = Math.sin(t * 1.4) * 0.03;
+        leftArmRef.current.rotation.x = 0.06 + sway;
+        rightArmRef.current.rotation.x = 0.06 - sway;
+      } else {
+        const typing = Math.sin(t * 5.2) * 0.08;
+        leftArmRef.current.rotation.x = -0.82 + typing;
+        rightArmRef.current.rotation.x = -0.82 - typing;
+      }
     }
   });
 
   const isSeated = person.pose === "seated";
+  const isFemale = person.gender === "female";
   const torsoY = isSeated ? 0.86 : 1.14;
   const headY = isSeated ? 1.28 : 1.56;
 
@@ -262,42 +331,64 @@ function StaffFigure({
             <capsuleGeometry args={[0.075, 0.62, 6, 8]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
+          {/* Tailored office skirt for standing female staff */}
+          {isFemale && (
+            <mesh position={[0, 0.72, 0]} castShadow>
+              <cylinderGeometry args={[0.15, 0.2, 0.34, 14]} />
+              <meshStandardMaterial color={person.suitColor} roughness={0.74} />
+            </mesh>
+          )}
         </group>
       )}
 
-      {/* Suit Torso + Crisp Shirt Collar + Optional Executive Tie */}
+      {/* Gender-Tailored Suit Torso (Broad Male vs Slim Female) */}
       <mesh position={[0, torsoY, 0]} castShadow>
-        <boxGeometry args={[0.42, 0.52, 0.24]} />
+        <boxGeometry args={[isFemale ? 0.36 : 0.44, 0.52, isFemale ? 0.21 : 0.25]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.72} />
       </mesh>
-      <mesh position={[0, torsoY + 0.12, 0.125]}>
-        <boxGeometry args={[0.13, 0.24, 0.02]} />
+      <mesh position={[0, torsoY + 0.12, isFemale ? 0.11 : 0.13]}>
+        <boxGeometry args={[0.12, 0.24, 0.02]} />
         <meshStandardMaterial color={person.shirtColor} roughness={0.6} />
       </mesh>
-      {person.tieColor && (
-        <mesh position={[0, torsoY + 0.04, 0.138]}>
+      {!isFemale && person.tieColor && (
+        <mesh position={[0, torsoY + 0.04, 0.142]}>
           <boxGeometry args={[0.045, 0.26, 0.015]} />
           <meshStandardMaterial color={person.tieColor} roughness={0.45} />
         </mesh>
       )}
+      {/* Security Uniform Gold Chest Badge + White Shoulder Epaulettes */}
+      {person.isSecurity && (
+        <group>
+          <mesh position={[0.12, torsoY + 0.12, 0.132]}>
+            <boxGeometry args={[0.065, 0.075, 0.016]} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
+          </mesh>
+          {[-0.17, 0.17].map((ex, ei) => (
+            <mesh key={ei} position={[ex, torsoY + 0.27, 0]}>
+              <boxGeometry args={[0.09, 0.025, 0.12]} />
+              <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+      )}
 
-      {/* Animated Arms (typing / presenting) */}
+      {/* Animated Arms (alert guard stance vs typing/presenting) */}
       <mesh
         ref={leftArmRef}
-        position={[-0.27, torsoY + 0.06, 0.12]}
-        rotation={[-0.82, 0, 0.12]}
+        position={[isFemale ? -0.23 : -0.28, torsoY + (person.isSecurity ? -0.02 : 0.06), person.isSecurity ? 0.02 : 0.12]}
+        rotation={[person.isSecurity ? 0.06 : -0.82, 0, 0.1]}
         castShadow
       >
-        <capsuleGeometry args={[0.058, 0.38, 6, 8]} />
+        <capsuleGeometry args={[isFemale ? 0.05 : 0.06, 0.38, 6, 8]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.75} />
       </mesh>
       <mesh
         ref={rightArmRef}
-        position={[0.27, torsoY + 0.06, 0.12]}
-        rotation={[-0.82, 0, -0.12]}
+        position={[isFemale ? 0.23 : 0.28, torsoY + (person.isSecurity ? -0.02 : 0.06), person.isSecurity ? 0.02 : 0.12]}
+        rotation={[person.isSecurity ? 0.06 : -0.82, 0, -0.1]}
         castShadow
       >
-        <capsuleGeometry args={[0.058, 0.38, 6, 8]} />
+        <capsuleGeometry args={[isFemale ? 0.05 : 0.06, 0.38, 6, 8]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.75} />
       </mesh>
 
@@ -319,16 +410,83 @@ function StaffFigure({
         </group>
       )}
 
-      {/* Animated Head & Hair */}
+      {/* Animated Head & Gender-Appropriate Hair / Security Cap */}
       <group ref={headRef} position={[0, headY, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.155, 14, 12]} />
           <meshStandardMaterial color={person.skinColor} roughness={0.7} />
         </mesh>
-        <mesh position={[0, 0.06, -0.02]}>
-          <sphereGeometry args={[0.162, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
-          <meshStandardMaterial color={person.hairColor} roughness={0.85} />
+        {/* Eyes */}
+        <mesh position={[-0.048, 0.02, 0.138]}>
+          <sphereGeometry args={[0.015, 8, 8]} />
+          <meshStandardMaterial color="#18181b" roughness={0.2} />
         </mesh>
+        <mesh position={[0.048, 0.02, 0.138]}>
+          <sphereGeometry args={[0.015, 8, 8]} />
+          <meshStandardMaterial color="#18181b" roughness={0.2} />
+        </mesh>
+
+        {person.hairStyle === "short" && (
+          <mesh position={[0, 0.06, -0.02]}>
+            <sphereGeometry args={[0.162, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.56]} />
+            <meshStandardMaterial color={person.hairColor} roughness={0.85} />
+          </mesh>
+        )}
+
+        {person.hairStyle === "bob" && (
+          <group>
+            <mesh position={[0, 0.05, -0.02]} castShadow>
+              <sphereGeometry args={[0.165, 14, 12]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            </mesh>
+            <mesh position={[-0.125, -0.05, -0.02]} castShadow>
+              <capsuleGeometry args={[0.042, 0.15, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            </mesh>
+            <mesh position={[0.125, -0.05, -0.02]} castShadow>
+              <capsuleGeometry args={[0.042, 0.15, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            </mesh>
+          </group>
+        )}
+
+        {person.hairStyle === "ponytail" && (
+          <group>
+            <mesh position={[0, 0.06, -0.02]} castShadow>
+              <sphereGeometry args={[0.164, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            </mesh>
+            <mesh position={[0, 0.01, -0.17]} rotation={[0.38, 0, 0]} castShadow>
+              <capsuleGeometry args={[0.055, 0.2, 6, 10]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+          </group>
+        )}
+
+        {person.hairStyle === "security_cap" && (
+          <group>
+            {/* Short male hair underneath */}
+            <mesh position={[0, 0.04, -0.02]}>
+              <sphereGeometry args={[0.158, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.85} />
+            </mesh>
+            {/* Navy Peaked Male Security Officer Cap */}
+            <mesh position={[0, 0.13, 0]} castShadow>
+              <cylinderGeometry args={[0.175, 0.158, 0.09, 14]} />
+              <meshStandardMaterial color="#0f2442" roughness={0.5} />
+            </mesh>
+            {/* Gold Cap Emblem */}
+            <mesh position={[0, 0.135, 0.165]}>
+              <boxGeometry args={[0.045, 0.035, 0.015]} />
+              <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
+            </mesh>
+            {/* Glossy Black Cap Visor Brim */}
+            <mesh position={[0, 0.095, 0.15]} rotation={[0.18, 0, 0]}>
+              <boxGeometry args={[0.2, 0.016, 0.12]} />
+              <meshStandardMaterial color="#090d16" roughness={0.25} metalness={0.3} />
+            </mesh>
+          </group>
+        )}
       </group>
 
       {/* Subtle Role-Colored Ground Presence Ring */}
