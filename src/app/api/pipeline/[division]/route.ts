@@ -32,39 +32,19 @@ const VALID_THEME_IDS: KidsThemeId[] = [
   "ai_tech_tips",
 ];
 
-/** Deterministic child-safety banned words list (Indonesian & English) */
-const BANNED_KIDS_WORDS = [
+/** Deterministic content-safety banned words list (YouTube Community Guidelines) */
+const BANNED_CONTENT_WORDS = [
   "bunuh",
   "membunuh",
-  "darah",
-  "berdarah",
-  "senjata",
-  "pistol",
-  "tembak",
   "narkoba",
-  "mabuk",
-  "alkohol",
-  "rokok",
-  "judi",
-  "bodoh",
+  "judi online",
+  "slot gacor",
   "goblok",
-  "anjing",
   "bangsat",
-  "setan",
-  "hantu seram",
-  "horor",
-  "kekerasan",
-  "siksa",
-  "bully",
-  "seks",
-  "telanjang",
   "porn",
-  "kill",
-  "blood",
-  "gun",
-  "weapon",
-  "drugs",
-  "stupid",
+  "porno",
+  "terorisme",
+  "penipuan cepat kaya",
 ];
 
 function normalizeTokens(text: string): string[] {
@@ -147,7 +127,7 @@ function runDeterministicQc(input: QcInput): QcOutput {
     .join(" ")
     .toLowerCase();
 
-  const foundBanned = BANNED_KIDS_WORDS.filter((word) => {
+  const foundBanned = BANNED_CONTENT_WORDS.filter((word) => {
     const pattern = new RegExp(`\\b${word.replace(/\s+/g, "\\s+")}\\b`, "i");
     return pattern.test(combinedText);
   });
@@ -155,32 +135,32 @@ function runDeterministicQc(input: QcInput): QcOutput {
   const safeWordsOk = foundBanned.length === 0;
   checks.push({
     id: "banned-words",
-    label: "Filter Kata Terlarang (COPPA / Ramah Anak)",
+    label: "Filter Kata Terlarang (Pedoman Komunitas YouTube)",
     passed: safeWordsOk,
     severity: "blocker",
     detail: safeWordsOk
-      ? "0 kata kasar, kekerasan, horor, atau tidak pantas ditemukan."
-      : `Ditemukan kata terlarang: ${foundBanned.join(", ")}.`,
+      ? "0 kata terlarang, spam judi, atau pelanggaran pedoman YouTube ditemukan."
+      : `Ditemukan kata berisiko: ${foundBanned.join(", ")}.`,
   });
   if (!safeWordsOk) {
-    blockedReasons.push(`Naskah mengandung kata terlarang untuk anak: ${foundBanned.join(", ")}.`);
+    blockedReasons.push(`Naskah mengandung kata berisiko: ${foundBanned.join(", ")}.`);
   }
 
-  // 3. Kids safety & educational value checklist
+  // 3. Value & clarity checklist
   const hasMoral = (input.moralLesson?.trim().length ?? 0) >= 8;
   const hasSummary = (input.summary?.trim().length ?? 0) >= 20;
-  const kidsChecklistOk = hasMoral && hasSummary;
+  const qualityChecklistOk = hasMoral && hasSummary;
   checks.push({
-    id: "kids-safety-checklist",
-    label: "Checklist Keamanan & Nilai Edukasi Anak",
-    passed: kidsChecklistOk,
+    id: "editorial-value-checklist",
+    label: "Checklist Nilai Informasi & Kejelasan Poin Utama",
+    passed: qualityChecklistOk,
     severity: "blocker",
-    detail: kidsChecklistOk
-      ? `Pesan edukasi jelas: "${input.moralLesson}".`
-      : "Pesan moral atau ringkasan episode terlalu singkat / kosong.",
+    detail: qualityChecklistOk
+      ? `Poin utama jelas: "${input.moralLesson}".`
+      : "Poin utama atau ringkasan episode terlalu singkat / kosong.",
   });
-  if (!kidsChecklistOk) {
-    blockedReasons.push("Pesan edukasi ramah anak atau ringkasan naskah belum lengkap.");
+  if (!qualityChecklistOk) {
+    blockedReasons.push("Poin utama atau ringkasan naskah belum lengkap.");
   }
 
   // 4. Anti-duplication / similarity check against previous episodes
@@ -267,25 +247,25 @@ export async function POST(
         );
       }
 
-      const systemPrompt = `Anda adalah Kepala Divisi Riset Konten YouTube Anak berbahasa Indonesia yang taat kebijakan monetisasi YouTube (anti konten massal/template seragam, 100% ramah anak COPPA).
+      const systemPrompt = `Anda adalah Kepala Divisi Riset Konten YouTube & TikTok profesional berbahasa Indonesia (konten umum/edukasi/bisnis/teknologi/storytelling — BUKAN kartun anak-anak). Anda taat kebijakan monetisasi YouTube (anti konten massal/template seragam).
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
   "ideas": [
     {
       "id": "idea-1",
       "title": "Judul konsep episode unik (Bahasa Indonesia)",
-      "angle": "Sudut pandang/konflik unik yang membedakan dari episode lain",
-      "themeId": "rescue_trucks | dino_colors | space_rocket | animal_friends | ai_tech_tips",
-      "storyStructure": "Nama struktur cerita (beda untuk setiap ide, misal: Misteri Petunjuk, Estafet Kerja Sama, Tukar Peran Lucu, Eksperimen Gagal-Berhasil, Peta Harta Karun)",
-      "setting": "Latar lokasi spesifik yang berbeda",
-      "supportingCharacter": "Nama & jenis karakter pendukung unik",
-      "moralLesson": "Pesan edukatif positif untuk anak",
-      "hook3s": "Kalimat hook 3 detik pertama yang memikat",
-      "targetAge": "3-7 tahun"
+      "angle": "Sudut pandang/insight unik yang membedakan dari episode lain",
+      "themeId": "ai_tech_tips",
+      "storyStructure": "Nama struktur cerita (beda untuk setiap ide)",
+      "setting": "Gaya visual / latar presentasi spesifik yang berbeda",
+      "supportingCharacter": "Perspektif / studi kasus / sudut pandang pendukung unik",
+      "moralLesson": "Poin utama / takeaway bernilai tinggi untuk penonton",
+      "hook3s": "Kalimat hook 3 detik pertama yang tajam dan memikat",
+      "targetAge": "Umum 15-40 tahun"
     }
   ]
 }
-WAJIB hasilkan tepat 5 ide yang masing-masing berbeda struktur cerita, latar, karakter pendukung, dan sudut pandang.`;
+WAJIB hasilkan tepat 5 ide yang masing-masing berbeda struktur, gaya visual, sudut pandang, dan pesan utama.`;
 
       const avoidStructSet = new Set(
         (input.avoidStructures ?? []).map((s) => s.toLowerCase().trim())
@@ -389,19 +369,19 @@ Hasilkan tepat 5 ide episode baru yang segar, orisinal, aman untuk anak, masing-
         );
       }
 
-      const systemPrompt = `Anda adalah Spesialis SEO YouTube Anak berbahasa Indonesia.
+      const systemPrompt = `Anda adalah Spesialis SEO YouTube & TikTok profesional berbahasa Indonesia (konten umum/edukasi/teknologi/bisnis — bukan kartun anak).
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
-  "title": "Judul YouTube klik-tinggi ramah anak maksimal 72 karakter (tanpa clickbait menyesatkan)",
-  "description": "Deskripsi lengkap berbahasa Indonesia (2-3 paragraf singkat + pesan edukasi untuk orang tua)",
+  "title": "Judul YouTube klik-tinggi maksimal 72 karakter (tanpa clickbait menyesatkan)",
+  "description": "Deskripsi lengkap berbahasa Indonesia (2-3 paragraf ringkas + poin penting video)",
   "tags": ["minimal 8 tag relevan tanpa #"],
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4"],
-  "thumbnailHeadline": "2-4 kata kapital singkat untuk thumbnail"
+  "thumbnailHeadline": "2-4 kata kapital tajam untuk thumbnail"
 }`;
 
       const userPrompt = `Platform: ${input.platform}
 Ide Episode: ${JSON.stringify(input.idea)}
-Buat metadata SEO Bahasa Indonesia yang natural, aman untuk anak, tidak spam keyword.`;
+Buat metadata SEO Bahasa Indonesia yang natural, tajam, dan tidak spam keyword.`;
 
       const llm = await callFreeTierLLM<Partial<SeoOutput>>({
         systemPrompt,
@@ -482,22 +462,22 @@ Buat metadata SEO Bahasa Indonesia yang natural, aman untuk anak, tidak spam key
             .join("\n")
         : "";
 
-      const systemPrompt = `Anda adalah Penulis Naskah Animasi Anak profesional berbahasa Indonesia (100% ramah anak, ceria, edukatif, bebas kekerasan & kata kasar).
+      const systemPrompt = `Anda adalah Penulis Naskah YouTube & TikTok profesional berbahasa Indonesia (konten modern edukasi/teknologi/bisnis/storytelling — BUKAN kartun anak-anak).
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
-  "summary": "Ringkasan plot 2-3 kalimat untuk arsip anti-duplikat",
-  "storyStructure": "Struktur cerita episode ini",
-  "setting": "Latar lokasi utama",
-  "supportingCharacter": "Karakter pendukung utama",
-  "moralLesson": "Pesan moral positif",
+  "summary": "Ringkasan isi video 2-3 kalimat untuk arsip anti-duplikat",
+  "storyStructure": "Struktur penyampaian episode ini",
+  "setting": "Gaya visual / latar utama",
+  "supportingCharacter": "Perspektif / studi kasus pendukung",
+  "moralLesson": "Poin utama / takeaway untuk penonton",
   "scenes": [
     {
       "sceneNumber": 1,
-      "label": "Nama adegan singkat",
+      "label": "Nama segmen singkat (misal: Hook, Masalah, Fakta, Solusi, Penutup)",
       "durationSec": 5,
-      "narration": "Dialog / narasi Bahasa Indonesia yang ceria dan alami untuk dibacakan TTS",
+      "narration": "Narasi Bahasa Indonesia yang mengalir alami, padat, dan enak didengar saat dibacakan TTS",
       "subtitle": "Teks subtitle pendek 4-9 kata untuk layar",
-      "visualCue": "Arahan visual animasi per adegan",
+      "visualCue": "Headline/poin visual ringkas untuk kartu motion-graphics di layar",
       "mood": "intro | problem | action | solve | celebrate"
     }
   ]
@@ -604,15 +584,15 @@ Tulis naskah lengkap per adegan Bahasa Indonesia yang segar, komunikatif untuk a
       let tokensUsed = 0;
 
       const llm = await callFreeTierLLM<{
-        childSafe?: boolean;
+        policySafe?: boolean;
         editorialNote?: string;
         concerns?: string[];
       }>({
-        systemPrompt: `Anda adalah Auditor QC Konten YouTube Anak. Evaluasi keamanan anak & keunikan naskah secara objektif.
-Balas HANYA JSON: { "childSafe": true/false, "editorialNote": "catatan singkat 1-2 kalimat", "concerns": [] }`,
+        systemPrompt: `Anda adalah Auditor QC Konten YouTube profesional. Evaluasi kepatuhan pedoman komunitas & keunikan naskah secara objektif.
+Balas HANYA JSON: { "policySafe": true/false, "editorialNote": "catatan singkat 1-2 kalimat", "concerns": [] }`,
         userPrompt: `Judul: ${input.title}
 Ringkasan: ${input.summary}
-Pesan Moral: ${input.moralLesson}
+Poin Utama: ${input.moralLesson}
 Adegan: ${JSON.stringify(input.scenes.map((s) => s.narration))}`,
         expectJson: true,
         temperature: 0.2,
@@ -627,15 +607,15 @@ Adegan: ${JSON.stringify(input.scenes.map((s) => s.narration))}`,
         if (llm.parsed?.editorialNote) {
           aiReviewNote = String(llm.parsed.editorialNote);
         }
-        if (llm.parsed?.childSafe === false) {
+        if (llm.parsed?.policySafe === false) {
           deterministic.passed = false;
           const concerns = Array.isArray(llm.parsed.concerns)
             ? llm.parsed.concerns.join("; ")
-            : "Dinilai kurang sesuai untuk anak oleh reviewer AI.";
+            : "Dinilai berisiko melanggar pedoman YouTube oleh reviewer AI.";
           deterministic.blockedReasons.push(concerns);
           deterministic.checks.push({
             id: "ai-safety-review",
-            label: "Audit Editorial AI Ramah Anak",
+            label: "Audit Editorial AI Pedoman YouTube",
             passed: false,
             severity: "blocker",
             detail: concerns,
@@ -643,7 +623,7 @@ Adegan: ${JSON.stringify(input.scenes.map((s) => s.narration))}`,
         } else {
           deterministic.checks.push({
             id: "ai-safety-review",
-            label: "Audit Editorial AI Ramah Anak",
+            label: "Audit Editorial AI Pedoman YouTube",
             passed: true,
             severity: "warning",
             detail: aiReviewNote,

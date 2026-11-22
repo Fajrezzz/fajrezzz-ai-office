@@ -1,11 +1,12 @@
 "use client";
 
-import type { KidsEpisode, KidsThemeId, VideoFormat } from "@/lib/kids-studio/episode-brain";
+import type { VideoFormat } from "@/lib/kids-studio/episode-brain";
 import {
-  renderCartoonFrame,
-  renderKidsThumbnail,
-  startKidsMelody,
-} from "@/lib/kids-studio/cartoon-renderer";
+  buildEditorialEpisode,
+  renderEditorialFrame,
+  renderEditorialThumbnail,
+  startAmbientSynthBed,
+} from "@/lib/pipeline/motion-renderer";
 import type {
   EditingOutput,
   MotionOutput,
@@ -16,66 +17,8 @@ import type {
   VoiceOutput,
 } from "@/types/pipeline";
 
-/** Convert a RealEpisode (from real 7-division outputs) into the Canvas renderer shape */
-export function buildRenderableEpisode(episode: RealEpisode): KidsEpisode | null {
-  const research = episode.divisions.research.output;
-  const seo = episode.divisions.seo.output;
-  const script = episode.divisions.script.output;
-  if (!script || script.scenes.length === 0) return null;
-
-  const selectedIdea =
-    research?.ideas.find((i) => i.id === episode.selectedIdeaId) ??
-    research?.ideas[0];
-
-  const themeId: KidsThemeId = selectedIdea?.themeId ?? "rescue_trucks";
-
-  return {
-    id: episode.id,
-    episodeNumber: episode.episodeNumber,
-    createdAt: episode.createdAt,
-    themeId,
-    themeLabel: selectedIdea?.storyStructure ?? "Episode Orisinal",
-    hook3s: selectedIdea?.hook3s ?? script.scenes[0]?.subtitle ?? "",
-    title: seo?.title ?? selectedIdea?.title ?? `Episode #${episode.episodeNumber}`,
-    thumbnailHeadline:
-      seo?.thumbnailHeadline ??
-      (seo?.title ?? "EPISODE BARU").split(" ").slice(0, 3).join(" ").toUpperCase(),
-    description: seo?.description ?? script.summary,
-    tags: (seo?.tags ?? []).join(", "),
-    accentColor: "#38bdf8",
-    scenes: script.scenes.map((s) => {
-      const moodMap = {
-        intro: "bright",
-        problem: "exciting",
-        action: "rainbow",
-        solve: "space",
-        celebrate: "celebrate",
-      } as const;
-      const actionMap = {
-        intro: "intro_hook",
-        problem: "problem",
-        action: "move_in",
-        solve: "solve",
-        celebrate: "celebrate",
-      } as const;
-      return {
-        sceneNumber: s.sceneNumber,
-        label: s.label,
-        durationSec: s.durationSec,
-        narration: s.narration,
-        subtitle: s.subtitle,
-        mood: moodMap[s.mood],
-        action: actionMap[s.mood],
-      };
-    }),
-    createdByAuto: false,
-    uploaded: Boolean(episode.metrics.uploadedAt),
-  };
-}
-
 /**
  * DIVISI 4 — SUARA (TTS per adegan menggunakan Web Speech API browser gratis)
- * Memverifikasi ketersediaan suara Bahasa Indonesia di browser & menyusun track per adegan.
  */
 export async function runVoiceDivisionBrowser(
   scenes: PipelineScene[]
@@ -90,7 +33,6 @@ export async function runVoiceDivisionBrowser(
   let engine: VoiceOutput["engine"] = "web-audio-bed";
 
   if (hasSpeech) {
-    // Allow browser voices list to initialize
     let voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) {
       await new Promise<void>((resolve) => {
@@ -119,7 +61,7 @@ export async function runVoiceDivisionBrowser(
     const wordCount = scene.narration.trim().split(/\s+/).filter(Boolean).length;
     const estimatedSec = Math.max(
       scene.durationSec,
-      Math.ceil((wordCount / 2.4) * 10) / 10
+      Math.ceil((wordCount / 2.5) * 10) / 10
     );
     return {
       sceneNumber: scene.sceneNumber,
@@ -127,8 +69,8 @@ export async function runVoiceDivisionBrowser(
       estimatedSec,
       voiceName: chosenVoiceName,
       lang,
-      rate: 1.0,
-      pitch: 1.12,
+      rate: 1.02,
+      pitch: 1.0,
       status: engine === "web-speech-api" ? "ready" : "fallback-web-audio",
     };
   });
@@ -167,8 +109,8 @@ export function speakSceneTracks(
     const track = tracks[idx];
     const utter = new SpeechSynthesisUtterance(track.text);
     utter.lang = track.lang || "id-ID";
-    utter.rate = track.rate || 1.0;
-    utter.pitch = track.pitch || 1.1;
+    utter.rate = track.rate || 1.02;
+    utter.pitch = track.pitch || 1.0;
 
     const match =
       voices.find((v) => v.name === track.voiceName) ??
@@ -192,7 +134,7 @@ export function speakSceneTracks(
 }
 
 /**
- * DIVISI 5 — MOTION (Render keyframe animasi per adegan secara nyata di HTML5 Canvas browser)
+ * DIVISI 5 — MOTION (Render keyframe motion-graphics modern per adegan di HTML5 Canvas)
  */
 export async function runMotionDivisionBrowser(
   episode: RealEpisode,
@@ -202,15 +144,14 @@ export async function runMotionDivisionBrowser(
     throw new Error("Divisi Motion harus dijalankan di browser.");
   }
 
-  const renderable = buildRenderableEpisode(episode);
-  if (!renderable) {
+  const editorial = buildEditorialEpisode(episode);
+  if (!editorial) {
     throw new Error("Naskah adegan belum tersedia untuk Divisi Motion.");
   }
 
   const width = format === "shorts" ? 720 : 1280;
   const height = format === "shorts" ? 1280 : 720;
 
-  // Render real storyboard keyframes per scene on an offscreen canvas
   const previewW = format === "shorts" ? 270 : 426;
   const previewH = format === "shorts" ? 480 : 240;
   const canvas = document.createElement("canvas");
@@ -224,10 +165,10 @@ export async function runMotionDivisionBrowser(
   const sceneFrames: SceneMotionFrame[] = [];
   let cursorSec = 0;
 
-  for (const scene of renderable.scenes) {
+  for (const scene of editorial.scenes) {
     const sampleTime = cursorSec + scene.durationSec * 0.45;
-    renderCartoonFrame(ctx, previewW, previewH, renderable, sampleTime);
-    const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.72);
+    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime);
+    const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.74);
     sceneFrames.push({
       sceneNumber: scene.sceneNumber,
       label: scene.label,
@@ -235,7 +176,6 @@ export async function runMotionDivisionBrowser(
       keyframeDataUrl,
     });
     cursorSec += scene.durationSec;
-    // Yield to browser paint loop so UI stays responsive
     await new Promise((r) => window.setTimeout(r, 16));
   }
 
@@ -250,7 +190,7 @@ export async function runMotionDivisionBrowser(
 }
 
 /**
- * DIVISI 6 — EDITING (Gabung animasi Canvas + audio via MediaRecorder -> Blob video & HD 1280x720 Thumbnail PNG)
+ * DIVISI 6 — EDITING (Gabung motion-graphics Canvas + audio ambient via MediaRecorder -> Video + HD Thumbnail 1280x720)
  */
 export async function runEditingDivisionBrowser(
   episode: RealEpisode,
@@ -266,15 +206,15 @@ export async function runEditingDivisionBrowser(
     );
   }
 
-  const renderable = buildRenderableEpisode(episode);
-  if (!renderable) {
+  const editorial = buildEditorialEpisode(episode);
+  if (!editorial) {
     throw new Error("Naskah & Motion belum siap untuk Editing.");
   }
 
-  // 1. Render crisp 1280x720 HD Thumbnail PNG
-  const thumbnailDataUrl = renderKidsThumbnail(renderable);
+  // 1. Render crisp 1280x720 Modern Editorial HD Thumbnail PNG
+  const thumbnailDataUrl = renderEditorialThumbnail(editorial);
 
-  // 2. Render & mux real Canvas video + Web Audio bed via MediaRecorder
+  // 2. Render & mux real Canvas video + modern ambient audio via MediaRecorder
   const width = format === "shorts" ? 720 : 1280;
   const height = format === "shorts" ? 1280 : 720;
   const canvas = document.createElement("canvas");
@@ -287,15 +227,17 @@ export async function runEditingDivisionBrowser(
 
   const totalSec = Math.max(
     6,
-    renderable.scenes.reduce((acc, s) => acc + s.durationSec, 0)
+    editorial.scenes.reduce((acc, s) => acc + s.durationSec, 0)
   );
   const videoStream = canvas.captureStream(30);
-  const melody = startKidsMelody(false);
+  const synthBed = startAmbientSynthBed(false);
 
   const combinedStream = new MediaStream();
   videoStream.getVideoTracks().forEach((t) => combinedStream.addTrack(t));
-  if (melody.audioStream) {
-    melody.audioStream.getAudioTracks().forEach((t) => combinedStream.addTrack(t));
+  if (synthBed.audioStream) {
+    synthBed.audioStream
+      .getAudioTracks()
+      .forEach((t) => combinedStream.addTrack(t));
   }
 
   const preferredMime = MediaRecorder.isTypeSupported(
@@ -318,11 +260,11 @@ export async function runEditingDivisionBrowser(
 
   const blobPromise = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => {
-      melody.stop();
+      synthBed.stop();
       resolve(new Blob(chunks, { type: preferredMime }));
     };
     recorder.onerror = () => {
-      melody.stop();
+      synthBed.stop();
       reject(new Error("MediaRecorder gagal saat merekam video."));
     };
   });
@@ -339,7 +281,7 @@ export async function runEditingDivisionBrowser(
         resolve();
         return;
       }
-      renderCartoonFrame(ctx, width, height, renderable, elapsedSec);
+      renderEditorialFrame(ctx, width, height, editorial, elapsedSec);
       onProgress?.(Math.min(99, Math.round((elapsedSec / totalSec) * 100)));
       window.requestAnimationFrame(tick);
     };
@@ -347,7 +289,7 @@ export async function runEditingDivisionBrowser(
   });
 
   const videoBlob = await blobPromise;
-  const safeSlug = renderable.title
+  const safeSlug = editorial.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")

@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle,
   Box,
   Check,
   CheckCircle2,
@@ -30,11 +29,12 @@ import {
   XCircle,
 } from "lucide-react";
 import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
-import { renderCartoonFrame, startKidsMelody } from "@/lib/kids-studio/cartoon-renderer";
 import {
-  buildRenderableEpisode,
-  speakSceneTracks,
-} from "@/lib/pipeline/browser-divisions";
+  buildEditorialEpisode,
+  renderEditorialFrame,
+  startAmbientSynthBed,
+} from "@/lib/pipeline/motion-renderer";
+import { speakSceneTracks } from "@/lib/pipeline/browser-divisions";
 import {
   buildScriptSummaryArchive,
   pickFreshVariationBlueprint,
@@ -73,38 +73,31 @@ const STATUS_BADGE: Record<
 
 const QUICK_THEMES: { label: string; theme: string; platform: PublishPlatform }[] = [
   {
-    label: "🚒 Truk Pemadam & Kucing",
-    theme: "Petualangan mobil pemadam cilik menolong anak kucing di jembatan pelangi",
+    label: "🤖 Tools AI Gratis",
+    theme: "3 tools AI gratis yang menghemat 5 jam kerja konten kreator tiap minggu",
     platform: "youtube_shorts",
   },
   {
-    label: "🦖 Dino Belajar Warna",
-    theme: "Dinosaurus kecil menemukan telur warna-warni di lembah musik",
+    label: "💰 Bisnis & Keuangan",
+    theme: "Kesalahan umum anak muda mengatur gaji pertama dan cara memperbaikinya",
     platform: "youtube_shorts",
   },
   {
-    label: "🚀 Roket ke Bulan",
-    theme: "Roket ceria bersama robot mini memperbaiki lampu bintang di bulan",
+    label: "🧠 Produktivitas & Fokus",
+    theme: "Eksperimen 7 hari kerja tanpa distraksi HP dan dampaknya ke hasil kerja",
     platform: "youtube_landscape",
   },
   {
-    label: "🐱 Persahabatan Hewan Hutan",
-    theme: "Kelinci dan gajah kecil bekerja sama membangun perahu daun menyeberang sungai",
+    label: "🌍 Fakta Teknologi Unik",
+    theme: "Bagaimana cara kerja algoritma rekomendasi video dan cara bikin konten yang bertahan lama",
     platform: "youtube_shorts",
   },
 ];
 
 interface AiServerStatus {
   anyConfigured: boolean;
-  configuredCount: number;
+  activeLabel: string;
   pricingNotice: string;
-  providers: {
-    id: string;
-    label: string;
-    envVar: string;
-    configured: boolean;
-    freeTierSummary: string;
-  }[];
 }
 
 export function KidsStudioPanel() {
@@ -153,7 +146,7 @@ export function KidsStudioPanel() {
   }, []);
 
   const renderableEpisode = useMemo(
-    () => (activeEpisode ? buildRenderableEpisode(activeEpisode) : null),
+    () => (activeEpisode ? buildEditorialEpisode(activeEpisode) : null),
     [activeEpisode]
   );
 
@@ -189,7 +182,7 @@ export function KidsStudioPanel() {
     if (!canvas || !renderableEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    renderCartoonFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8);
+    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8);
   }, [renderableEpisode, stopPlayback]);
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
@@ -206,7 +199,7 @@ export function KidsStudioPanel() {
     if (!ctx) return;
 
     if (!isMuted) {
-      melodyStopRef.current = startKidsMelody(true).stop;
+      melodyStopRef.current = startAmbientSynthBed(true).stop;
       const tracks = activeEpisode?.divisions.voice.output?.sceneTracks;
       if (tracks && tracks.length > 0) {
         speechStopRef.current = speakSceneTracks(tracks, (sn) =>
@@ -226,7 +219,7 @@ export function KidsStudioPanel() {
         return;
       }
       setPlayTime(elapsed);
-      renderCartoonFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
+      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
       rafRef.current = window.requestAnimationFrame(loop);
     };
     rafRef.current = window.requestAnimationFrame(loop);
@@ -291,35 +284,15 @@ export function KidsStudioPanel() {
 
   return (
     <div className="space-y-5">
-      {/* ================= SERVER AI FREE-TIER STATUS BANNER ================= */}
-      {aiStatus && !aiStatus.anyConfigured && (
-        <div className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 text-xs text-amber-100">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
-            <div className="space-y-1.5">
-              <div className="font-black text-amber-200">
-                API Key AI Belum Terpasang di Environment Variable Vercel
-              </div>
-              <p className="leading-relaxed text-amber-100/90">
-                Pipeline nyata memanggil LLM melalui Vercel Serverless Function (
-                <code className="rounded bg-slate-950 px-1.5 py-0.5 text-cyan-300">
-                  /api/pipeline/*
-                </code>
-                ). Untuk keamanan, API key <strong>tidak</strong> disimpan di kode.
-                Tambahkan minimal 1 key gratis tanpa kartu kredit di Vercel Settings →
-                Environment Variables lalu Redeploy:
-              </p>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {aiStatus.providers.map((p) => (
-                  <span
-                    key={p.id}
-                    className="rounded-lg border border-amber-400/40 bg-slate-950/80 px-2 py-1 font-mono text-[10px] text-amber-200"
-                  >
-                    {p.envVar}
-                  </span>
-                ))}
-              </div>
-            </div>
+      {/* ================= SERVER AI GRATIS RP 0 STATUS STRIP ================= */}
+      {aiStatus && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-100">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 shrink-0 text-emerald-300" />
+            <span>
+              <strong>AI Gratis Rp 0 Langsung Aktif</strong> ({aiStatus.activeLabel})
+              — tanpa kartu kredit &amp; tanpa wajib daftar API key.
+            </span>
           </div>
         </div>
       )}
@@ -375,7 +348,7 @@ export function KidsStudioPanel() {
               type="text"
               value={themeInput}
               onChange={(e) => setThemeInput(e.target.value)}
-              placeholder="Contoh: Petualangan truk pemadam cilik menolong anak kucing di jembatan pelangi..."
+              placeholder="Contoh: 3 cara mengatur keuangan gaji pertama biar tidak habis di tengah bulan..."
               className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
             />
             <button
@@ -1049,13 +1022,13 @@ export function KidsStudioPanel() {
                             customIdea: e.target.value,
                           })
                         }
-                        placeholder="Misal: Kucingnya ternyata suka bunyi lonceng sepeda..."
+                        placeholder="Misal: Pengalaman pribadi saat mencoba metode ini selama 1 bulan..."
                         className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] font-bold text-slate-300">
-                        2. Twist Cerita Unik
+                        2. Twist / Insight Unik
                       </label>
                       <input
                         type="text"
@@ -1065,13 +1038,13 @@ export function KidsStudioPanel() {
                             customTwist: e.target.value,
                           })
                         }
-                        placeholder="Misal: Jembatannya berubah jadi perosotan pelangi!"
+                        placeholder="Misal: Ternyata hasil terbaik bukan dari cara populer, melainkan..."
                         className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] font-bold text-slate-300">
-                        3. Kalimat / Suara Khas Bos
+                        3. Kalimat / Opini Khas Bos
                       </label>
                       <input
                         type="text"
@@ -1081,13 +1054,13 @@ export function KidsStudioPanel() {
                             customVoiceLine: e.target.value,
                           })
                         }
-                        placeholder="Misal: Ayo hitung sama-sama ya teman-teman!"
+                        placeholder="Misal: Menurut pengalamanku di lapangan, trik paling ngaruh itu..."
                         className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] font-bold text-slate-300">
-                        4. Karakter Pendukung Baru dari Bos
+                        4. Studi Kasus / Tokoh Tambahan dari Bos
                       </label>
                       <input
                         type="text"
@@ -1097,7 +1070,7 @@ export function KidsStudioPanel() {
                             customCharacter: e.target.value,
                           })
                         }
-                        placeholder="Misal: Piko si anak kucing belang oranye"
+                        placeholder="Misal: Contoh kasus UMKM kopi lokal di kota sendiri"
                         className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
                       />
                     </div>
