@@ -138,6 +138,12 @@ interface OfficeContextValue {
   // Agent & Task actions
   setAgentStatus: (agentId: string, status: RobotAnimationState) => void;
   sendAgentToWaypoint: (agentId: string, waypointId: string) => void;
+  dispatchAgentRealWork: (
+    agentId: string,
+    mode: "working" | "idle" | "error",
+    waypointId: string,
+    actionLabel: string
+  ) => void;
   assignAgentWorkstation: (agentId: string, workstationId: string) => void;
   notifyAgentArrived: (agentId: string, waypointId: string) => void;
   createTask: (input: CreateTaskInput) => void;
@@ -156,9 +162,34 @@ interface OfficeContextValue {
 
 const OfficeContext = createContext<OfficeContextValue | null>(null);
 
+const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
+  "staff-01": "wp-l2-lounge",
+  "staff-02": "wp-l2-promenade",
+  "staff-03": "wp-l2-lounge",
+  "staff-04": "wp-l2-front-4",
+  "staff-05": "wp-l2-front-1",
+  "staff-06": "wp-l2-front-2",
+  "staff-07": "wp-l2-front-3",
+  "staff-08": "wp-l2-promenade",
+};
+
 export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
-  const [agents, setAgents] = useState<OfficeAgent[]>(INITIAL_AGENTS);
+  // All agents start genuinely IDLE (ngopi/santai) until a real division runs!
+  const [agents, setAgents] = useState<OfficeAgent[]>(() =>
+    INITIAL_AGENTS.map((a) => {
+      const idleWp = IDLE_LOUNGE_WAYPOINTS[a.id] ?? a.currentWaypointId;
+      return {
+        ...a,
+        status: "idle",
+        pendingWorkState: "idle",
+        currentWaypointId: idleWp,
+        targetWaypointId: idleWp,
+        simulatedLoad: 0,
+        currentActionLabel: "☕ Antrean kosong — IDLE / ngopi santai",
+      };
+    })
+  );
   const [workstations, setWorkstations] =
     useState<Workstation[]>(INITIAL_WORKSTATIONS);
   const [tasks, setTasks] = useState<OfficeTask[]>(INITIAL_TASKS);
@@ -636,19 +667,44 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     [addActivity, agents, workstations]
   );
 
+  const dispatchAgentRealWork = useCallback(
+    (
+      agentId: string,
+      mode: "working" | "idle" | "error",
+      waypointId: string,
+      actionLabel: string
+    ) => {
+      const dest = OFFICE_WAYPOINTS[waypointId];
+      if (!dest) return;
+
+      setAgents((prev) =>
+        prev.map((agent) => {
+          if (agent.id !== agentId) return agent;
+          const alreadyThere = agent.currentWaypointId === waypointId;
+          return {
+            ...agent,
+            floor: dest.floor,
+            targetWaypointId: waypointId,
+            pendingWorkState: mode,
+            status: alreadyThere ? mode : "walking",
+            simulatedLoad: mode === "working" ? 100 : 0,
+            currentActionLabel: actionLabel,
+          };
+        })
+      );
+    },
+    []
+  );
+
   const notifyAgentArrived = useCallback(
     (agentId: string, waypointId: string) => {
       const wp = OFFICE_WAYPOINTS[waypointId];
       setAgents((prev) =>
         prev.map((agent) => {
           if (agent.id !== agentId) return agent;
-          const assignedWs = workstations.find(
-            (w) => w.id === agent.assignedWorkstationId
-          );
-          const isHomeWorkstation = assignedWs?.waypointId === waypointId;
-          const nextStatus: RobotAnimationState = isHomeWorkstation
-            ? "working"
-            : "idle";
+          // Respect ONLY real pendingWorkState (never fake-work when queue is empty!)
+          const nextStatus: RobotAnimationState =
+            agent.pendingWorkState ?? "idle";
 
           return {
             ...agent,
@@ -656,66 +712,20 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
             currentWaypointId: waypointId,
             targetWaypointId: waypointId,
             status: nextStatus,
-            simulatedLoad: isHomeWorkstation ? 72 : 28,
-            currentActionLabel: isHomeWorkstation
-              ? `Simulasi kerja di ${assignedWs?.name}`
-              : `Idle di ${wp?.label ?? "Area Kantor"}`,
+            simulatedLoad: nextStatus === "working" ? 100 : 0,
+            currentActionLabel:
+              agent.currentActionLabel ||
+              (nextStatus === "working"
+                ? `Mengerjakan tugas nyata di ${wp?.label ?? "Meja"}`
+                : nextStatus === "error"
+                ? `Error di ${wp?.label ?? "Meja"}`
+                : `☕ IDLE / santai di ${wp?.label ?? "Lounge"}`),
           };
         })
       );
-
-      const targetAgent = agents.find((a) => a.id === agentId);
-      if (targetAgent && wp) {
-        addActivity(
-          targetAgent.name,
-          "robot-placeholder",
-          `Tiba di ${wp.label} (${
-            wp.zone === "workstation" ? "mode kerja simulasi" : "mode idle"
-          }).`,
-          "success",
-          wp.label
-        );
-      }
     },
-    [addActivity, agents, workstations]
+    []
   );
-
-  useEffect(() => {
-    if (!isSimulationRunning) return;
-
-    const timer = window.setInterval(() => {
-      setAgents((prev) => {
-        const eligible = prev.filter(
-          (a) => a.status === "idle" || a.status === "working"
-        );
-        if (eligible.length === 0) return prev;
-
-        const chosen = eligible[Math.floor(Math.random() * eligible.length)];
-        const nextOptions = chosen.patrolWaypoints.filter(
-          (wp) => wp !== chosen.currentWaypointId
-        );
-        if (nextOptions.length === 0) return prev;
-
-        const nextWp =
-          nextOptions[Math.floor(Math.random() * nextOptions.length)];
-        const destLabel = OFFICE_WAYPOINTS[nextWp]?.label ?? nextWp;
-
-        return prev.map((agent) =>
-          agent.id === chosen.id
-            ? {
-                ...agent,
-                status: "walking",
-                targetWaypointId: nextWp,
-                simulatedLoad: 48,
-                currentActionLabel: `Patroli menuju ${destLabel}`,
-              }
-            : agent
-        );
-      });
-    }, 6500);
-
-    return () => window.clearInterval(timer);
-  }, [isSimulationRunning]);
 
   const createTask = useCallback(
     (input: CreateTaskInput) => {
@@ -1001,6 +1011,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       deleteWorkOrder,
       setAgentStatus,
       sendAgentToWaypoint,
+      dispatchAgentRealWork,
       assignAgentWorkstation,
       notifyAgentArrived,
       createTask,
@@ -1047,6 +1058,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       deleteWorkOrder,
       setAgentStatus,
       sendAgentToWaypoint,
+      dispatchAgentRealWork,
       assignAgentWorkstation,
       notifyAgentArrived,
       createTask,

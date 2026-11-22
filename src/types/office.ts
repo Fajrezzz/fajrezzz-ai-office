@@ -6,7 +6,12 @@ export type NavSection =
   | "tasks"
   | "activity";
 
-export type RobotAnimationState = "idle" | "working" | "walking" | "standby";
+export type RobotAnimationState =
+  | "idle"
+  | "working"
+  | "walking"
+  | "standby"
+  | "error";
 
 export type PerformanceMode = "eco" | "balanced" | "high";
 
@@ -86,6 +91,8 @@ export interface OfficeAgent {
   /** Explicit flag ensuring UI always communicates visual placeholder status in Phase 1 */
   isVisualPlaceholder: true;
   status: RobotAnimationState;
+  /** Target real status applied once agent finishes walking to destination */
+  pendingWorkState?: "idle" | "working" | "error";
   assignedWorkstationId: string;
   currentWaypointId: string;
   targetWaypointId: string;

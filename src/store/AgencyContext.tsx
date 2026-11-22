@@ -158,7 +158,7 @@ function sanitizeEpisodesForStorage(episodes: RealEpisode[]): RealEpisode[] {
 }
 
 export function AgencyProvider({ children }: { children: React.ReactNode }) {
-  const { sendAgentToWaypoint, setAgentStatus, addActivity } = useOffice();
+  const { dispatchAgentRealWork, addActivity } = useOffice();
 
   const [episodes, setEpisodes] = useState<RealEpisode[]>([]);
   const [activeEpisodeId, setActiveEpisodeId] = useState<string | null>(null);
@@ -237,17 +237,29 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       const meta = PIPELINE_DIVISIONS.find((d) => d.key === division);
       if (!meta) return;
       if (state === "working") {
-        sendAgentToWaypoint(meta.agentId, meta.deskWaypointId);
-        setAgentStatus(meta.agentId, "working");
+        dispatchAgentRealWork(
+          meta.agentId,
+          "working",
+          meta.deskWaypointId,
+          `Sedang menjalankan ${meta.label}`
+        );
       } else if (state === "error") {
-        sendAgentToWaypoint(meta.agentId, meta.deskWaypointId);
-        setAgentStatus(meta.agentId, "standby");
+        dispatchAgentRealWork(
+          meta.agentId,
+          "error",
+          meta.deskWaypointId,
+          `ERROR pada ${meta.label} — butuh Retry`
+        );
       } else {
-        sendAgentToWaypoint(meta.agentId, meta.loungeWaypointId);
-        setAgentStatus(meta.agentId, "idle");
+        dispatchAgentRealWork(
+          meta.agentId,
+          "idle",
+          meta.loungeWaypointId,
+          "☕ Antrean kosong — IDLE / ngopi santai"
+        );
       }
     },
-    [sendAgentToWaypoint, setAgentStatus]
+    [dispatchAgentRealWork]
   );
 
   const patchEpisode = useCallback(

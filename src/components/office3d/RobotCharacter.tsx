@@ -255,6 +255,8 @@ export function RobotCharacter({
   const statusDotColor =
     agent.status === "working"
       ? "#10b981"
+      : agent.status === "error"
+      ? "#ef4444"
       : agent.status === "walking"
       ? "#38bdf8"
       : agent.status === "idle"
@@ -268,13 +270,13 @@ export function RobotCharacter({
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Subtle Role-Colored Ground Presence Ring for Instant Visual Readability */}
+      {/* Subtle Role-Colored Ground Presence Ring (Red when division failed) */}
       <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[isSelected ? 0.42 : 0.34, isSelected ? 0.56 : 0.41, 24]} />
         <meshBasicMaterial
-          color={agent.accentColor}
+          color={agent.status === "error" ? "#ef4444" : agent.accentColor}
           transparent
-          opacity={isSelected ? 0.92 : 0.42}
+          opacity={agent.status === "error" || isSelected ? 0.92 : 0.42}
         />
       </mesh>
 

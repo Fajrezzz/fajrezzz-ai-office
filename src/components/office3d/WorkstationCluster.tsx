@@ -34,6 +34,7 @@ export function WorkstationCluster({
       {workstations.map((ws) => {
         const assigned = agents.find((a) => a.id === ws.assignedAgentId);
         const isActive = assigned?.status === "working";
+        const isError = assigned?.status === "error";
         const [x, y, z] = ws.position;
 
         const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -102,21 +103,46 @@ export function WorkstationCluster({
                   <boxGeometry args={[0.88, 0.52, 0.035]} />
                   <meshStandardMaterial color="#111622" metalness={0.55} roughness={0.3} />
                 </mesh>
-                {/* High-res glowing screen */}
+                {/* High-res glowing screen (Active green/white when working, Red alert when failed, Dim when idle) */}
                 <mesh position={[0, 0, 0.02]}>
                   <planeGeometry args={[0.83, 0.47]} />
                   <meshStandardMaterial
                     map={textures.monitorScreen}
                     emissiveMap={textures.monitorScreen}
-                    emissive="#ffffff"
+                    emissive={isError ? "#ef4444" : "#ffffff"}
                     emissiveIntensity={
-                      isActive ? (isNight ? 0.95 : 0.62) : 0.24
+                      isError
+                        ? 1.85
+                        : isActive
+                        ? isNight
+                          ? 0.95
+                          : 0.62
+                        : 0.14
                     }
                     roughness={0.18}
                   />
                 </mesh>
               </group>
             ))}
+
+            {/* Real Division Error Indicator Beacon on Desk (only visible when division FAILED) */}
+            {isError && (
+              <group position={[0, 1.56, -0.26]}>
+                <mesh>
+                  <sphereGeometry args={[0.13, 14, 12]} />
+                  <meshStandardMaterial
+                    color="#ef4444"
+                    emissive="#ef4444"
+                    emissiveIntensity={2.8}
+                    toneMapped={false}
+                  />
+                </mesh>
+                <mesh position={[0, -0.14, 0]}>
+                  <cylinderGeometry args={[0.025, 0.025, 0.22, 8]} />
+                  <meshStandardMaterial color="#991b1b" metalness={0.6} roughness={0.3} />
+                </mesh>
+              </group>
+            )}
 
             {/* Desk Mat, Mechanical Keyboard & Mouse */}
             <mesh position={[0, 0.778, 0.16]} receiveShadow>
