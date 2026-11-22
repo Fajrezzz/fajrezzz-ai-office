@@ -4,9 +4,24 @@ export type KidsThemeId =
   | "rainbow_train"
   | "space_rocket"
   | "excavator_park"
-  | "animal_friends";
+  | "animal_friends"
+  | "ai_tech_tips";
 
 export type VideoFormat = "shorts" | "landscape";
+
+export type PublishPlatform = "youtube_shorts" | "youtube_landscape" | "tiktok";
+
+export interface ContentIdeaOption {
+  id: string;
+  themeId: KidsThemeId;
+  themeLabel: string;
+  angle: string;
+  title: string;
+  thumbnailHeadline: string;
+  hook3s: string;
+  viralScore: number;
+  accentColor: string;
+}
 
 export interface CartoonScene {
   sceneNumber: number;
@@ -511,17 +526,377 @@ const THEME_BLUEPRINTS: ThemeBlueprint[] = [
       },
     ],
   },
+  {
+    themeId: "ai_tech_tips",
+    themeLabel: "Tools AI & Konten Viral",
+    accentColor: "#38bdf8",
+    variations: [
+      {
+        title:
+          "3 Tools AI GRATIS 2026 yang Kerja Otomatis Buat Bikin Konten Viral!",
+        thumbnailHeadline: "3 TOOLS AI GRATIS 2026!",
+        hook3s:
+          "STOP kerjain semuanya manual! Ini 3 tools AI GRATIS yang bikin konten jalan otomatis!",
+        tags: "#toolsai #aigratis #kontenviral #tiktoktips #youtubeshorts #produktivitas #bisnisdigital",
+        scenes: [
+          {
+            sceneNumber: 1,
+            label: "Hook 3 Detik",
+            durationSec: 4,
+            narration:
+              "Stop buang waktu berjam-jam! 3 tools AI gratis ini bisa kerjain ide sampai video otomatis!",
+            subtitle: "STOP MANUAL! 3 Tools AI Gratis 2026!",
+            mood: "space",
+            action: "intro_hook",
+          },
+          {
+            sceneNumber: 2,
+            label: "Tool #1 — Riset & Naskah",
+            durationSec: 4.5,
+            narration:
+              "Pertama, AI Riset & Penulis Naskah! Cukup ketik 1 kalimat, 3 ide viral + hook langsung jadi!",
+            subtitle: "1. AI Riset & Naskah: 1 Klik Jadi 3 Ide!",
+            mood: "space",
+            action: "move_in",
+          },
+          {
+            sceneNumber: 3,
+            label: "Tool #2 — Suara & Motion",
+            durationSec: 4.5,
+            narration:
+              "Kedua, AI Studio Suara & Motion! Musik bebas copyright dan visual 60fps langsung dirender!",
+            subtitle: "2. AI Motion & Audio Bebas Copyright!",
+            mood: "exciting",
+            action: "problem",
+          },
+          {
+            sceneNumber: 4,
+            label: "Tool #3 — SEO & Auto Publish",
+            durationSec: 4.5,
+            narration:
+              "Ketiga, AI SEO & QC! Judul, hashtag, thumbnail HD, semua dicek otomatis biar siap FYP!",
+            subtitle: "3. AI SEO + Thumbnail HD Siap FYP!",
+            mood: "rainbow",
+            action: "solve",
+          },
+          {
+            sceneNumber: 5,
+            label: "CTA Save & Follow",
+            durationSec: 4.5,
+            narration:
+              "Save video ini biar nggak lupa! Follow akun ini untuk trik kantor AI gratis lainnya!",
+            subtitle: "SAVE & FOLLOW biar nggak ketinggalan!",
+            mood: "celebrate",
+            action: "celebrate",
+          },
+        ],
+      },
+      {
+        title:
+          "PUNYA KANTOR AI SENDIRI Rp 0! Semua Divisi Kerja dari Ide Sampai Siap Posting",
+        thumbnailHeadline: "KANTOR AI Rp 0 MODAL!",
+        hook3s:
+          "Bayangin punya tim AI lengkap dari riset, SEO, naskah, sampai QC — semuanya gratis Rp 0!",
+        tags: "#kantorai #agenai #aigratis #kontenkreator #tiktokai #youtubeshorts #automation",
+        scenes: [
+          {
+            sceneNumber: 1,
+            label: "Hook 3 Detik",
+            durationSec: 4,
+            narration:
+              "Cukup ketik tugas dari HP, tim AI langsung bagi kerjaan ke tiap divisi secara otomatis!",
+            subtitle: "KETIK DARI HP -> TIM AI KERJA!",
+            mood: "space",
+            action: "intro_hook",
+          },
+          {
+            sceneNumber: 2,
+            label: "Direktur Bagi Tugas",
+            durationSec: 4.5,
+            narration:
+              "Direktur Konten langsung kasih brief ke tim Riset, SEO, dan Penulis Naskah dalam hitungan detik!",
+            subtitle: "Direktur -> Riset -> SEO -> Naskah!",
+            mood: "space",
+            action: "move_in",
+          },
+          {
+            sceneNumber: 3,
+            label: "Bos Tinggal Pilih & Setujui",
+            durationSec: 4.5,
+            narration:
+              "Laporan masuk ke panel Bos. Tinggal pilih ide dan klik setujui naskah — super praktis!",
+            subtitle: "Bos Pilih Ide & Setujui Naskah!",
+            mood: "exciting",
+            action: "problem",
+          },
+          {
+            sceneNumber: 4,
+            label: "Produksi & QC Otomatis",
+            durationSec: 4.5,
+            narration:
+              "Studio Suara, Motion, Editing, dan QC langsung selesaikan video + thumbnail siap posting!",
+            subtitle: "Suara + Motion + QC -> SIAP POSTING!",
+            mood: "rainbow",
+            action: "solve",
+          },
+          {
+            sceneNumber: 5,
+            label: "CTA Komentar",
+            durationSec: 4.5,
+            narration:
+              "Mau dibuatin konten apa lagi sama tim AI ini? Tulis di komentar dan klik Follow ya!",
+            subtitle: "Tulis di KOMENTAR + FOLLOW ya!",
+            mood: "celebrate",
+            action: "celebrate",
+          },
+        ],
+      },
+    ],
+  },
 ];
+
+export function detectThemeFromBrief(brief: string): KidsThemeId {
+  const lower = brief.toLowerCase();
+  if (
+    lower.includes("ai") ||
+    lower.includes("tiktok") ||
+    lower.includes("tools") ||
+    lower.includes("bisnis") ||
+    lower.includes("uang") ||
+    lower.includes("tutorial") ||
+    lower.includes("konten") ||
+    lower.includes("coding") ||
+    lower.includes("kantor")
+  ) {
+    if (
+      !lower.includes("anak") &&
+      !lower.includes("kartun") &&
+      !lower.includes("dino") &&
+      !lower.includes("truk") &&
+      !lower.includes("pemadam") &&
+      !lower.includes("kereta") &&
+      !lower.includes("roket") &&
+      !lower.includes("hewan")
+    ) {
+      return "ai_tech_tips";
+    }
+  }
+  if (
+    lower.includes("pemadam") ||
+    lower.includes("polisi") ||
+    lower.includes("ambulans") ||
+    lower.includes("mobil")
+  ) {
+    return "rescue_trucks";
+  }
+  if (lower.includes("dino") || lower.includes("telur") || lower.includes("warna")) {
+    return "dino_colors";
+  }
+  if (lower.includes("kereta") || lower.includes("pelangi") || lower.includes("angka")) {
+    return "rainbow_train";
+  }
+  if (
+    lower.includes("roket") ||
+    lower.includes("planet") ||
+    lower.includes("angkasa") ||
+    lower.includes("bulan")
+  ) {
+    return "space_rocket";
+  }
+  if (
+    lower.includes("excavator") ||
+    lower.includes("eskavator") ||
+    lower.includes("truk") ||
+    lower.includes("alat berat") ||
+    lower.includes("pasir")
+  ) {
+    return "excavator_park";
+  }
+  if (
+    lower.includes("hewan") ||
+    lower.includes("kelinci") ||
+    lower.includes("beruang") ||
+    lower.includes("kucing") ||
+    lower.includes("dongeng")
+  ) {
+    return "animal_friends";
+  }
+  if (lower.includes("ai") || lower.includes("tiktok") || lower.includes("tools")) {
+    return "ai_tech_tips";
+  }
+  return "rescue_trucks";
+}
+
+export function generateIdeaOptionsFromBrief(
+  brief: string,
+  episodeNumber: number
+): ContentIdeaOption[] {
+  const cleanBrief = brief.trim() || "Video animasi anak truk pemadam penyelamat";
+  const detectedTheme = detectThemeFromBrief(cleanBrief);
+  const primary =
+    THEME_BLUEPRINTS.find((b) => b.themeId === detectedTheme) ??
+    THEME_BLUEPRINTS[0];
+  const isTech = detectedTheme === "ai_tech_tips";
+  const shortTopic =
+    cleanBrief.length > 42 ? `${cleanBrief.slice(0, 42).trim()}...` : cleanBrief;
+
+  const baseVarA = primary.variations[0];
+  const baseVarB = primary.variations[1] ?? primary.variations[0];
+
+  if (isTech) {
+    return [
+      {
+        id: `idea-a-${episodeNumber}`,
+        themeId: "ai_tech_tips",
+        themeLabel: primary.themeLabel,
+        angle: "Hook Cepat & Solusi Praktis (CTR Tinggi)",
+        title: `WAJIB TAHU! ${shortTopic.toUpperCase()} — 100% Gratis & Otomatis!`,
+        thumbnailHeadline: "GRATIS & OTOMATIS!",
+        hook3s: `STOP scroll dulu! Ini cara paling gampang soal "${shortTopic}" yang bisa jalan otomatis 100% gratis!`,
+        viralScore: 96,
+        accentColor: "#38bdf8",
+      },
+      {
+        id: `idea-b-${episodeNumber}`,
+        themeId: "ai_tech_tips",
+        themeLabel: primary.themeLabel,
+        angle: "Listicle 3 Langkah Siap Praktik",
+        title: baseVarA.title,
+        thumbnailHeadline: baseVarA.thumbnailHeadline,
+        hook3s: baseVarA.hook3s,
+        viralScore: 93,
+        accentColor: "#a855f7",
+      },
+      {
+        id: `idea-c-${episodeNumber}`,
+        themeId: "ai_tech_tips",
+        themeLabel: primary.themeLabel,
+        angle: "Storytelling Kantor AI Rp 0",
+        title: baseVarB.title,
+        thumbnailHeadline: baseVarB.thumbnailHeadline,
+        hook3s: baseVarB.hook3s,
+        viralScore: 91,
+        accentColor: "#10b981",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `idea-a-${episodeNumber}`,
+      themeId: primary.themeId,
+      themeLabel: primary.themeLabel,
+      angle: "Aksi Penyelamatan + Hook 3 Detik Kuat",
+      title: `WAH SERU! ${shortTopic} | Kartun Animasi Anak Indonesia`,
+      thumbnailHeadline: baseVarA.thumbnailHeadline,
+      hook3s: `LIHAT TEMAN-TEMAN! ${baseVarA.hook3s}`,
+      viralScore: 97,
+      accentColor: primary.accentColor,
+    },
+    {
+      id: `idea-b-${episodeNumber}`,
+      themeId: primary.themeId,
+      themeLabel: primary.themeLabel,
+      angle: "Tebak Warna & Berhitung Interaktif",
+      title: baseVarB.title,
+      thumbnailHeadline: baseVarB.thumbnailHeadline,
+      hook3s: baseVarB.hook3s,
+      viralScore: 94,
+      accentColor: "#f59e0b",
+    },
+    {
+      id: `idea-c-${episodeNumber}`,
+      themeId: primary.themeId,
+      themeLabel: primary.themeLabel,
+      angle: "Petualangan Ceria + Pesan Baik Anak",
+      title: baseVarA.title,
+      thumbnailHeadline: `SERU! EP #${episodeNumber}`,
+      hook3s: `Ayo ikut petualangan baru bersama ${primary.themeLabel}! Ada kejutan warna-warni di akhir video!`,
+      viralScore: 91,
+      accentColor: "#22c55e",
+    },
+  ];
+}
+
+export function buildEpisodeFromSelectedIdea(
+  idea: ContentIdeaOption,
+  brief: string,
+  episodeNumber: number,
+  createdByAuto = false
+): KidsEpisode {
+  const blueprint =
+    THEME_BLUEPRINTS.find((b) => b.themeId === idea.themeId) ??
+    THEME_BLUEPRINTS[0];
+  const baseVar =
+    blueprint.variations[episodeNumber % blueprint.variations.length];
+
+  const scenes: CartoonScene[] = baseVar.scenes.map((sc, idx) =>
+    idx === 0
+      ? {
+          ...sc,
+          narration: idea.hook3s,
+          subtitle:
+            idea.thumbnailHeadline.length > 34
+              ? idea.thumbnailHeadline.slice(0, 34)
+              : idea.thumbnailHeadline,
+        }
+      : { ...sc }
+  );
+
+  const isTech = idea.themeId === "ai_tech_tips";
+  const description = isTech
+    ? `${idea.hook3s}
+
+Brief Bos: "${brief}"
+Diproduksi otomatis oleh Tim FAJREZZZ AI Office (Direktur Konten, Riset, SEO, Penulis Naskah, Studio Suara, Motion, Editing & QC) — 100% Gratis Rp 0!
+
+🎬 Alur Video:
+${scenes.map((s) => `• Adegan ${s.sceneNumber} (${s.label}): ${s.subtitle}`).join("\n")}
+
+🔥 Simpan & Follow untuk konten AI praktis setiap hari!
+
+${baseVar.tags}`
+    : `${idea.hook3s}
+
+Selamat datang di channel Animasi Anak Ceria! Di episode #${episodeNumber} (Brief: "${brief}"), anak-anak akan bermain, belajar warna, berhitung, dan nilai kebaikan bersama ${blueprint.themeLabel} secara aman untuk semua usia.
+
+🎬 Isi Episode:
+${scenes.map((s) => `• Adegan ${s.sceneNumber} (${s.label}): ${s.subtitle}`).join("\n")}
+
+💛 Dukung channel ini dengan LIKE, KOMENTAR, dan SUBSCRIBE agar tidak ketinggalan episode animasi baru setiap hari!
+
+${baseVar.tags}`;
+
+  return {
+    id: `yt-ep-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    episodeNumber,
+    createdAt: new Date().toISOString(),
+    themeId: blueprint.themeId,
+    themeLabel: blueprint.themeLabel,
+    title: idea.title,
+    thumbnailHeadline: idea.thumbnailHeadline,
+    hook3s: idea.hook3s,
+    description,
+    tags: baseVar.tags,
+    accentColor: idea.accentColor || blueprint.accentColor,
+    uploaded: false,
+    createdByAuto,
+    scenes,
+  };
+}
 
 export function generateAutonomousKidsEpisode(
   episodeNumber: number,
   preferredTheme?: KidsThemeId,
   createdByAuto = false
 ): KidsEpisode {
+  const kidsOnlyBlueprints = THEME_BLUEPRINTS.filter(
+    (b) => b.themeId !== "ai_tech_tips"
+  );
   const blueprint = preferredTheme
     ? THEME_BLUEPRINTS.find((b) => b.themeId === preferredTheme) ??
-      THEME_BLUEPRINTS[episodeNumber % THEME_BLUEPRINTS.length]
-    : THEME_BLUEPRINTS[(episodeNumber - 1) % THEME_BLUEPRINTS.length];
+      kidsOnlyBlueprints[episodeNumber % kidsOnlyBlueprints.length]
+    : kidsOnlyBlueprints[(episodeNumber - 1) % kidsOnlyBlueprints.length];
 
   const variation =
     blueprint.variations[
@@ -568,4 +943,5 @@ export const ALL_KIDS_THEMES: { id: KidsThemeId; label: string; emoji: string }[
     { id: "space_rocket", label: "Roket Luar Angkasa", emoji: "🚀" },
     { id: "excavator_park", label: "Truk Excavator", emoji: "🚜" },
     { id: "animal_friends", label: "Kelinci & Beruang", emoji: "🐰" },
+    { id: "ai_tech_tips", label: "Video TikTok Tools AI", emoji: "🤖" },
   ];

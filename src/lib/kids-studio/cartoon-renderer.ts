@@ -418,7 +418,7 @@ function drawHeroByTheme(
     ctx.fill();
     ctx.stroke();
     ctx.restore();
-  } else {
+  } else if (themeId === "animal_friends") {
     // Cute Bunny & Teddy Bear Friends!
     // Left: Cute White/Pink Bunny
     ctx.save();
@@ -468,6 +468,103 @@ function drawHeroByTheme(
     ctx.ellipse(0, -34, 28, 20, 0, 0, Math.PI * 2);
     ctx.fill();
     drawCuteEyes(ctx, 0, -56, 18, 11, t + 1);
+    ctx.restore();
+  } else if (themeId === "ai_tech_tips") {
+    // Cute Futuristic AI Assistant Robot + Orbiting Hologram Tool Cards
+    const floatY = Math.sin(t * 3.4) * 14;
+    ctx.save();
+    ctx.translate(0, floatY - 12);
+
+    // Floating holographic AI tool cards around the robot
+    const cards = [
+      { x: -165, y: -70, col: "#38bdf8", label: "RISET AI" },
+      { x: 165, y: -55, col: "#a855f7", label: "NASKAH" },
+      { x: -145, y: 65, col: "#10b981", label: "SEO + QC" },
+      { x: 155, y: 70, col: "#f59e0b", label: "AUTO 60FPS" },
+    ];
+    cards.forEach((c, idx) => {
+      const cy = c.y + Math.sin(t * 3 + idx * 1.5) * 10;
+      ctx.save();
+      ctx.translate(c.x, cy);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+      ctx.strokeStyle = c.col;
+      ctx.lineWidth = 4;
+      drawRoundedRect(ctx, -64, -24, 128, 48, 14);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 18px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(c.label, 0, 1);
+      ctx.restore();
+    });
+
+    // Glow Aura
+    const aura = ctx.createRadialGradient(0, 0, 20, 0, 0, 130);
+    aura.addColorStop(0, "rgba(56, 189, 248, 0.45)");
+    aura.addColorStop(1, "rgba(56, 189, 248, 0)");
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, 130, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Robot Antenna
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(0, -82);
+    ctx.lineTo(0, -118);
+    ctx.stroke();
+    ctx.fillStyle = "#fde047";
+    ctx.beginPath();
+    ctx.arc(0, -124, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Robot Body
+    ctx.fillStyle = "#f8fafc";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 6;
+    drawRoundedRect(ctx, -54, 8, 108, 92, 28);
+    ctx.fill();
+    ctx.stroke();
+
+    // Glowing Chest Core
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.arc(0, 52, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 16px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("AI", 0, 53);
+
+    // Robot Head
+    ctx.fillStyle = "#f8fafc";
+    drawRoundedRect(ctx, -74, -84, 148, 94, 34);
+    ctx.fill();
+    ctx.stroke();
+
+    // Dark Visor Screen
+    ctx.fillStyle = "#0f172a";
+    drawRoundedRect(ctx, -58, -68, 116, 62, 22);
+    ctx.fill();
+
+    // Glowing Cyan Happy Eyes on Visor
+    const blink = Math.sin(t * 3.1) > 0.95 ? 0.2 : 1;
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.ellipse(-24, -40, 13, 15 * blink, 0, 0, Math.PI * 2);
+    ctx.ellipse(24, -40, 13, 15 * blink, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(0, -24, 14, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+
     ctx.restore();
   }
 
@@ -748,16 +845,18 @@ export function renderKidsThumbnail(episode: KidsEpisode): string {
     ctx.fillText(line, 64, y);
   });
 
-  // Bright Red Episode Pill
-  ctx.fillStyle = "#ef4444";
+  // Bright Episode Pill
+  ctx.fillStyle = episode.themeId === "ai_tech_tips" ? "#0ea5e9" : "#ef4444";
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 6;
-  drawRoundedRect(ctx, 64, 540, 390, 76, 38);
+  drawRoundedRect(ctx, 64, 540, 410, 76, 38);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = "#ffffff";
   ctx.font = "900 34px system-ui, sans-serif";
-  ctx.fillText(`KARTUN ANAK · EP #${episode.episodeNumber}`, 96, 579);
+  const pillPrefix =
+    episode.themeId === "ai_tech_tips" ? "TOOLS AI" : "KARTUN ANAK";
+  ctx.fillText(`${pillPrefix} · EP #${episode.episodeNumber}`, 96, 579);
 
   return canvas.toDataURL("image/png");
 }
