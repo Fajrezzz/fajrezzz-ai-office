@@ -123,7 +123,11 @@ export interface VoiceInput {
 }
 
 export interface VoiceOutput {
-  engine: "web-speech-api" | "web-audio-bed";
+  engine:
+    | "edge-neural-tts"
+    | "google-neural-tts"
+    | "web-speech-api"
+    | "web-audio-bed";
   voiceName: string;
   lang: string;
   totalEstimatedSec: number;

@@ -405,13 +405,18 @@ export function renderEditorialThumbnail(
   return canvas.toDataURL("image/png");
 }
 
-/** Synthesize subtle copyright-free modern ambient lo-fi synth bed via Web Audio API */
-export function startAmbientSynthBed(connectToSpeakers = true): {
+/** Synthesize subtle copyright-free modern ambient lo-fi synth bed + dedicated Neural Voice mix bus */
+export function startAmbientSynthBed(
+  connectToSpeakers = true,
+  bedVolume = 0.055
+): {
   audioStream: MediaStream | null;
+  audioCtx: AudioContext | null;
+  voiceBus: GainNode | null;
   stop: () => void;
 } {
   if (typeof window === "undefined") {
-    return { audioStream: null, stop: () => {} };
+    return { audioStream: null, audioCtx: null, voiceBus: null, stop: () => {} };
   }
 
   const AudioCtx =
@@ -419,16 +424,24 @@ export function startAmbientSynthBed(connectToSpeakers = true): {
     (window as unknown as { webkitAudioContext: typeof AudioContext })
       .webkitAudioContext;
   if (!AudioCtx) {
-    return { audioStream: null, stop: () => {} };
+    return { audioStream: null, audioCtx: null, voiceBus: null, stop: () => {} };
   }
 
   const ctx = new AudioCtx();
   const dest = ctx.createMediaStreamDestination();
   const master = ctx.createGain();
-  master.gain.value = 0.12;
+  master.gain.value = bedVolume;
   master.connect(dest);
   if (connectToSpeakers) {
     master.connect(ctx.destination);
+  }
+
+  // Dedicated high-clarity vocal narration bus mixed directly into video recording
+  const voiceBus = ctx.createGain();
+  voiceBus.gain.value = 1.05;
+  voiceBus.connect(dest);
+  if (connectToSpeakers) {
+    voiceBus.connect(ctx.destination);
   }
 
   // Smooth modern chill ambient chord progression (Am7 -> Fmaj7 -> Cmaj7 -> G6)
@@ -468,6 +481,8 @@ export function startAmbientSynthBed(connectToSpeakers = true): {
 
   return {
     audioStream: dest.stream,
+    audioCtx: ctx,
+    voiceBus,
     stop: () => {
       window.clearInterval(intervalId);
       ctx.close().catch(() => {});
