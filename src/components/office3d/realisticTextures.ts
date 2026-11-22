@@ -18,6 +18,7 @@ export interface RealisticTextureSet {
   asphalt: THREE.CanvasTexture;
   skylineDay: THREE.CanvasTexture;
   skylineNight: THREE.CanvasTexture;
+  skylineNightEmissive: THREE.CanvasTexture;
   monitorScreen: THREE.CanvasTexture;
   commandWallScreen: THREE.CanvasTexture;
 }
@@ -329,65 +330,89 @@ function buildAsphalt(): THREE.CanvasTexture {
   return makeTex(canvas, 8, 8, true);
 }
 
-function buildSkylineCurtainWall(isNight: boolean): THREE.CanvasTexture {
+function buildSkylineCurtainWall(
+  mode: "day" | "night" | "nightEmissive"
+): THREE.CanvasTexture {
   const size = 512;
   const [canvas, ctx] = createCanvas(size);
 
-  // Realistic sleek architectural glass curtain-wall facade (fine mullions, subtle sky reflection)
-  const bg = ctx.createLinearGradient(0, 0, 0, size);
-  if (isNight) {
-    bg.addColorStop(0, "#152033");
-    bg.addColorStop(1, "#0d1422");
+  if (mode === "nightEmissive") {
+    // Pure black background — ONLY lit skyscraper windows glow brightly at night!
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, size, size);
   } else {
-    bg.addColorStop(0, "#9ab3c8");
-    bg.addColorStop(0.55, "#7d96ad");
-    bg.addColorStop(1, "#667e94");
+    const bg = ctx.createLinearGradient(0, 0, 0, size);
+    if (mode === "night") {
+      bg.addColorStop(0, "#131e33");
+      bg.addColorStop(1, "#0b1222");
+    } else {
+      // Crisp architectural blue-steel glass skyscraper facade (never washed-out white!)
+      bg.addColorStop(0, "#5c80a3");
+      bg.addColorStop(0.55, "#46688a");
+      bg.addColorStop(1, "#355372");
+    }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, size, size);
   }
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, size, size);
 
   const cols = 10;
-  const rows = 20;
+  const rows = 22;
   const cw = size / cols;
   const rh = size / rows;
 
   for (let r = 0; r < rows; r++) {
     // Architectural floor slab spandrel band
-    ctx.fillStyle = isNight ? "#0b111c" : "#516578";
-    ctx.fillRect(0, r * rh, size, rh * 0.28);
+    if (mode !== "nightEmissive") {
+      ctx.fillStyle = mode === "night" ? "#090f1a" : "#2b4157";
+      ctx.fillRect(0, r * rh, size, rh * 0.28);
+    }
+
+    // Some office floors are brightly lit in clusters (like real high-rise buildings at night!)
+    const busyFloor = (r * 7 + 3) % 5 < 2;
 
     for (let c = 0; c < cols; c++) {
       const seed = (r * 31 + c * 17 + r * c * 5) % 19;
-      if (isNight) {
-        if (seed < 4) {
-          ctx.fillStyle = seed === 0 ? "#f8dfaa" : "#c8dced";
-        } else {
-          ctx.fillStyle = "#19263c";
+      const isLit = busyFloor ? seed < 11 : seed < 6;
+
+      if (mode === "nightEmissive") {
+        if (isLit) {
+          ctx.fillStyle =
+            seed % 4 === 0
+              ? "#ffe6a3" // warm office gold
+              : seed % 4 === 1
+              ? "#fff7dc" // bright warm white
+              : seed % 4 === 2
+              ? "#bae6fd" // modern cool office cyan-white
+              : "#fcd34d"; // cozy amber
+          ctx.fillRect(c * cw + 4, r * rh + rh * 0.34, cw - 8, rh * 0.56);
         }
+      } else if (mode === "night") {
+        if (isLit) {
+          ctx.fillStyle = seed % 2 === 0 ? "#fde68a" : "#dbeafe";
+        } else {
+          ctx.fillStyle = "#16233b";
+        }
+        ctx.fillRect(c * cw + 2, r * rh + rh * 0.3, cw - 4, rh * 0.65);
       } else {
-        // Subtle sky/cloud reflection tonal variation across glass panes (never blocky yellow!)
+        // Crisp reflective blue-glass daytime skyscraper panes
         ctx.fillStyle =
           seed % 4 === 0
-            ? "#b7cde0"
+            ? "#8eb2d1"
             : seed % 4 === 1
-            ? "#9eb8ce"
+            ? "#7097ba"
             : seed % 4 === 2
-            ? "#84a0b8"
-            : "#a9c1d6";
+            ? "#5a80a4"
+            : "#7fa4c5";
+        ctx.fillRect(c * cw + 2, r * rh + rh * 0.3, cw - 4, rh * 0.65);
       }
-      ctx.fillRect(
-        c * cw + 2,
-        r * rh + rh * 0.3,
-        cw - 4,
-        rh * 0.65
-      );
     }
   }
 
-  // Thin vertical architectural mullions
-  ctx.fillStyle = isNight ? "#0a0f18" : "#4b5d6e";
-  for (let c = 0; c <= cols; c++) {
-    ctx.fillRect(c * cw - 1, 0, 2, size);
+  if (mode !== "nightEmissive") {
+    ctx.fillStyle = mode === "night" ? "#080d16" : "#273b4f";
+    for (let c = 0; c <= cols; c++) {
+      ctx.fillRect(c * cw - 1, 0, 2, size);
+    }
   }
 
   return makeTex(canvas, 1, 2, true);
@@ -543,8 +568,9 @@ export function getRealisticTextures(): RealisticTextureSet {
   const [poolTiles, poolWaterBump] = buildPoolTilesAndWater();
   const [grassLawn, grassBump] = buildGrassPair();
   const asphalt = buildAsphalt();
-  const skylineDay = buildSkylineCurtainWall(false);
-  const skylineNight = buildSkylineCurtainWall(true);
+  const skylineDay = buildSkylineCurtainWall("day");
+  const skylineNight = buildSkylineCurtainWall("night");
+  const skylineNightEmissive = buildSkylineCurtainWall("nightEmissive");
   const monitorScreen = buildMonitorScreen();
   const commandWallScreen = buildCommandWallScreen();
 
@@ -564,6 +590,7 @@ export function getRealisticTextures(): RealisticTextureSet {
     asphalt,
     skylineDay,
     skylineNight,
+    skylineNightEmissive,
     monitorScreen,
     commandWallScreen,
   };
