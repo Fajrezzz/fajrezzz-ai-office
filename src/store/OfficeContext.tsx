@@ -36,6 +36,9 @@ import type {
   RobotAnimationState,
   TaskStatus,
   Vector3Tuple,
+  WorkDealStatus,
+  WorkOrderDeliverable,
+  WorkOrderInput,
   Workstation,
 } from "@/types/office";
 
@@ -122,6 +125,16 @@ interface OfficeContextValue {
     yaw?: number
   ) => void;
   moveBossToFloor: (floor: BossFloor) => void;
+  // Zero-Cost Work Engine & Revenue Tracker
+  workOrders: WorkOrderDeliverable[];
+  isGeneratingWork: boolean;
+  runWorkOrder: (input: WorkOrderInput) => Promise<WorkOrderDeliverable | null>;
+  updateWorkOrderDeal: (
+    orderId: string,
+    dealStatus: WorkDealStatus,
+    dealValueIdr?: number
+  ) => void;
+  deleteWorkOrder: (orderId: string) => void;
   // Agent & Task actions
   setAgentStatus: (agentId: string, status: RobotAnimationState) => void;
   sendAgentToWaypoint: (agentId: string, waypointId: string) => void;
@@ -149,6 +162,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [workstations, setWorkstations] =
     useState<Workstation[]>(INITIAL_WORKSTATIONS);
   const [tasks, setTasks] = useState<OfficeTask[]>(INITIAL_TASKS);
+  const [workOrders, setWorkOrders] = useState<WorkOrderDeliverable[]>([]);
+  const [isGeneratingWork, setIsGeneratingWork] = useState<boolean>(false);
   const [activities, setActivities] =
     useState<ActivityEvent[]>(INITIAL_ACTIVITIES);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
@@ -332,6 +347,16 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           setTasks(parsed);
         }
       }
+
+      const savedOrders = window.localStorage.getItem(
+        "fajrezzz_work_orders_v1"
+      );
+      if (savedOrders) {
+        const parsedOrders = JSON.parse(savedOrders) as WorkOrderDeliverable[];
+        if (Array.isArray(parsedOrders)) {
+          setWorkOrders(parsedOrders);
+        }
+      }
     } catch {
       // Ignore invalid localStorage state
     } finally {
@@ -346,10 +371,14 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         "fajrezzz_local_tasks_v2",
         JSON.stringify(tasks)
       );
+      window.localStorage.setItem(
+        "fajrezzz_work_orders_v1",
+        JSON.stringify(workOrders.slice(0, 25))
+      );
     } catch {
       // Ignore quota errors
     }
-  }, [performanceReady, tasks]);
+  }, [performanceReady, tasks, workOrders]);
 
   const addActivity = useCallback(
     (
@@ -810,6 +839,118 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     [addActivity, tasks]
   );
 
+  const runWorkOrder = useCallback(
+    async (input: WorkOrderInput): Promise<WorkOrderDeliverable | null> => {
+      setIsGeneratingWork(true);
+
+      // Dispatch all 10 staff to actively work on Bos FAJREZ's order in 3D!
+      setAgents((prev) =>
+        prev.map((agent) => {
+          const homeWs = workstations.find(
+            (w) => w.id === agent.assignedWorkstationId
+          );
+          if (agent.floor === 2 && homeWs) {
+            const atDesk = agent.currentWaypointId === homeWs.waypointId;
+            return {
+              ...agent,
+              status: atDesk ? "working" : "walking",
+              targetWaypointId: homeWs.waypointId,
+              simulatedLoad: 88,
+              currentActionLabel: `Mengerjakan paket "${input.businessName}"`,
+            };
+          }
+          return {
+            ...agent,
+            status: "working",
+            simulatedLoad: 82,
+            currentActionLabel: `Menyiapkan strategi & outreach "${input.businessName}"`,
+          };
+        })
+      );
+
+      addActivity(
+        "BOS FAJREZ",
+        "user",
+        `Perintah kerja baru dikirim ke 10 karyawan: "${input.businessName}" (${input.niche} - ${input.city}).`,
+        "info",
+        "Work Studio"
+      );
+
+      try {
+        const res = await fetch("/api/work-engine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) return null;
+
+        const data = (await res.json()) as {
+          ok: boolean;
+          deliverable: WorkOrderDeliverable;
+        };
+
+        if (data.ok && data.deliverable) {
+          setWorkOrders((prev) => [data.deliverable, ...prev]);
+          addActivity(
+            "10 KARYAWAN",
+            "robot-placeholder",
+            `Paket "${input.businessName}" selesai: Website HTML, 7 Naskah Viral, 3 Script WA/DM & Invoice (Rp 0 Gratis).`,
+            "success",
+            "Work Studio"
+          );
+          return data.deliverable;
+        }
+        return null;
+      } catch {
+        addActivity(
+          "SYSTEM",
+          "system",
+          `Gagal memproduksi paket "${input.businessName}". Coba ulangi.`,
+          "warning",
+          "Work Studio"
+        );
+        return null;
+      } finally {
+        setIsGeneratingWork(false);
+      }
+    },
+    [addActivity, workstations]
+  );
+
+  const updateWorkOrderDeal = useCallback(
+    (orderId: string, dealStatus: WorkDealStatus, dealValueIdr?: number) => {
+      setWorkOrders((prev) =>
+        prev.map((order) => {
+          if (order.id !== orderId) return order;
+          return {
+            ...order,
+            dealStatus,
+            dealValueIdr:
+              typeof dealValueIdr === "number" && Number.isFinite(dealValueIdr)
+                ? Math.max(0, Math.round(dealValueIdr))
+                : order.dealValueIdr,
+          };
+        })
+      );
+
+      const target = workOrders.find((o) => o.id === orderId);
+      if (target) {
+        addActivity(
+          "BOS FAJREZ",
+          "user",
+          `Status proyek "${target.input.businessName}" diperbarui menjadi ${dealStatus.toUpperCase()}.`,
+          dealStatus === "paid" ? "success" : "info",
+          "Revenue Tracker"
+        );
+      }
+    },
+    [addActivity, workOrders]
+  );
+
+  const deleteWorkOrder = useCallback((orderId: string) => {
+    setWorkOrders((prev) => prev.filter((o) => o.id !== orderId));
+  }, []);
+
   const value = useMemo<OfficeContextValue>(
     () => ({
       activeSection,
@@ -853,6 +994,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       bossTeleportCommand,
       teleportBoss,
       moveBossToFloor,
+      workOrders,
+      isGeneratingWork,
+      runWorkOrder,
+      updateWorkOrderDeal,
+      deleteWorkOrder,
       setAgentStatus,
       sendAgentToWaypoint,
       assignAgentWorkstation,
@@ -894,6 +1040,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       bossTeleportCommand,
       teleportBoss,
       moveBossToFloor,
+      workOrders,
+      isGeneratingWork,
+      runWorkOrder,
+      updateWorkOrderDeal,
+      deleteWorkOrder,
       setAgentStatus,
       sendAgentToWaypoint,
       assignAgentWorkstation,
