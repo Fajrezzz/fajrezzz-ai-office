@@ -81,7 +81,7 @@ export function Sidebar({
                   FAJREZZZ
                 </div>
                 <div className="truncate text-[10px] font-bold tracking-wider text-amber-300 uppercase">
-                  YT ANAK AUTOPILOT
+                  AI CONTENT STUDIO
                 </div>
               </div>
             )}
@@ -149,12 +149,12 @@ export function Sidebar({
           <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-100">
             <div className="flex items-center gap-1.5 font-bold">
               <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              <span>AI Free-Tier (Kuota Gratis)</span>
+              <span>AI Gratis Rp 0 (Langsung Jalan)</span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-              AI berjalan via proxy server (Groq / Gemini / OpenRouter free tier).
-              Di dalam kuota gratis biaya Rp 0; batas rate limit provider berlaku
-              dan upload YouTube dilakukan manual oleh Bos.
+              Langsung aktif gratis tanpa kartu kredit &amp; tanpa API key lewat
+              Pollinations AI. Opsional tambah key gratis Groq/Gemini di Vercel
+              untuk kecepatan lebih tinggi. Upload YouTube manual oleh Bos.
             </p>
           </div>
         ) : (

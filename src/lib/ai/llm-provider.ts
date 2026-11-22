@@ -1,17 +1,24 @@
 /**
  * Server-side ONLY Free-Tier LLM Router with automatic rate-limit & error fallback.
  *
- * Verified 2026 Free-Tier Providers (no credit card required inside free quota):
- *  1. Groq (GROQ_API_KEY): llama-3.3-70b-versatile (1,000 req/day, 30 RPM) & llama-3.1-8b-instant (14,400 req/day)
- *  2. Google Gemini API (GEMINI_API_KEY): gemini-2.5-flash & gemini-2.5-flash-lite (free tier)
- *  3. OpenRouter Free (OPENROUTER_API_KEY): openrouter/free & meta-llama/llama-3.3-70b-instruct:free (50 req/day, 20 RPM)
- *  4. Mistral Free Mode (MISTRAL_API_KEY): mistral-small-latest (free experiment quota)
+ * Verified 2026 Free Providers (Rp 0 — NO credit card required):
+ *  1. Groq (GROQ_API_KEY, optional speed upgrade): llama-3.3-70b-versatile & llama-3.1-8b-instant
+ *  2. Google Gemini API (GEMINI_API_KEY, optional): gemini-2.5-flash & gemini-2.5-flash-lite
+ *  3. OpenRouter Free (OPENROUTER_API_KEY, optional): openrouter/free & llama-3.3-70b-instruct:free
+ *  4. Mistral Free Mode (MISTRAL_API_KEY, optional): mistral-small-latest
+ *  5. Pollinations.AI Keyless Free Lane (ALWAYS ACTIVE — ZERO API KEY NEEDED, Rp 0):
+ *     POST https://text.pollinations.ai/openai/chat/completions (models: openai-fast, gpt-oss-20b)
  *
  * API keys are ONLY read from server environment variables (`process.env`).
  * Never import this file in client components.
  */
 
-export type LlmProviderId = "groq" | "gemini" | "openrouter" | "mistral";
+export type LlmProviderId =
+  | "groq"
+  | "gemini"
+  | "openrouter"
+  | "mistral"
+  | "pollinations";
 
 export interface ProviderAttempt {
   provider: LlmProviderId;
@@ -37,7 +44,7 @@ export interface LlmCallResult<T = unknown> {
   model: string;
   durationMs: number;
   usage: LlmTokenUsage;
-  /** $0 inside verified free-tier quota; tracked transparently per call */
+  /** $0 on verified free-tier & keyless public lane */
   estimatedCostUsd: number;
   tier: "free-tier";
   attempts: ProviderAttempt[];
@@ -46,7 +53,6 @@ export interface LlmCallResult<T = unknown> {
 export interface LlmCallError {
   ok: false;
   code:
-    | "NO_API_KEY_CONFIGURED"
     | "ALL_PROVIDERS_RATE_LIMITED"
     | "ALL_PROVIDERS_FAILED"
     | "INVALID_JSON_RESPONSE";
@@ -59,8 +65,9 @@ export interface LlmCallError {
 export interface ProviderConfigStatus {
   id: LlmProviderId;
   label: string;
-  envVar: string;
+  envVar: string | null;
   configured: boolean;
+  keyless: boolean;
   freeTierSummary: string;
   models: string[];
 }
@@ -68,7 +75,8 @@ export interface ProviderConfigStatus {
 interface ProviderTarget {
   provider: LlmProviderId;
   label: string;
-  envVar: string;
+  envVar: string | null;
+  keyless?: boolean;
   endpoint: string;
   models: string[];
   extraHeaders?: Record<string, string>;
@@ -95,10 +103,7 @@ const PROVIDER_TARGETS: ProviderTarget[] = [
     label: "OpenRouter (:free Models)",
     envVar: "OPENROUTER_API_KEY",
     endpoint: "https://openrouter.ai/api/v1/chat/completions",
-    models: [
-      "openrouter/free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-    ],
+    models: ["openrouter/free", "meta-llama/llama-3.3-70b-instruct:free"],
     extraHeaders: {
       "HTTP-Referer": "https://fajrezzz-ai-office.vercel.app",
       "X-Title": "FAJREZZZ AI Office",
@@ -111,18 +116,30 @@ const PROVIDER_TARGETS: ProviderTarget[] = [
     endpoint: "https://api.mistral.ai/v1/chat/completions",
     models: ["mistral-small-latest"],
   },
+  {
+    provider: "pollinations",
+    label: "Pollinations AI (Gratis Tanpa API Key)",
+    envVar: null,
+    keyless: true,
+    endpoint: "https://text.pollinations.ai/openai/chat/completions",
+    models: ["openai-fast", "gpt-oss-20b"],
+  },
 ];
 
 const FREE_TIER_SUMMARIES: Record<LlmProviderId, string> = {
-  groq: "Gratis tanpa kartu kredit: 30 req/menit, hingga 1.000–14.400 req/hari",
-  gemini: "Gratis tanpa kartu kredit pada seri Gemini Flash & Flash-Lite (kuota AI Studio)",
+  groq: "Gratis tanpa kartu kredit: 30 req/menit, hingga 1.000–14.400 req/hari (opsional untuk lebih cepat)",
+  gemini: "Gratis tanpa kartu kredit pada seri Gemini Flash & Flash-Lite",
   openrouter: "Gratis pada model :free (20 req/menit, 50 req/hari)",
-  mistral: "Free Experiment mode tanpa kartu kredit (terbatas kuota bulanan)",
+  mistral: "Free Experiment mode tanpa kartu kredit",
+  pollinations:
+    "100% Gratis Rp 0 tanpa daftar & tanpa API key (jalur publik ~1 req/15 detik, langsung aktif!)",
 };
 
 export function getConfiguredProvidersStatus(): {
   anyConfigured: boolean;
   configuredCount: number;
+  hasPrivateFreeKey: boolean;
+  activeLabel: string;
   providers: ProviderConfigStatus[];
   pricingNotice: string;
 } {
@@ -130,19 +147,27 @@ export function getConfiguredProvidersStatus(): {
     id: t.provider,
     label: t.label,
     envVar: t.envVar,
-    configured: Boolean(process.env[t.envVar]?.trim()),
+    configured: Boolean(t.keyless || (t.envVar && process.env[t.envVar]?.trim())),
+    keyless: Boolean(t.keyless),
     freeTierSummary: FREE_TIER_SUMMARIES[t.provider],
     models: t.models,
   }));
 
   const configuredCount = providers.filter((p) => p.configured).length;
+  const privateKeys = providers.filter((p) => !p.keyless && p.configured);
+  const activeLabel =
+    privateKeys.length > 0
+      ? `${privateKeys.map((p) => p.id.toUpperCase()).join("+")} + Pollinations`
+      : "Pollinations Free (Rp 0)";
 
   return {
-    anyConfigured: configuredCount > 0,
+    anyConfigured: true,
     configuredCount,
+    hasPrivateFreeKey: privateKeys.length > 0,
+    activeLabel,
     providers,
     pricingNotice:
-      "Menggunakan Free-Tier API (Rp 0 di dalam batas kuota harian/menit provider). Jika kuota gratis habis atau di-upgrade ke paket berbayar, biaya API dapat berlaku sesuai tarif provider.",
+      "Gratis Rp 0 langsung jalan tanpa kartu kredit memakai Pollinations AI (jalur publik gratis), dengan fallback otomatis ke Groq / Gemini / OpenRouter gratis jika API key dipasang di Vercel.",
   };
 }
 
@@ -183,31 +208,19 @@ export async function callFreeTierLLM<T = unknown>(
     expectJson = true,
     temperature = 0.7,
     maxTokens = 2200,
-    timeoutMs = 28000,
+    timeoutMs = 32000,
   } = options;
 
-  const activeTargets = PROVIDER_TARGETS.filter((t) =>
-    Boolean(process.env[t.envVar]?.trim())
+  const activeTargets = PROVIDER_TARGETS.filter(
+    (t) => t.keyless || (t.envVar && Boolean(process.env[t.envVar]?.trim()))
   );
-
-  if (activeTargets.length === 0) {
-    return {
-      ok: false,
-      code: "NO_API_KEY_CONFIGURED",
-      error:
-        "Belum ada API key LLM yang terpasang di Environment Variables Vercel.",
-      hint: "Tambahkan minimal satu API key gratis (GROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, atau MISTRAL_API_KEY) di Vercel Project Settings -> Environment Variables lalu Redeploy.",
-      httpStatus: 503,
-      attempts: [],
-    };
-  }
 
   const attempts: ProviderAttempt[] = [];
   let sawRateLimit = false;
   let lastParseError: string | null = null;
 
   for (const target of activeTargets) {
-    const apiKey = process.env[target.envVar]!.trim();
+    const apiKey = target.envVar ? process.env[target.envVar]?.trim() ?? "" : "";
 
     for (const model of target.models) {
       const start = Date.now();
@@ -225,18 +238,27 @@ export async function callFreeTierLLM<T = unknown>(
           ],
         };
 
-        // Request structured JSON mode for providers that reliably support it
-        if (expectJson && (target.provider === "groq" || target.provider === "gemini" || target.provider === "mistral")) {
+        if (
+          expectJson &&
+          (target.provider === "groq" ||
+            target.provider === "gemini" ||
+            target.provider === "mistral" ||
+            target.provider === "pollinations")
+        ) {
           bodyPayload.response_format = { type: "json_object" };
+        }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          ...(target.extraHeaders ?? {}),
+        };
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`;
         }
 
         const res = await fetch(target.endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-            ...(target.extraHeaders ?? {}),
-          },
+          headers,
           body: JSON.stringify(bodyPayload),
           signal: controller.signal,
         });
@@ -245,7 +267,7 @@ export async function callFreeTierLLM<T = unknown>(
 
         if (!res.ok) {
           const errText = await res.text().catch(() => "");
-          const shortErr = errText.slice(0, 260) || res.statusText;
+          const shortErr = errText.slice(0, 220) || res.statusText;
           const isRateLimit = res.status === 429;
           if (isRateLimit) sawRateLimit = true;
 
@@ -258,7 +280,6 @@ export async function callFreeTierLLM<T = unknown>(
             rateLimited: isRateLimit,
             error: `HTTP ${res.status}: ${shortErr}`,
           });
-          // Fallback to next model / provider
           continue;
         }
 
@@ -360,8 +381,8 @@ export async function callFreeTierLLM<T = unknown>(
       ok: false,
       code: "ALL_PROVIDERS_RATE_LIMITED",
       error:
-        "Semua provider AI yang aktif sedang terkena batas kuota / rate limit (HTTP 429).",
-      hint: "Tunggu 1 menit lalu klik Retry pada divisi ini, atau tambahkan API key cadangan (GROQ_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY) di Vercel agar fallback otomatis berjalan.",
+        "Server AI gratis sedang padat / terkena rate limit sementara (HTTP 429).",
+      hint: "Tunggu 15 detik lalu klik tombol Retry pada divisi ini. (Opsional: pasang GROQ_API_KEY gratis di Vercel agar jauh lebih cepat hingga 30 req/menit.)",
       httpStatus: 429,
       attempts,
     };
@@ -371,8 +392,8 @@ export async function callFreeTierLLM<T = unknown>(
     return {
       ok: false,
       code: "INVALID_JSON_RESPONSE",
-      error: `Model AI mengembalikan format yang tidak sesuai skema JSON: ${lastParseError}`,
-      hint: "Klik tombol Retry pada divisi ini untuk mencoba ulang permintaan.",
+      error: `Model AI mengembalikan format tidak sesuai JSON: ${lastParseError}`,
+      hint: "Klik tombol Retry pada divisi ini untuk mencoba ulang.",
       httpStatus: 502,
       attempts,
     };
@@ -381,8 +402,8 @@ export async function callFreeTierLLM<T = unknown>(
   return {
     ok: false,
     code: "ALL_PROVIDERS_FAILED",
-    error: "Semua provider AI gagal merespons permintaan saat ini.",
-    hint: "Periksa validitas API key di Vercel Environment Variables atau coba Retry beberapa saat lagi.",
+    error: "Server AI gratis gagal merespons permintaan saat ini.",
+    hint: "Tunggu beberapa detik lalu klik Retry pada divisi ini.",
     httpStatus: 502,
     attempts,
   };
