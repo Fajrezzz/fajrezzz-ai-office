@@ -171,6 +171,8 @@ const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
   "staff-06": "wp-seat-02",
   "staff-07": "wp-seat-04",
   "staff-08": "wp-seat-08",
+  "staff-09": "wp-l3-boardroom",
+  "staff-10": "wp-l1-seat",
 };
 
 export function OfficeProvider({ children }: { children: React.ReactNode }) {
@@ -538,15 +540,23 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
               }`;
             }
           } else if (status === "idle") {
-            currentActionLabel = "Mode idle visual (bernapas & melihat sekitar)";
+            const loungeWp = IDLE_LOUNGE_WAYPOINTS[agent.id];
+            if (loungeWp) {
+              targetWaypointId = loungeWp;
+            }
+            currentActionLabel = "☕ IDLE / duduk santai ngopi";
           } else {
             currentActionLabel = "Mode standby istirahat";
           }
 
           return {
             ...agent,
+            pendingWorkState:
+              status === "working" || status === "error" || status === "idle"
+                ? status
+                : agent.pendingWorkState,
             status:
-              status === "working" && targetWaypointId !== agent.currentWaypointId
+              targetWaypointId !== agent.currentWaypointId
                 ? "walking"
                 : status,
             targetWaypointId,

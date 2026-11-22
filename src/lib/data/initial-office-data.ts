@@ -311,9 +311,9 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
   // ================= FLOOR 3 (EXECUTIVE BOARDROOM & SKY LOUNGE) =================
   "wp-l3-boardroom": {
     id: "wp-l3-boardroom",
-    label: "L3 • Executive Boardroom",
+    label: "L3 • Kursi Boardroom Direktur",
     floor: 3,
-    position: [-3.2, FLOOR_3_Y, -1.2],
+    position: [-4.5, FLOOR_3_Y, -2.0],
     facingYaw: Math.PI,
     neighbors: ["wp-l3-balcony", "wp-l3-lounge"],
     zone: "executive",
@@ -338,13 +338,22 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
   },
 
   // ================= FLOOR 1 & OUTDOOR POOL DECK =================
+  "wp-l1-seat": {
+    id: "wp-l1-seat",
+    label: "L1 • Kursi Lounge Lobby",
+    floor: 1,
+    position: [3.0, FLOOR_1_Y, -1.6],
+    facingYaw: 0,
+    neighbors: ["wp-l1-reception", "wp-l1-entrance"],
+    zone: "lobby",
+  },
   "wp-l1-reception": {
     id: "wp-l1-reception",
     label: "L1 • Grand Reception",
     floor: 1,
     position: [0.0, FLOOR_1_Y, -3.2],
     facingYaw: 0,
-    neighbors: ["wp-l1-entrance"],
+    neighbors: ["wp-l1-entrance", "wp-l1-seat"],
     zone: "lobby",
   },
   "wp-l1-entrance": {
@@ -353,7 +362,7 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
     floor: 1,
     position: [0.0, FLOOR_1_Y, 2.6],
     facingYaw: 0,
-    neighbors: ["wp-l1-reception", "wp-pool-deck", "wp-supercar-bay"],
+    neighbors: ["wp-l1-reception", "wp-l1-seat", "wp-pool-deck", "wp-supercar-bay"],
     zone: "lobby",
   },
   "wp-pool-deck": {

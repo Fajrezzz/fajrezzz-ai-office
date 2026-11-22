@@ -20,6 +20,28 @@ interface RobotCharacterProps {
   onArrive: (agentId: string, waypointId: string) => void;
 }
 
+/** Only these real chair / workstation waypoints allow an agent to sit down. */
+const SEATED_WAYPOINT_IDS = new Set([
+  "wp-ws-01",
+  "wp-ws-02",
+  "wp-ws-03",
+  "wp-ws-04",
+  "wp-ws-05",
+  "wp-ws-06",
+  "wp-ws-07",
+  "wp-ws-08",
+  "wp-seat-01",
+  "wp-seat-02",
+  "wp-seat-03",
+  "wp-seat-04",
+  "wp-seat-05",
+  "wp-seat-06",
+  "wp-seat-07",
+  "wp-seat-08",
+  "wp-l1-seat",
+  "wp-l3-boardroom",
+]);
+
 export function RobotCharacter({
   agent,
   isSelected,
@@ -34,8 +56,11 @@ export function RobotCharacter({
   const headRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
+  const rightElbowRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
+  const leftKneeRef = useRef<THREE.Group>(null);
+  const rightKneeRef = useRef<THREE.Group>(null);
   const coffeeMugRef = useRef<THREE.Group>(null);
   const steam1Ref = useRef<THREE.Mesh>(null);
   const steam2Ref = useRef<THREE.Mesh>(null);
@@ -49,8 +74,13 @@ export function RobotCharacter({
     new THREE.Vector3(initialPos[0], initialPos[1], initialPos[2])
   );
   const pathQueueRef = useRef<string[]>([]);
-  const lastTargetRef = useRef<string>(agent.targetWaypointId);
-  const arrivedSentRef = useRef<boolean>(true);
+  // IMPORTANT: initialize to currentWaypointId (NOT targetWaypointId) so if Bos
+  // ordered work on the Komando tab before mounting Kantor 3D, the agent IMMEDIATELY
+  // calculates the path and walks to their desk on mount!
+  const lastTargetRef = useRef<string>(agent.currentWaypointId);
+  const arrivedSentRef = useRef<boolean>(
+    agent.currentWaypointId === agent.targetWaypointId
+  );
   const phaseOffset = useMemo(
     () => (agent.id.charCodeAt(agent.id.length - 1) % 10) * 0.75,
     [agent.id]
@@ -137,7 +167,7 @@ export function RobotCharacter({
         );
         const dir = dest.clone().sub(currentPosRef.current);
         const dist = dir.length();
-        const speed = 2.15;
+        const speed = 3.5;
 
         if (dist <= 0.14) {
           currentPosRef.current.copy(dest);
@@ -173,15 +203,19 @@ export function RobotCharacter({
       root.rotation.y += diff * Math.min(1, dt * 6);
     }
 
+    const hasRealChairHere = SEATED_WAYPOINT_IDS.has(agent.currentWaypointId);
     const isWorkingSeated =
-      !isMoving && (agent.status === "working" || agent.status === "error");
-    const isIdleSeatedCoffee = !isMoving && agent.status === "idle";
+      !isMoving &&
+      hasRealChairHere &&
+      (agent.status === "working" || agent.status === "error");
+    const isIdleSeatedCoffee =
+      !isMoving && hasRealChairHere && agent.status === "idle";
     const verticalOffset = isMoving
-      ? Math.abs(Math.sin(t * 7.2)) * 0.04
+      ? Math.abs(Math.sin(t * 7.8)) * 0.04
       : isWorkingSeated
-      ? -0.22
-      : isIdleSeatedCoffee
       ? -0.23
+      : isIdleSeatedCoffee
+      ? -0.24
       : 0;
 
     root.position.set(
@@ -195,9 +229,13 @@ export function RobotCharacter({
     }
 
     if (isMoving) {
-      const stride = Math.sin(t * 7.2);
+      const stride = Math.sin(t * 7.8);
       if (leftLegRef.current) leftLegRef.current.rotation.x = stride * 0.56;
       if (rightLegRef.current) rightLegRef.current.rotation.x = -stride * 0.56;
+      if (leftKneeRef.current)
+        leftKneeRef.current.rotation.x = Math.max(0, -stride * 0.45);
+      if (rightKneeRef.current)
+        rightKneeRef.current.rotation.x = Math.max(0, stride * 0.45);
       if (leftArmRef.current) {
         leftArmRef.current.rotation.x = -stride * 0.44;
         leftArmRef.current.rotation.z = 0.08;
@@ -205,6 +243,9 @@ export function RobotCharacter({
       if (rightArmRef.current) {
         rightArmRef.current.rotation.x = stride * 0.44;
         rightArmRef.current.rotation.z = -0.08;
+      }
+      if (rightElbowRef.current) {
+        rightElbowRef.current.rotation.x = -0.18;
       }
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0.05;
@@ -215,50 +256,63 @@ export function RobotCharacter({
         headRef.current.rotation.x = 0;
       }
     } else if (isWorkingSeated) {
-      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.25;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.25;
+      // Natural 90-degree bent knees seated at workstation desk
+      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.48;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.48;
+      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
+      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.82 + Math.sin(t * 9.5) * 0.07;
+        leftArmRef.current.rotation.x = -0.78 + Math.sin(t * 10.5) * 0.07;
         leftArmRef.current.rotation.z = -0.08;
       }
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = -0.82 + Math.cos(t * 9.5) * 0.07;
+        rightArmRef.current.rotation.x = -0.35 + Math.cos(t * 10.5) * 0.05;
         rightArmRef.current.rotation.z = 0.08;
       }
+      if (rightElbowRef.current) {
+        rightElbowRef.current.rotation.x = -0.68 + Math.sin(t * 10.5) * 0.08;
+      }
       if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0.12;
+        torsoRef.current.rotation.x = 0.1;
         torsoRef.current.position.y = 1.02;
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 0.9) * 0.18;
         headRef.current.rotation.x = 0.08;
       }
-    } else {
-      // REAL SEATED RELAXED POSE WITH COFFEE MUG & PERIODIC SIPPING
+    } else if (isIdleSeatedCoffee) {
+      // REAL 90-DEGREE SEATED RELAXED POSE WITH BENT ELBOW & COFFEE MUG
       const breathe = Math.sin(t * 1.9);
       const sipCycle = (t * 0.22) % 1; // 1 sip every ~4.5 seconds
       const sipLift =
         sipCycle < 0.28 ? Math.sin((sipCycle / 0.28) * Math.PI) : 0;
 
-      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.32;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.32;
+      // Thighs flat on seat cushion, shins bent 90 degrees straight down
+      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.48;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.48;
+      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
+      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
 
       // Left arm rests relaxed on armrest / lap
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.58 + breathe * 0.03;
-        leftArmRef.current.rotation.z = 0.14;
+        leftArmRef.current.rotation.x = -0.52 + breathe * 0.03;
+        leftArmRef.current.rotation.z = 0.12;
       }
 
-      // Right arm holds real 3D coffee mug and lifts periodically to sip
-      const rightArmX = -0.96 - sipLift * 0.56 + breathe * 0.02;
+      // Right arm bends naturally at elbow to hold mug in front of torso, then lifts to sip
+      const upperArmX = -0.26 - sipLift * 0.34 + breathe * 0.02;
+      const elbowX = -1.16 - sipLift * 0.52;
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = rightArmX;
-        rightArmRef.current.rotation.z = 0.18 + sipLift * 0.16;
+        rightArmRef.current.rotation.x = upperArmX;
+        rightArmRef.current.rotation.z = 0.14 + sipLift * 0.12;
+      }
+      if (rightElbowRef.current) {
+        rightElbowRef.current.rotation.x = elbowX;
       }
 
-      // Keep coffee mug upright so espresso never spills
+      // Keep coffee mug strictly upright so espresso never spills
       if (coffeeMugRef.current) {
-        coffeeMugRef.current.rotation.x = -rightArmX;
+        coffeeMugRef.current.rotation.x = -(upperArmX + elbowX);
       }
 
       // Animate rising warm coffee steam puffs
@@ -284,7 +338,33 @@ export function RobotCharacter({
       if (headRef.current) {
         headRef.current.rotation.y =
           (1 - sipLift) * Math.sin(t * 0.55) * 0.24;
-        headRef.current.rotation.x = -sipLift * 0.12;
+        headRef.current.rotation.x = -sipLift * 0.1;
+      }
+    } else {
+      // Standing upright cleanly (never float-sit without a real chair!)
+      const breathe = Math.sin(t * 2.0);
+      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 0;
+      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 0;
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = 0.04 + breathe * 0.02;
+        leftArmRef.current.rotation.z = 0.08;
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = 0.04 - breathe * 0.02;
+        rightArmRef.current.rotation.z = -0.08;
+      }
+      if (rightElbowRef.current) {
+        rightElbowRef.current.rotation.x = -0.06;
+      }
+      if (torsoRef.current) {
+        torsoRef.current.rotation.x = 0;
+        torsoRef.current.position.y = 1.02 + breathe * 0.012;
+      }
+      if (headRef.current) {
+        headRef.current.rotation.y = Math.sin(t * 0.65) * 0.22;
+        headRef.current.rotation.x = 0;
       }
     }
   });
@@ -335,28 +415,44 @@ export function RobotCharacter({
         />
       </mesh>
 
-      {/* SCULPTED LEFT LEG + DRESS SHOE */}
+      {/* ARTICULATED LEFT LEG (THIGH + HINGED 90° KNEE SHIN + DRESS SHOE) */}
       <group ref={leftLegRef} position={[-0.1, 0.79, 0]}>
-        <mesh position={[0, -0.34, 0]} castShadow>
-          <capsuleGeometry args={[0.072, 0.52, 8, 12]} />
+        {/* Upper Thigh */}
+        <mesh position={[0, -0.18, 0]} castShadow>
+          <capsuleGeometry args={[0.072, 0.24, 8, 12]} />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        <mesh position={[0, -0.71, 0.045]} castShadow>
-          <capsuleGeometry args={[0.055, 0.12, 6, 10]} />
-          <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
-        </mesh>
+        {/* Hinged Knee Joint -> Lower Shin + Dress Shoe */}
+        <group ref={leftKneeRef} position={[0, -0.36, 0]}>
+          <mesh position={[0, -0.17, 0]} castShadow>
+            <capsuleGeometry args={[0.062, 0.24, 8, 10]} />
+            <meshStandardMaterial color={pantsColor} roughness={0.78} />
+          </mesh>
+          <mesh position={[0, -0.35, 0.045]} castShadow>
+            <capsuleGeometry args={[0.052, 0.12, 6, 10]} />
+            <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
+          </mesh>
+        </group>
       </group>
 
-      {/* SCULPTED RIGHT LEG + DRESS SHOE */}
+      {/* ARTICULATED RIGHT LEG (THIGH + HINGED 90° KNEE SHIN + DRESS SHOE) */}
       <group ref={rightLegRef} position={[0.1, 0.79, 0]}>
-        <mesh position={[0, -0.34, 0]} castShadow>
-          <capsuleGeometry args={[0.072, 0.52, 8, 12]} />
+        {/* Upper Thigh */}
+        <mesh position={[0, -0.18, 0]} castShadow>
+          <capsuleGeometry args={[0.072, 0.24, 8, 12]} />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        <mesh position={[0, -0.71, 0.045]} castShadow>
-          <capsuleGeometry args={[0.055, 0.12, 6, 10]} />
-          <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
-        </mesh>
+        {/* Hinged Knee Joint -> Lower Shin + Dress Shoe */}
+        <group ref={rightKneeRef} position={[0, -0.36, 0]}>
+          <mesh position={[0, -0.17, 0]} castShadow>
+            <capsuleGeometry args={[0.062, 0.24, 8, 10]} />
+            <meshStandardMaterial color={pantsColor} roughness={0.78} />
+          </mesh>
+          <mesh position={[0, -0.35, 0.045]} castShadow>
+            <capsuleGeometry args={[0.052, 0.12, 6, 10]} />
+            <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
+          </mesh>
+        </group>
       </group>
 
       {/* SCULPTED ANATOMICAL TORSO & TAILORED BLAZER */}
@@ -443,62 +539,70 @@ export function RobotCharacter({
           </mesh>
         </group>
 
-        {/* RIGHT ARM */}
+        {/* ARTICULATED RIGHT ARM (UPPER ARM + BENT ELBOW FOREARM + REAL 3D COFFEE MUG) */}
         <group ref={rightArmRef} position={[0.24, 0.33, 0]}>
-          <mesh position={[0, -0.23, 0]} castShadow>
-            <capsuleGeometry args={[0.056, 0.38, 8, 12]} />
+          {/* Upper Arm */}
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
             <meshStandardMaterial color={suitColor} roughness={0.66} />
           </mesh>
-          <mesh position={[0, -0.44, 0]}>
-            <cylinderGeometry args={[0.046, 0.046, 0.05, 10]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.55} />
-          </mesh>
-          <mesh position={[0, -0.5, 0]}>
-            <sphereGeometry args={[0.05, 10, 10]} />
-            <meshStandardMaterial color={skinColor} roughness={0.72} />
-          </mesh>
+          {/* Hinged Elbow Forearm */}
+          <group ref={rightElbowRef} position={[0, -0.24, 0]}>
+            <mesh position={[0, -0.11, 0]} castShadow>
+              <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
+              <meshStandardMaterial color={suitColor} roughness={0.66} />
+            </mesh>
+            <mesh position={[0, -0.21, 0]}>
+              <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.55} />
+            </mesh>
+            <mesh position={[0, -0.26, 0]}>
+              <sphereGeometry args={[0.048, 10, 10]} />
+              <meshStandardMaterial color={skinColor} roughness={0.72} />
+            </mesh>
 
-          {/* REAL 3D CERAMIC COFFEE MUG + DARK ESPRESSO + WARM STEAM (visible when seated IDLE) */}
-          <group ref={coffeeMugRef} position={[0, -0.52, 0.06]} visible={false}>
-            {/* Ceramic Mug Body */}
-            <mesh castShadow>
-              <cylinderGeometry args={[0.052, 0.045, 0.11, 14]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.22} metalness={0.05} />
-            </mesh>
-            {/* Accent Stripe Around Mug */}
-            <mesh position={[0, 0, 0]}>
-              <cylinderGeometry args={[0.053, 0.05, 0.024, 14]} />
-              <meshStandardMaterial color="#c2410c" roughness={0.35} />
-            </mesh>
-            {/* Dark Hot Espresso Surface */}
-            <mesh position={[0, 0.048, 0]}>
-              <cylinderGeometry args={[0.044, 0.044, 0.012, 12]} />
-              <meshStandardMaterial color="#3b1f0e" roughness={0.18} />
-            </mesh>
-            {/* Mug Handle */}
-            <mesh position={[0.055, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-              <torusGeometry args={[0.028, 0.008, 8, 14, Math.PI]} />
-              <meshStandardMaterial color="#f1f5f9" roughness={0.25} />
-            </mesh>
-            {/* Rising Warm Coffee Steam Puffs */}
-            <mesh ref={steam1Ref} position={[0, 0.09, 0]}>
-              <sphereGeometry args={[0.018, 8, 8]} />
-              <meshStandardMaterial
-                color="#ffffff"
-                transparent
-                opacity={0.42}
-                depthWrite={false}
-              />
-            </mesh>
-            <mesh ref={steam2Ref} position={[0.01, 0.14, 0]}>
-              <sphereGeometry args={[0.014, 8, 8]} />
-              <meshStandardMaterial
-                color="#f8fafc"
-                transparent
-                opacity={0.3}
-                depthWrite={false}
-              />
-            </mesh>
+            {/* REAL 3D CERAMIC COFFEE MUG + DARK ESPRESSO + WARM STEAM (visible when seated IDLE) */}
+            <group ref={coffeeMugRef} position={[0, -0.28, 0.05]} visible={false}>
+              {/* Ceramic Mug Body */}
+              <mesh castShadow>
+                <cylinderGeometry args={[0.05, 0.043, 0.105, 14]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.22} metalness={0.05} />
+              </mesh>
+              {/* Accent Stripe Around Mug */}
+              <mesh position={[0, 0, 0]}>
+                <cylinderGeometry args={[0.051, 0.048, 0.022, 14]} />
+                <meshStandardMaterial color="#c2410c" roughness={0.35} />
+              </mesh>
+              {/* Dark Hot Espresso Surface */}
+              <mesh position={[0, 0.046, 0]}>
+                <cylinderGeometry args={[0.042, 0.042, 0.012, 12]} />
+                <meshStandardMaterial color="#3b1f0e" roughness={0.18} />
+              </mesh>
+              {/* Mug Handle */}
+              <mesh position={[0.052, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <torusGeometry args={[0.026, 0.008, 8, 14, Math.PI]} />
+                <meshStandardMaterial color="#f1f5f9" roughness={0.25} />
+              </mesh>
+              {/* Rising Warm Coffee Steam Puffs */}
+              <mesh ref={steam1Ref} position={[0, 0.09, 0]}>
+                <sphereGeometry args={[0.017, 8, 8]} />
+                <meshStandardMaterial
+                  color="#ffffff"
+                  transparent
+                  opacity={0.42}
+                  depthWrite={false}
+                />
+              </mesh>
+              <mesh ref={steam2Ref} position={[0.01, 0.14, 0]}>
+                <sphereGeometry args={[0.013, 8, 8]} />
+                <meshStandardMaterial
+                  color="#f8fafc"
+                  transparent
+                  opacity={0.3}
+                  depthWrite={false}
+                />
+              </mesh>
+            </group>
           </group>
         </group>
 

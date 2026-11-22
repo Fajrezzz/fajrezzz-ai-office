@@ -233,7 +233,11 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
   }, [divisionHistory, hydrated]);
 
   const syncAgent3D = useCallback(
-    (division: PipelineDivisionKey, state: "working" | "idle" | "error") => {
+    (
+      division: PipelineDivisionKey,
+      state: "working" | "idle" | "error",
+      customLabel?: string
+    ) => {
       const meta = PIPELINE_DIVISIONS.find((d) => d.key === division);
       if (!meta) return;
       if (state === "working") {
@@ -241,21 +245,21 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           meta.agentId,
           "working",
           meta.deskWaypointId,
-          `Sedang menjalankan ${meta.label}`
+          customLabel ?? `Sedang menjalankan ${meta.label}`
         );
       } else if (state === "error") {
         dispatchAgentRealWork(
           meta.agentId,
           "error",
           meta.deskWaypointId,
-          `ERROR pada ${meta.label} — butuh Retry`
+          customLabel ?? `ERROR pada ${meta.label} — butuh Retry`
         );
       } else {
         dispatchAgentRealWork(
           meta.agentId,
           "idle",
           meta.loungeWaypointId,
-          "☕ Antrean kosong — IDLE / ngopi santai"
+          customLabel ?? "☕ Antrean kosong — IDLE / ngopi santai"
         );
       }
     },
@@ -297,7 +301,8 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
     async (
       episodeId: string,
       division: PipelineDivisionKey,
-      overrideEpisode?: RealEpisode
+      overrideEpisode?: RealEpisode,
+      keepAtDeskOnDone = false
     ): Promise<RealEpisode | null> => {
       const currentEp =
         overrideEpisode ??
@@ -401,7 +406,15 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           qcPassed?: boolean;
         }
       ) => {
-        syncAgent3D(division, "idle");
+        if (division === "research") {
+          syncAgent3D(
+            division,
+            "working",
+            "5 ide siap — menunggu Bos pilih ide di Komando"
+          );
+        } else if (!keepAtDeskOnDone) {
+          syncAgent3D(division, "idle");
+        }
         setRunningDivision(null);
         recordDivisionHistory({
           episodeId,
@@ -795,21 +808,56 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       }));
       if (!epWithIdea) return;
 
-      const afterSeo = await runDivision(episodeId, "seo", epWithIdea);
-      if (!afterSeo || afterSeo.divisions.seo.status !== "done") return;
+      // Research handoff done -> Raka returns to lounge coffee while production team mobilizes to desks!
+      syncAgent3D("research", "idle");
+      const activeStages: PipelineDivisionKey[] = [
+        "seo",
+        "script",
+        "voice",
+        "motion",
+        "qc",
+      ];
+      activeStages.forEach((stage) => {
+        syncAgent3D(stage, "working", `Bersiap di meja untuk ${stage.toUpperCase()} episode aktif`);
+      });
 
-      const afterScript = await runDivision(episodeId, "script", afterSeo);
-      if (!afterScript || afterScript.divisions.script.status !== "done") return;
+      const releaseIdleIfDone = (ep: RealEpisode | null) => {
+        activeStages.forEach((stage) => {
+          const st = ep?.divisions[stage]?.status;
+          if (st !== "failed") {
+            syncAgent3D(stage, "idle");
+          }
+        });
+      };
 
-      const afterVoice = await runDivision(episodeId, "voice", afterScript);
-      if (!afterVoice || afterVoice.divisions.voice.status !== "done") return;
+      const afterSeo = await runDivision(episodeId, "seo", epWithIdea, true);
+      if (!afterSeo || afterSeo.divisions.seo.status !== "done") {
+        releaseIdleIfDone(afterSeo);
+        return;
+      }
 
-      const afterMotion = await runDivision(episodeId, "motion", afterVoice);
-      if (!afterMotion || afterMotion.divisions.motion.status !== "done") return;
+      const afterScript = await runDivision(episodeId, "script", afterSeo, true);
+      if (!afterScript || afterScript.divisions.script.status !== "done") {
+        releaseIdleIfDone(afterScript);
+        return;
+      }
 
-      await runDivision(episodeId, "qc", afterMotion);
+      const afterVoice = await runDivision(episodeId, "voice", afterScript, true);
+      if (!afterVoice || afterVoice.divisions.voice.status !== "done") {
+        releaseIdleIfDone(afterVoice);
+        return;
+      }
+
+      const afterMotion = await runDivision(episodeId, "motion", afterVoice, true);
+      if (!afterMotion || afterMotion.divisions.motion.status !== "done") {
+        releaseIdleIfDone(afterMotion);
+        return;
+      }
+
+      const afterQc = await runDivision(episodeId, "qc", afterMotion, true);
+      releaseIdleIfDone(afterQc);
     },
-    [patchEpisode, runDivision]
+    [patchEpisode, runDivision, syncAgent3D]
   );
 
   const runProductionAndExport = useCallback(
@@ -817,23 +865,53 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       const current = episodesRef.current.find((e) => e.id === episodeId);
       if (!current) return;
 
+      const exportStages: PipelineDivisionKey[] = [
+        "voice",
+        "motion",
+        "editing",
+        "qc",
+      ];
+      exportStages.forEach((stage) => {
+        if (current.divisions[stage].status !== "done" || stage === "editing") {
+          syncAgent3D(stage, "working", `Render & ekspor ${stage.toUpperCase()} di meja kerja`);
+        }
+      });
+
+      const releaseDone = (ep: RealEpisode | null) => {
+        exportStages.forEach((stage) => {
+          if (ep?.divisions[stage]?.status !== "failed") {
+            syncAgent3D(stage, "idle");
+          }
+        });
+      };
+
       let ep: RealEpisode | null = current;
       if (ep.divisions.voice.status !== "done") {
-        ep = await runDivision(episodeId, "voice", ep);
-        if (!ep || ep.divisions.voice.status !== "done") return;
+        ep = await runDivision(episodeId, "voice", ep, true);
+        if (!ep || ep.divisions.voice.status !== "done") {
+          releaseDone(ep);
+          return;
+        }
       }
       if (ep.divisions.motion.status !== "done") {
-        ep = await runDivision(episodeId, "motion", ep);
-        if (!ep || ep.divisions.motion.status !== "done") return;
+        ep = await runDivision(episodeId, "motion", ep, true);
+        if (!ep || ep.divisions.motion.status !== "done") {
+          releaseDone(ep);
+          return;
+        }
       }
-      ep = await runDivision(episodeId, "editing", ep);
-      if (!ep || ep.divisions.editing.status !== "done") return;
+      ep = await runDivision(episodeId, "editing", ep, true);
+      if (!ep || ep.divisions.editing.status !== "done") {
+        releaseDone(ep);
+        return;
+      }
 
       if (ep.divisions.qc.status !== "done") {
-        await runDivision(episodeId, "qc", ep);
+        ep = await runDivision(episodeId, "qc", ep, true);
       }
+      releaseDone(ep);
     },
-    [runDivision]
+    [runDivision, syncAgent3D]
   );
 
   const updateBossOriginality = useCallback(

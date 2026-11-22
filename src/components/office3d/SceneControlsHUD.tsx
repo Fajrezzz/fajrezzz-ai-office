@@ -873,6 +873,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                       className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
                         selectedAgent.status === "working"
                           ? "bg-emerald-500/25 text-emerald-200"
+                          : selectedAgent.status === "walking"
+                          ? "bg-sky-500/25 text-sky-200"
                           : selectedAgent.status === "error"
                           ? "bg-rose-500/25 text-rose-200"
                           : "bg-slate-800 text-slate-300"
@@ -880,6 +882,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                     >
                       {selectedAgent.status === "working"
                         ? "WORK"
+                        : selectedAgent.status === "walking"
+                        ? "WALK"
                         : selectedAgent.status === "error"
                         ? "ERROR"
                         : "IDLE"}
@@ -1049,6 +1053,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                         L{agent.floor} ·{" "}
                         {agent.status === "working"
                           ? "WORK"
+                          : agent.status === "walking"
+                          ? "WALK"
                           : agent.status === "error"
                           ? "ERROR"
                           : "IDLE"}
