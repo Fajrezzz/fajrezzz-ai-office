@@ -3,11 +3,9 @@
 import React, { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
-import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { AgentManagementPanel } from "@/components/dashboard/AgentManagementPanel";
-import { TaskManagerPanel } from "@/components/dashboard/TaskManagerPanel";
 import { LiveActivityPanel } from "@/components/dashboard/LiveActivityPanel";
-import { WorkStudioPanel } from "@/components/dashboard/WorkStudioPanel";
+import { KidsStudioPanel } from "@/components/kids/KidsStudioPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
 import { OfficeProvider, useOffice } from "@/store/OfficeContext";
 
@@ -28,31 +26,22 @@ function OfficeWorkspace() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
-        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 pb-24 sm:p-6 lg:pb-8">
-          {activeSection === "dashboard" && <DashboardOverview />}
+        <main className="mx-auto w-full max-w-[1400px] flex-1 p-3 pb-24 sm:p-6 lg:pb-8">
+          {(activeSection === "dashboard" || activeSection === "studio") && (
+            <KidsStudioPanel />
+          )}
 
           {activeSection === "office" && (
             <div className="space-y-3">
-              <DynamicVirtualOffice className="h-[calc(100vh-140px)] min-h-[540px] lg:h-[calc(100vh-110px)]" />
+              <DynamicVirtualOffice className="h-[calc(100vh-145px)] min-h-[520px] lg:h-[calc(100vh-110px)]" />
             </div>
           )}
 
-          {activeSection === "studio" && <WorkStudioPanel />}
-
-          {activeSection === "agents" && (
-            <div className="space-y-5">
+          {(activeSection === "agents" ||
+            activeSection === "tasks" ||
+            activeSection === "activity") && (
+            <div className="mx-auto max-w-5xl space-y-6">
               <AgentManagementPanel />
-            </div>
-          )}
-
-          {activeSection === "tasks" && (
-            <div className="mx-auto max-w-5xl">
-              <TaskManagerPanel />
-            </div>
-          )}
-
-          {activeSection === "activity" && (
-            <div className="mx-auto max-w-4xl">
               <LiveActivityPanel />
             </div>
           )}
