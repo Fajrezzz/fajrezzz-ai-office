@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { AgentManagementPanel } from "@/components/dashboard/AgentManagementPanel";
 import { LiveActivityPanel } from "@/components/dashboard/LiveActivityPanel";
+import { RealResultsDashboard } from "@/components/dashboard/RealResultsDashboard";
 import { KidsStudioPanel } from "@/components/kids/KidsStudioPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
 import { OfficeProvider, useOffice } from "@/store/OfficeContext";
@@ -35,9 +36,9 @@ function OfficeWorkspace() {
         <TopHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-3 pb-24 sm:p-6 lg:pb-8">
-          {(activeSection === "dashboard" || activeSection === "studio") && (
-            <KidsStudioPanel />
-          )}
+          {activeSection === "dashboard" && <KidsStudioPanel />}
+
+          {activeSection === "studio" && <RealResultsDashboard />}
 
           {activeSection === "office" && (
             <div className="space-y-3">

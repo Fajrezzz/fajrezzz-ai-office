@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  BarChart3,
   Box,
   ChevronLeft,
   ChevronRight,
@@ -39,9 +40,15 @@ const NAV_ITEMS: {
     icon: Box,
   },
   {
+    id: "studio",
+    label: "Hasil & KPI YPP",
+    shortLabel: "Hasil YPP",
+    icon: BarChart3,
+  },
+  {
     id: "agents",
-    label: "Tim & Divisi",
-    shortLabel: "Tim 10",
+    label: "Tim 7 Divisi",
+    shortLabel: "Tim 7",
     icon: Users,
   },
 ];
@@ -181,8 +188,8 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Ultra-Clean 3-Button Android Bottom Navigation Bar */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 grid grid-cols-3 border-t border-slate-800 bg-[#050b1d]/95 px-2 py-2 backdrop-blur-lg lg:hidden">
+      {/* Clean 4-Button Android Bottom Navigation Bar */}
+      <nav className="fixed right-0 bottom-0 left-0 z-40 grid grid-cols-4 border-t border-slate-800 bg-[#050b1d]/95 px-2 py-2 backdrop-blur-lg lg:hidden">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = activeSection === item.id;
