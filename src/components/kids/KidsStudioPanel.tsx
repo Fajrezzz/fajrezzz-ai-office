@@ -1,110 +1,157 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Box,
   Check,
   CheckCircle2,
-  Coffee,
+  ChevronDown,
+  ChevronUp,
+  Clock,
   Copy,
   Download,
-  Gamepad2,
+  ExternalLink,
+  Film,
   ImageDown,
   Loader2,
-  MessageSquare,
   Pause,
   Play,
+  RotateCcw,
   Send,
-  Sparkles,
+  ShieldAlert,
+  ShieldCheck,
   Trash2,
-  UploadCloud,
   Volume2,
   VolumeX,
-  Zap,
+  XCircle,
 } from "lucide-react";
+import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
+import { renderCartoonFrame, startKidsMelody } from "@/lib/kids-studio/cartoon-renderer";
 import {
-  renderCartoonFrame,
-  renderKidsThumbnail,
-  startKidsMelody,
-} from "@/lib/kids-studio/cartoon-renderer";
+  buildRenderableEpisode,
+  speakSceneTracks,
+} from "@/lib/pipeline/browser-divisions";
 import {
-  renderEpisodeToVideoBlob,
-} from "@/lib/kids-studio/youtube-upload";
-import type {
-  PublishPlatform,
-  VideoFormat,
-} from "@/lib/kids-studio/episode-brain";
-import {
-  AGENCY_DIVISIONS,
-  useAgency,
-} from "@/store/AgencyContext";
+  PIPELINE_DIVISIONS,
+  type PipelineDivisionKey,
+  type RealDivisionStatus,
+} from "@/types/pipeline";
+import { useAgency } from "@/store/AgencyContext";
 import { useOffice } from "@/store/OfficeContext";
-import { YouTubeUploadModal } from "@/components/kids/YouTubeUploadModal";
 
-const QUICK_PROMPTS: { label: string; brief: string; platform: PublishPlatform }[] = [
+const STATUS_BADGE: Record<
+  RealDivisionStatus,
+  { label: string; cls: string }
+> = {
+  queued: {
+    label: "QUEUED",
+    cls: "border-slate-700 bg-slate-800/80 text-slate-300",
+  },
+  running: {
+    label: "RUNNING",
+    cls: "border-cyan-400/70 bg-cyan-500/20 text-cyan-200",
+  },
+  done: {
+    label: "DONE",
+    cls: "border-emerald-400/70 bg-emerald-500/20 text-emerald-200",
+  },
+  failed: {
+    label: "FAILED",
+    cls: "border-rose-400/80 bg-rose-500/20 text-rose-200",
+  },
+};
+
+const QUICK_THEMES: { label: string; theme: string; platform: PublishPlatform }[] = [
   {
-    label: "🚒 Kartun Truk Pemadam",
-    brief: "Bikinin video animasi anak tentang mobil pemadam dan polisi menolong kucing",
+    label: "🚒 Truk Pemadam & Kucing",
+    theme: "Petualangan mobil pemadam cilik menolong anak kucing di jembatan pelangi",
     platform: "youtube_shorts",
   },
   {
-    label: "🦖 Kartun Dino Warna",
-    brief: "Bikinin video kartun anak dinosaurus warna-warni belajar berhitung",
+    label: "🦖 Dino Belajar Warna",
+    theme: "Dinosaurus kecil menemukan telur warna-warni di lembah musik",
     platform: "youtube_shorts",
   },
   {
-    label: "🚀 Kartun Roket Angkasa",
-    brief: "Bikinin animasi anak roket terbang ke planet bulan",
+    label: "🚀 Roket ke Bulan",
+    theme: "Roket ceria bersama robot mini memperbaiki lampu bintang di bulan",
     platform: "youtube_landscape",
   },
   {
-    label: "🤖 Video TikTok Tools AI",
-    brief: "Bikinin video TikTok soal tools AI gratis buat bikin konten otomatis",
-    platform: "tiktok",
+    label: "🐱 Persahabatan Hewan Hutan",
+    theme: "Kelinci dan gajah kecil bekerja sama membangun perahu daun menyeberang sungai",
+    platform: "youtube_shorts",
   },
 ];
 
+interface AiServerStatus {
+  anyConfigured: boolean;
+  configuredCount: number;
+  pricingNotice: string;
+  providers: {
+    id: string;
+    label: string;
+    envVar: string;
+    configured: boolean;
+    freeTierSummary: string;
+  }[];
+}
+
 export function KidsStudioPanel() {
-  const { agents, setActiveSection } = useOffice();
+  const { setActiveSection } = useOffice();
   const {
-    job,
-    teamChat,
     episodes,
-    selectedEpisodeId,
-    setSelectedEpisodeId,
-    autoApproveMode,
-    setAutoApproveMode,
-    submitBossBrief,
-    selectIdeaOption,
-    updateDraftFields,
-    approveScriptAndProduce,
-    markEpisodeUploaded,
+    activeEpisode,
+    setActiveEpisodeId,
+    videoBlobUrls,
+    editingProgressPct,
+    runningDivision,
+    startNewEpisode,
+    selectIdeaAndContinue,
+    runDivision,
+    runProductionAndExport,
     deleteEpisode,
   } = useAgency();
 
-  const [briefInput, setBriefInput] = useState("");
+  const [themeInput, setThemeInput] = useState("");
   const [platform, setPlatform] = useState<PublishPlatform>("youtube_shorts");
+  const [aiStatus, setAiStatus] = useState<AiServerStatus | null>(null);
+  const [expandedDiv, setExpandedDiv] = useState<PipelineDivisionKey | null>(null);
+
+  // Playback & TTS preview refs
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const melodyStopRef = useRef<(() => void) | null>(null);
+  const speechStopRef = useRef<(() => void) | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [playTime, setPlayTime] = useState(0);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportPct, setExportPct] = useState(0);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [speakingScene, setSpeakingScene] = useState<number | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const melodyStopRef = useRef<(() => void) | null>(null);
-  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    fetch("/api/ai/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok) setAiStatus(d);
+      })
+      .catch(() => {});
+  }, []);
 
-  const activeEpisode =
-    episodes.find((ep) => ep.id === selectedEpisodeId) ?? episodes[0];
+  const renderableEpisode = useMemo(
+    () => (activeEpisode ? buildRenderableEpisode(activeEpisode) : null),
+    [activeEpisode]
+  );
 
-  const videoFormat: VideoFormat =
-    platform === "youtube_landscape" ? "landscape" : "shorts";
-
-  const totalDuration = activeEpisode
-    ? activeEpisode.scenes.reduce((acc, s) => acc + s.durationSec, 0)
-    : 22;
+  const totalDuration = useMemo(
+    () =>
+      renderableEpisode
+        ? renderableEpisode.scenes.reduce((s, x) => s + x.durationSec, 0)
+        : 0,
+    [renderableEpisode]
+  );
 
   const stopPlayback = useCallback(() => {
     if (rafRef.current !== null) {
@@ -115,735 +162,811 @@ export function KidsStudioPanel() {
       melodyStopRef.current();
       melodyStopRef.current = null;
     }
+    if (speechStopRef.current) {
+      speechStopRef.current();
+      speechStopRef.current = null;
+    }
+    setSpeakingScene(null);
     setIsPlaying(false);
   }, []);
 
-  // Draw static preview frame whenever episode or format changes
   useEffect(() => {
     stopPlayback();
     setPlayTime(0);
     const canvas = canvasRef.current;
-    if (!canvas || !activeEpisode) return;
+    if (!canvas || !renderableEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    renderCartoonFrame(ctx, canvas.width, canvas.height, activeEpisode, 0.8);
-  }, [activeEpisode, videoFormat, stopPlayback]);
+    renderCartoonFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8);
+  }, [renderableEpisode, stopPlayback]);
 
-  useEffect(() => {
-    return () => stopPlayback();
-  }, [stopPlayback]);
+  useEffect(() => () => stopPlayback(), [stopPlayback]);
 
-  // Live 60fps animation loop
-  useEffect(() => {
-    if (!isPlaying || !activeEpisode) return;
+  const togglePlayPreview = () => {
+    if (!renderableEpisode || !canvasRef.current) return;
+    if (isPlaying) {
+      stopPlayback();
+      return;
+    }
+
     const canvas = canvasRef.current;
-    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     if (!isMuted) {
-      const { stop } = startKidsMelody(true);
-      melodyStopRef.current = stop;
+      melodyStopRef.current = startKidsMelody(true).stop;
+      const tracks = activeEpisode?.divisions.voice.output?.sceneTracks;
+      if (tracks && tracks.length > 0) {
+        speechStopRef.current = speakSceneTracks(tracks, (sn) =>
+          setSpeakingScene(sn)
+        );
+      }
     }
 
-    const startMs = performance.now() - playTime * 1000;
-    const tick = (now: number) => {
+    setIsPlaying(true);
+    const startMs = performance.now();
+
+    const loop = (now: number) => {
       const elapsed = (now - startMs) / 1000;
       if (elapsed >= totalDuration) {
-        renderCartoonFrame(ctx, canvas.width, canvas.height, activeEpisode, 0.2);
-        setPlayTime(0);
+        setPlayTime(totalDuration);
         stopPlayback();
         return;
       }
       setPlayTime(elapsed);
-      renderCartoonFrame(ctx, canvas.width, canvas.height, activeEpisode, elapsed);
-      rafRef.current = window.requestAnimationFrame(tick);
+      renderCartoonFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
+      rafRef.current = window.requestAnimationFrame(loop);
     };
-    rafRef.current = window.requestAnimationFrame(tick);
+    rafRef.current = window.requestAnimationFrame(loop);
+  };
 
-    return () => {
-      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-      if (melodyStopRef.current) {
-        melodyStopRef.current();
-        melodyStopRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, isMuted, activeEpisode?.id, videoFormat]);
+  const handleSpeakScene = (sceneNumber: number) => {
+    const tracks = activeEpisode?.divisions.voice.output?.sceneTracks ?? [];
+    const target = tracks.find((t) => t.sceneNumber === sceneNumber);
+    if (!target) return;
+    if (speechStopRef.current) speechStopRef.current();
+    speechStopRef.current = speakSceneTracks(
+      [target],
+      (sn) => setSpeakingScene(sn),
+      () => setSpeakingScene(null)
+    );
+  };
 
-  const handleSendBrief = (e: React.FormEvent) => {
+  const handleSubmitTheme = async (e: React.FormEvent) => {
     e.preventDefault();
-    const text =
-      briefInput.trim() ||
-      "Bikinin video animasi anak truk pemadam penyelamat";
-    submitBossBrief(text, platform);
-    setBriefInput("");
+    if (!themeInput.trim() || runningDivision) return;
+    const theme = themeInput.trim();
+    setThemeInput("");
+    await startNewEpisode(theme, platform);
   };
 
-  const handleDownloadVideo = async () => {
-    if (!activeEpisode || isExporting) return;
-    stopPlayback();
-    setIsExporting(true);
-    setExportPct(0);
-    try {
-      const { blob, ext } = await renderEpisodeToVideoBlob(
-        activeEpisode,
-        videoFormat,
-        (pct) => setExportPct(pct)
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `FAJREZZZ-EP${activeEpisode.episodeNumber}-${videoFormat}.${ext}`;
-      a.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch {
-      // Fallback ignored gracefully
-    } finally {
-      setIsExporting(false);
-      setExportPct(0);
-    }
+  const copyText = (key: string, text: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopiedKey(key);
+    window.setTimeout(() => setCopiedKey(null), 1600);
   };
 
-  const handleDownloadThumbnail = () => {
-    if (!activeEpisode) return;
-    const dataUrl = renderKidsThumbnail(activeEpisode);
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `THUMBNAIL-EP${activeEpisode.episodeNumber}.png`;
-    a.click();
-  };
-
-  const handleCopySEO = async () => {
-    if (!activeEpisode) return;
-    const pack = `JUDUL:\n${activeEpisode.title}\n\nHOOK 3 DETIK:\n${activeEpisode.hook3s}\n\nDESKRIPSI:\n${activeEpisode.description}\n\nTAGS:\n${activeEpisode.tags}`;
-    try {
-      await navigator.clipboard.writeText(pack);
-      setCopiedId(activeEpisode.id);
-      window.setTimeout(() => setCopiedId(null), 2200);
-    } catch {
-      // Ignore clipboard error
-    }
-  };
-
-  const handleQuickStudioUpload = async () => {
-    if (!activeEpisode) return;
-    await handleCopySEO();
-    handleDownloadThumbnail();
-    await handleDownloadVideo();
-    const targetUrl =
-      platform === "tiktok"
-        ? "https://www.tiktok.com/upload"
-        : "https://studio.youtube.com";
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-  };
-
-  // Live 3D office staff stats (Working vs Coffee vs Game Break)
-  const workingCount = agents.filter((a) => a.status === "working").length;
-  const coffeeCount = agents.filter(
-    (a) =>
-      a.targetWaypointId === "wp-l2-lounge" ||
-      a.targetWaypointId === "wp-l3-lounge" ||
-      a.currentActionLabel.includes("☕")
-  ).length;
-  const gameOrChillCount = Math.max(0, agents.length - workingCount - coffeeCount);
-
-  const isJobRunning =
-    job.stage !== "idle" && job.stage !== "ready";
-
-  const canvasW = videoFormat === "shorts" ? 540 : 960;
-  const canvasH = videoFormat === "shorts" ? 960 : 540;
+  const researchOut = activeEpisode?.divisions.research.output ?? null;
+  const seoOut = activeEpisode?.divisions.seo.output ?? null;
+  const scriptOut = activeEpisode?.divisions.script.output ?? null;
+  const voiceOut = activeEpisode?.divisions.voice.output ?? null;
+  const motionOut = activeEpisode?.divisions.motion.output ?? null;
+  const editingOut = activeEpisode?.divisions.editing.output ?? null;
+  const qcOut = activeEpisode?.divisions.qc.output ?? null;
+  const activeVideoUrl = activeEpisode ? videoBlobUrls[activeEpisode.id] : undefined;
 
   return (
-    <div className="space-y-4">
-      {/* 1. SUPER-SIMPLE BOSS COMMAND INPUT (Ketik dari HP -> Kirim!) */}
-      <section className="rounded-3xl border border-amber-400/35 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/60 p-4 shadow-xl sm:p-5">
+    <div className="space-y-5">
+      {/* ================= SERVER AI FREE-TIER STATUS BANNER ================= */}
+      {aiStatus && !aiStatus.anyConfigured && (
+        <div className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 text-xs text-amber-100">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+            <div className="space-y-1.5">
+              <div className="font-black text-amber-200">
+                API Key AI Belum Terpasang di Environment Variable Vercel
+              </div>
+              <p className="leading-relaxed text-amber-100/90">
+                Pipeline nyata memanggil LLM melalui Vercel Serverless Function (
+                <code className="rounded bg-slate-950 px-1.5 py-0.5 text-cyan-300">
+                  /api/pipeline/*
+                </code>
+                ). Untuk keamanan, API key <strong>tidak</strong> disimpan di kode.
+                Tambahkan minimal 1 key gratis tanpa kartu kredit di Vercel Settings →
+                Environment Variables lalu Redeploy:
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {aiStatus.providers.map((p) => (
+                  <span
+                    key={p.id}
+                    className="rounded-lg border border-amber-400/40 bg-slate-950/80 px-2 py-1 font-mono text-[10px] text-amber-200"
+                  >
+                    {p.envVar}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= 1. KOMANDO BOS (MULAI EPISODE NYATA) ================= */}
+      <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-black text-white sm:text-lg">
-              📱 Perintah Bos ke Direktur Konten AI
+              📱 Komando Bos — Mulai Produksi Episode Nyata
             </h2>
-            <p className="text-xs text-slate-300">
-              Ketik 1 tugas singkat → Direktur bagi kerja ke 7 divisi → Bos pilih
-              ide &amp; setujui naskah → Video siap posting!
+            <p className="text-xs text-slate-400">
+              Ketik tema episode → Divisi Riset memanggil AI nyata untuk 5 ide unik,
+              lalu tiap divisi menjalankan tugasnya dengan log &amp; hasil JSON tersimpan.
             </p>
           </div>
-
           <button
             type="button"
-            onClick={() => setAutoApproveMode(!autoApproveMode)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black transition ${
-              autoApproveMode
-                ? "bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25"
-                : "border border-slate-700 bg-slate-800 text-slate-200 hover:border-amber-400/50"
-            }`}
+            onClick={() => setActiveSection("office")}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25"
           >
-            <Zap className="h-3.5 w-3.5" />
-            {autoApproveMode
-              ? "Autopilot Penuh: ON"
-              : "Mode Bos: Pilih Ide & ACC"}
+            <Box className="h-4 w-4" />
+            <span>Pantau di Kantor 3D</span>
           </button>
         </div>
 
-        <form onSubmit={handleSendBrief} className="mt-3 flex flex-col gap-2.5 sm:flex-row">
-          <input
-            type="text"
-            value={briefInput}
-            onChange={(e) => setBriefInput(e.target.value)}
-            placeholder="Ketik tugas... misal: Bikinin video TikTok soal tools AI / kartun truk pemadam"
-            className="flex-1 rounded-2xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-110 active:scale-95"
-          >
-            <Send className="h-4 w-4" />
-            <span>Kirim ke Direktur</span>
-          </button>
-        </form>
-
-        {/* Quick 1-Tap Examples + Platform Pills */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <form onSubmit={handleSubmitTheme} className="mt-4 space-y-3">
           <div className="flex flex-wrap gap-1.5">
-            {QUICK_PROMPTS.map((qp) => (
-              <button
-                key={qp.label}
-                type="button"
-                onClick={() => {
-                  setPlatform(qp.platform);
-                  submitBossBrief(qp.brief, qp.platform);
-                }}
-                className="rounded-xl border border-slate-700/90 bg-slate-800/80 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition hover:border-amber-400/60 hover:text-amber-200"
-              >
-                {qp.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-950/80 p-1">
             {(
               [
-                { id: "youtube_shorts", label: "YT Shorts 9:16" },
-                { id: "tiktok", label: "TikTok 9:16" },
-                { id: "youtube_landscape", label: "YouTube 16:9" },
+                { id: "youtube_shorts", label: "📱 YouTube Shorts (9:16)" },
+                { id: "youtube_landscape", label: "📺 YouTube Video (16:9)" },
+                { id: "tiktok", label: "🎵 TikTok / Reels (9:16)" },
               ] as { id: PublishPlatform; label: string }[]
-            ).map((pf) => (
+            ).map((p) => (
               <button
-                key={pf.id}
+                key={p.id}
                 type="button"
-                onClick={() => setPlatform(pf.id)}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
-                  platform === pf.id
-                    ? "bg-amber-400 text-slate-950"
-                    : "text-slate-400 hover:text-white"
+                onClick={() => setPlatform(p.id)}
+                className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                  platform === p.id
+                    ? "border-amber-300 bg-amber-400 text-slate-950"
+                    : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500"
                 }`}
               >
-                {pf.label}
+                {p.label}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* 7-Division Pipeline Status Strip */}
-        {job.stage !== "idle" && (
-          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="font-bold text-amber-300">
-                {job.activeStepLabel}
-              </span>
-              <span className="font-mono font-black text-emerald-300">
-                {job.progressPercent}%
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-sky-400 transition-all duration-500"
-                style={{ width: `${job.progressPercent}%` }}
-              />
-            </div>
-            <div className="mt-2.5 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
-              {AGENCY_DIVISIONS.map((div) => {
-                const st = job.divisionStatus[div.key];
-                return (
-                  <div
-                    key={div.key}
-                    className={`flex items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold ${
-                      st === "done"
-                        ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                        : st === "working"
-                        ? "bg-amber-400/20 text-amber-200 ring-1 ring-amber-400/60"
-                        : "bg-slate-900 text-slate-500"
-                    }`}
-                  >
-                    {st === "done" ? (
-                      <Check className="h-3 w-3 shrink-0" />
-                    ) : st === "working" ? (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                    ) : null}
-                    <span className="truncate">{div.shortLabel}</span>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="text"
+              value={themeInput}
+              onChange={(e) => setThemeInput(e.target.value)}
+              placeholder="Contoh: Petualangan truk pemadam cilik menolong anak kucing di jembatan pelangi..."
+              className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!themeInput.trim() || Boolean(runningDivision)}
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {runningDivision === "research" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              <span>Jalankan Riset AI</span>
+            </button>
           </div>
-        )}
+
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_THEMES.map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => {
+                  setThemeInput(q.theme);
+                  setPlatform(q.platform);
+                }}
+                className="rounded-lg border border-slate-800 bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-cyan-400/50 hover:text-cyan-200"
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+        </form>
       </section>
 
-      {/* 2. MAIN CLEAN 2-COLUMN WORKSPACE */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* LEFT COLUMN (7 cols): BOSS REPORT & APPROVAL -> VIDEO READY TO POST */}
-        <div className="space-y-4 lg:col-span-7">
-          {/* REPORT STEP A: BOS PILIH 1 DARI 3 IDE */}
-          {job.stage === "waiting_idea" && (
-            <section className="rounded-3xl border-2 border-amber-400/70 bg-slate-900/95 p-4 shadow-xl shadow-amber-500/10 sm:p-5">
-              <div className="flex items-center justify-between gap-2">
+      {/* ================= EPISODE SELECTOR BAR ================= */}
+      {episodes.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {episodes.map((ep) => {
+            const active = ep.id === activeEpisode?.id;
+            const qc = ep.divisions.qc.output;
+            return (
+              <button
+                key={ep.id}
+                type="button"
+                onClick={() => setActiveEpisodeId(ep.id)}
+                className={`flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-left text-xs transition ${
+                  active
+                    ? "border-cyan-400 bg-cyan-500/15 text-white"
+                    : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-600"
+                }`}
+              >
+                <Film className="h-3.5 w-3.5 text-amber-300" />
                 <div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-black text-amber-300 uppercase">
-                    <Sparkles className="h-3 w-3" />
-                    Laporan Tim Riset Masuk
-                  </span>
-                  <h3 className="mt-1 text-base font-black text-white">
-                    Pilih 1 Ide Terbaik (Klik Langsung Jalan!)
-                  </h3>
-                </div>
-              </div>
-
-              <div className="mt-3 space-y-2.5">
-                {job.ideas.map((idea, idx) => (
-                  <button
-                    key={idea.id}
-                    type="button"
-                    onClick={() => selectIdeaOption(idea.id)}
-                    className="group w-full rounded-2xl border border-slate-700 bg-slate-950/90 p-3.5 text-left transition hover:border-amber-400 hover:bg-slate-800/80"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="rounded-lg bg-sky-500/20 px-2 py-0.5 text-[10px] font-black text-sky-300">
-                        IDE #{idx + 1} · {idea.angle}
-                      </span>
-                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300">
-                        Skor Viral {idea.viralScore}/100
-                      </span>
-                    </div>
-                    <div className="mt-1.5 text-sm font-black text-white group-hover:text-amber-300">
-                      {idea.title}
-                    </div>
-                    <p className="mt-1 text-xs text-slate-400">
-                      <strong className="text-amber-300">Hook 3 detik:</strong>{" "}
-                      {idea.hook3s}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* REPORT STEP B: BOS SETUJUI NASKAH */}
-          {job.stage === "waiting_script" && job.draftEpisode && (
-            <section className="rounded-3xl border-2 border-emerald-400/70 bg-slate-900/95 p-4 shadow-xl shadow-emerald-500/10 sm:p-5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-black text-emerald-300 uppercase">
-                <CheckCircle2 className="h-3 w-3" />
-                Laporan Penulis Naskah &amp; SEO Masuk
-              </span>
-              <h3 className="mt-1 text-base font-black text-white">
-                Baca Singkat &amp; Setujui Naskah — Sisanya Tim yang Jalan!
-              </h3>
-
-              <div className="mt-3 space-y-2.5">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-400">
-                    Judul YouTube / TikTok (bisa edit cepat)
-                  </label>
-                  <input
-                    type="text"
-                    value={job.draftEpisode.title}
-                    onChange={(e) =>
-                      updateDraftFields({ title: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white focus:border-emerald-400 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-400">
-                    Hook 3 Detik Pertama
-                  </label>
-                  <input
-                    type="text"
-                    value={job.draftEpisode.hook3s}
-                    onChange={(e) =>
-                      updateDraftFields({ hook3s: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-amber-200 focus:border-emerald-400 focus:outline-none"
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
-                  <div className="text-[11px] font-black text-slate-300">
-                    Naskah 5 Adegan:
+                  <div className="max-w-[190px] truncate font-bold">
+                    Ep #{ep.episodeNumber} ·{" "}
+                    {ep.divisions.seo.output?.title || ep.bossTheme}
                   </div>
-                  <div className="mt-2 space-y-1.5">
-                    {job.draftEpisode.scenes.map((sc) => (
-                      <div
-                        key={sc.sceneNumber}
-                        className="rounded-xl bg-slate-900 px-3 py-2 text-xs"
-                      >
-                        <span className="font-black text-amber-300">
-                          Adegan {sc.sceneNumber} ({sc.label}):
-                        </span>{" "}
-                        <span className="text-slate-200">{sc.narration}</span>
-                      </div>
-                    ))}
+                  <div className="text-[10px] text-slate-400">
+                    {qc
+                      ? qc.passed
+                        ? `QC Lolos (${qc.score})`
+                        : "QC Diblokir"
+                      : "Dalam Produksi"}
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={approveScriptAndProduce}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 px-5 py-3.5 text-sm font-black text-slate-950 shadow-lg transition hover:brightness-110"
-                >
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Setujui Naskah — Tim Suara, Motion &amp; QC Jalan!</span>
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* LIVE VIDEO PLAYER + DOWNLOAD / UPLOAD READY TO POST */}
-          {activeEpisode && (
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-black text-emerald-300">
-                      SIAP POSTING · EP #{activeEpisode.episodeNumber}
-                    </span>
-                    {activeEpisode.uploaded && (
-                      <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-black text-sky-300">
-                        ✓ Sudah Upload
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-1 truncate text-sm font-black text-white sm:text-base">
-                    {activeEpisode.title}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Cartoon / AI Motion Canvas Stage */}
-              <div className="mt-3 flex justify-center rounded-2xl bg-slate-950 p-2.5">
-                <canvas
-                  ref={canvasRef}
-                  width={canvasW}
-                  height={canvasH}
-                  className={`rounded-xl shadow-2xl ${
-                    videoFormat === "shorts"
-                      ? "max-h-[400px] w-auto aspect-[9/16]"
-                      : "w-full max-w-[640px] aspect-video"
-                  }`}
-                />
-              </div>
-
-              {/* Simple Playback Bar */}
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsPlaying((p) => !p)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-amber-300"
-                >
-                  {isPlaying ? (
-                    <>
-                      <Pause className="h-4 w-4" /> Jeda
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4" /> Putar Preview
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsMuted((m) => !m)}
-                  className="rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-200 hover:text-white"
-                  title={isMuted ? "Nyalakan musik" : "Matikan musik"}
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4 text-emerald-400" />
-                  )}
-                </button>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-amber-400 transition-all"
-                    style={{
-                      width: `${Math.min(100, (playTime / totalDuration) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <span className="font-mono text-[11px] text-slate-400">
-                  {Math.floor(playTime)}s / {Math.round(totalDuration)}s
-                </span>
-              </div>
-
-              {/* 4 BIG CLEAR ACTION BUTTONS */}
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <button
-                  type="button"
-                  disabled={isExporting}
-                  onClick={handleDownloadVideo}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-emerald-500 px-3 py-3 text-xs font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
-                >
-                  {isExporting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{exportPct}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      <span>Download Video</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadThumbnail}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl border border-slate-700 bg-slate-800 px-3 py-3 text-xs font-bold text-white transition hover:border-amber-400"
-                >
-                  <ImageDown className="h-4 w-4 text-amber-300" />
-                  <span>Thumbnail HD</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopySEO}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl border border-slate-700 bg-slate-800 px-3 py-3 text-xs font-bold text-white transition hover:border-sky-400"
-                >
-                  {copiedId === activeEpisode.id ? (
-                    <>
-                      <Check className="h-4 w-4 text-emerald-400" />
-                      <span className="text-emerald-300">Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4 text-sky-300" />
-                      <span>Copy SEO</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setUploadModalOpen(true)}
-                  className="flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 px-3 py-3 text-xs font-black text-white shadow-lg shadow-red-600/20 transition hover:bg-red-500"
-                >
-                  <UploadCloud className="h-4 w-4" />
-                  <span>Upload YouTube</span>
-                </button>
-              </div>
-            </section>
-          )}
+              </button>
+            );
+          })}
         </div>
+      )}
 
-        {/* RIGHT COLUMN (5 cols): 3D OFFICE LIVE STATUS + TEAM CHAT + READY ARCHIVE */}
-        <div className="space-y-4 lg:col-span-5">
-          {/* LIVE 3D OFFICE STATUS (Work / Coffee / Game Break) */}
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl">
-            <div className="flex items-center justify-between gap-2">
+      {/* ================= EMPTY STATE ================= */}
+      {!activeEpisode && (
+        <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
+          <Film className="mx-auto h-10 w-10 text-slate-600" />
+          <h3 className="mt-3 text-sm font-bold text-slate-200">
+            Belum Ada Episode Produksi
+          </h3>
+          <p className="mx-auto mt-1 max-w-md text-xs text-slate-400">
+            Tidak ada data atau angka simulasi palsu. Ketik tema episode pertama di
+            atas untuk mulai menjalankan Pipeline 7 Divisi secara nyata.
+          </p>
+        </div>
+      )}
+
+      {/* ================= ACTIVE EPISODE — PIPELINE 7 DIVISI NYATA ================= */}
+      {activeEpisode && (
+        <div className="space-y-5">
+          {/* 7-Division Real Status Grid + Retry per Division */}
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-black text-white">
-                  🏢 Status Kantor 3D Live (10 Staf AI)
+                <h3 className="text-sm font-black text-white sm:text-base">
+                  ⚙️ Pipeline 7 Divisi — Episode #{activeEpisode.episodeNumber}
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Tim kerja di meja saat tugas aktif, lalu istirahat ngopi &amp; main game!
+                  Status real-time (queued / running / done / failed), durasi kerja,
+                  log &amp; tombol Retry per divisi.
                 </p>
               </div>
-              {isJobRunning && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-1 text-[10px] font-black text-amber-300">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Lagi Kerja
-                </span>
-              )}
-            </div>
-
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-2xl bg-emerald-500/15 p-2.5 ring-1 ring-emerald-500/30">
-                <div className="text-lg font-black text-emerald-300">
-                  {workingCount}
-                </div>
-                <div className="text-[10px] font-bold text-slate-300">
-                  💻 Sibuk Kerja
-                </div>
-              </div>
-              <div className="rounded-2xl bg-amber-500/15 p-2.5 ring-1 ring-amber-500/30">
-                <div className="flex items-center justify-center gap-1 text-lg font-black text-amber-300">
-                  <Coffee className="h-4 w-4" />
-                  <span>{coffeeCount}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-300">
-                  Ngopi Lounge
-                </div>
-              </div>
-              <div className="rounded-2xl bg-sky-500/15 p-2.5 ring-1 ring-sky-500/30">
-                <div className="flex items-center justify-center gap-1 text-lg font-black text-sky-300">
-                  <Gamepad2 className="h-4 w-4" />
-                  <span>{gameOrChillCount}</span>
-                </div>
-                <div className="text-[10px] font-bold text-slate-300">
-                  Main / Santai
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveSection("office")}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/40 bg-sky-500/15 px-4 py-2.5 text-xs font-black text-sky-200 transition hover:bg-sky-500/25"
-            >
-              <Box className="h-4 w-4" />
-              <span>Lihat Tim Sibuk &amp; Istirahat di Kantor 3D →</span>
-            </button>
-          </section>
-
-          {/* LIVE TEAM CHAT (Obrolan Tim Antar Divisi) */}
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl">
-            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-amber-300" />
-                <h3 className="text-sm font-black text-white">
-                  💬 Obrolan Tim Live
-                </h3>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-400">
-                ● Online
-              </span>
-            </div>
-
-            <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto pr-1">
-              {teamChat.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`rounded-2xl p-3 text-xs ${
-                    msg.kind === "boss"
-                      ? "border border-amber-400/40 bg-amber-400/15"
-                      : msg.kind === "report"
-                      ? "border border-emerald-500/35 bg-emerald-500/10"
-                      : msg.kind === "break"
-                      ? "border border-slate-800 bg-slate-950/70"
-                      : "border border-slate-800 bg-slate-950"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: msg.avatarColor }}
-                      />
-                      <span className="font-black text-white">
-                        {msg.senderName}
-                      </span>
-                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold text-slate-300">
-                        {msg.division}
-                      </span>
-                    </div>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {msg.time}
+                {scriptOut && (
+                  <button
+                    type="button"
+                    disabled={Boolean(runningDivision)}
+                    onClick={() => runProductionAndExport(activeEpisode.id)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
+                  >
+                    {runningDivision === "editing" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Film className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                      {runningDivision === "editing"
+                        ? `Rendering ${editingProgressPct}%`
+                        : "Render Video & Thumbnail HD"}
                     </span>
-                  </div>
-                  <p className="mt-1 leading-relaxed text-slate-200">
-                    {msg.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* READY-TO-POST EPISODE ARCHIVE */}
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-white">
-                🎬 Konten Siap Posting ({episodes.length})
-              </h3>
-              <span className="text-[10px] text-slate-400">
-                Tersimpan otomatis
-              </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => deleteEpisode(activeEpisode.id)}
+                  title="Hapus Episode"
+                  className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-2 text-rose-300 hover:bg-rose-500/20"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="mt-2.5 max-h-[210px] space-y-2 overflow-y-auto pr-1">
-              {episodes.map((ep) => {
-                const selected = activeEpisode?.id === ep.id;
+            <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              {PIPELINE_DIVISIONS.map((meta) => {
+                const rec = activeEpisode.divisions[meta.key];
+                const badge = STATUS_BADGE[rec.status];
+                const isOpen = expandedDiv === meta.key;
+
                 return (
                   <div
-                    key={ep.id}
-                    onClick={() => setSelectedEpisodeId(ep.id)}
-                    className={`flex cursor-pointer items-center justify-between gap-2 rounded-2xl border p-2.5 transition ${
-                      selected
-                        ? "border-amber-400/70 bg-amber-400/10"
-                        : "border-slate-800 bg-slate-950/80 hover:border-slate-700"
+                    key={meta.key}
+                    className={`flex flex-col justify-between rounded-2xl border p-3 transition ${
+                      rec.status === "failed"
+                        ? "border-rose-500/60 bg-rose-950/20"
+                        : rec.status === "running"
+                        ? "border-cyan-400/70 bg-cyan-950/25"
+                        : rec.status === "done"
+                        ? "border-emerald-500/35 bg-slate-950/75"
+                        : "border-slate-800 bg-slate-950/55"
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                        <span className="text-amber-300">
-                          EP #{ep.episodeNumber}
-                        </span>
-                        <span>·</span>
-                        <span className="truncate">{ep.themeLabel}</span>
-                      </div>
-                      <div className="truncate text-xs font-bold text-white">
-                        {ep.title}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markEpisodeUploaded(ep.id, !ep.uploaded);
-                        }}
-                        title="Tandai sudah upload"
-                        className={`rounded-lg px-2 py-1 text-[10px] font-black ${
-                          ep.uploaded
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : "bg-slate-800 text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {ep.uploaded ? "✓ Upload" : "Belum"}
-                      </button>
-                      {episodes.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteEpisode(ep.id);
-                          }}
-                          title="Hapus"
-                          className="rounded-lg p-1.5 text-slate-500 hover:text-rose-400"
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-black text-white">
+                            {meta.label}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {meta.agentName} ·{" "}
+                            {meta.executionSide === "server-llm"
+                              ? "Server AI"
+                              : meta.executionSide === "browser"
+                              ? "Browser"
+                              : "Hybrid QC"}
+                          </div>
+                        </div>
+                        <span
+                          className={`rounded-md border px-1.5 py-0.5 font-mono text-[9px] font-bold ${badge.cls}`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                          {badge.label}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {rec.durationMs > 0
+                            ? `${(rec.durationMs / 1000).toFixed(1)}d`
+                            : "—"}
+                        </span>
+                        {rec.provider && (
+                          <span className="truncate rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[9px] text-cyan-300">
+                            {rec.provider}
+                          </span>
+                        )}
+                      </div>
+
+                      {rec.error && (
+                        <div className="rounded-xl border border-rose-500/40 bg-rose-950/50 p-2 text-[10px] leading-relaxed text-rose-200">
+                          <div className="font-bold">Error: {rec.error}</div>
+                          {rec.hint && (
+                            <div className="mt-1 text-rose-100/80">{rec.hint}</div>
+                          )}
+                        </div>
                       )}
                     </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-1.5 border-t border-slate-800/80 pt-2">
+                      <button
+                        type="button"
+                        disabled={Boolean(runningDivision)}
+                        onClick={() => runDivision(activeEpisode.id, meta.key)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-bold text-slate-200 hover:border-cyan-400 hover:text-cyan-200 disabled:opacity-40"
+                      >
+                        {rec.status === "running" ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3 w-3" />
+                        )}
+                        <span>
+                          {rec.status === "queued" ? "Jalankan" : "Retry"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedDiv(isOpen ? null : meta.key)
+                        }
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-white"
+                      >
+                        <span>Log &amp; JSON</span>
+                        {isOpen ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
+                      </button>
+                    </div>
+
+                    {isOpen && (
+                      <div className="mt-2 space-y-2 border-t border-slate-800 pt-2 text-[10px]">
+                        <div className="max-h-28 overflow-y-auto rounded-lg bg-slate-950 p-2 font-mono text-[9px] text-slate-300">
+                          {rec.logs.length === 0 ? (
+                            <span className="text-slate-500">Belum ada log.</span>
+                          ) : (
+                            rec.logs.map((l, idx) => (
+                              <div
+                                key={idx}
+                                className={
+                                  l.level === "error"
+                                    ? "text-rose-300"
+                                    : l.level === "success"
+                                    ? "text-emerald-300"
+                                    : "text-slate-300"
+                                }
+                              >
+                                [{l.time}] {l.message}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {rec.output !== null && (
+                          <pre className="max-h-32 overflow-auto rounded-lg bg-slate-950 p-2 text-[9px] text-cyan-200">
+                            {JSON.stringify(rec.output, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </section>
-        </div>
-      </div>
 
-      {/* YOUTUBE UPLOAD MODAL (Cara 1 Cepat + Cara 2 Auto-Upload YouTube API v3 Rp 0) */}
-      {activeEpisode && (
-        <YouTubeUploadModal
-          open={uploadModalOpen}
-          onClose={() => setUploadModalOpen(false)}
-          episode={activeEpisode}
-          format={videoFormat}
-          onQuickUpload={handleQuickStudioUpload}
-          onUploadedSuccess={(epId) => markEpisodeUploaded(epId, true)}
-        />
+          {/* ================= HASIL DIVISI 1: PILIH 1 DARI 5 IDE RISET ================= */}
+          {researchOut && researchOut.ideas.length > 0 && (
+            <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
+              <h3 className="text-sm font-black text-white">
+                1️⃣ Hasil Divisi Riset — Pilih 1 dari {researchOut.ideas.length} Ide
+                Episode Unik
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Tiap ide memakai struktur cerita, latar, karakter pendukung, dan sudut
+                pandang berbeda. Klik salah satu untuk menjalankan SEO → Naskah → Suara →
+                Motion → QC secara nyata.
+              </p>
+
+              <div className="mt-3 grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+                {researchOut.ideas.map((idea) => {
+                  const selected = activeEpisode.selectedIdeaId === idea.id;
+                  return (
+                    <button
+                      key={idea.id}
+                      type="button"
+                      disabled={Boolean(runningDivision)}
+                      onClick={() =>
+                        selectIdeaAndContinue(activeEpisode.id, idea.id)
+                      }
+                      className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                        selected
+                          ? "border-amber-400 bg-amber-400/15 ring-1 ring-amber-400/50"
+                          : "border-slate-800 bg-slate-950/75 hover:border-cyan-400/60"
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="rounded-md bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-cyan-200">
+                            {idea.storyStructure}
+                          </span>
+                          {selected && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-300">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Dipilih
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs font-black text-white">
+                          {idea.title}
+                        </div>
+                        <p className="text-[11px] text-slate-300">{idea.angle}</p>
+                        <div className="space-y-0.5 pt-1 text-[10px] text-slate-400">
+                          <div>📍 Latar: {idea.setting}</div>
+                          <div>🧸 Karakter: {idea.supportingCharacter}</div>
+                          <div>💡 Pesan: {idea.moralLesson}</div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* ================= HASIL DIVISI 2-6: SEO, NASKAH, SUARA, MOTION, EDITING ================= */}
+          {(seoOut || scriptOut) && (
+            <div className="grid gap-5 lg:grid-cols-12">
+              {/* LEFT: LIVE MOTION CANVAS PLAYER + VIDEO & THUMBNAIL HD EXPORT */}
+              <div className="space-y-4 lg:col-span-5">
+                <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-xs font-black tracking-wide text-white uppercase">
+                      🎬 Preview Motion &amp; Editing
+                    </h3>
+                    <span className="font-mono text-[11px] text-cyan-300">
+                      {playTime.toFixed(1)}s / {totalDuration}s
+                    </span>
+                  </div>
+
+                  {renderableEpisode ? (
+                    <>
+                      <div className="flex justify-center overflow-hidden rounded-2xl border border-slate-800 bg-black">
+                        <canvas
+                          ref={canvasRef}
+                          width={activeEpisode.format === "shorts" ? 360 : 640}
+                          height={activeEpisode.format === "shorts" ? 640 : 360}
+                          className="max-h-[420px] w-auto object-contain"
+                        />
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={togglePlayPreview}
+                          className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-amber-300"
+                        >
+                          {isPlaying ? (
+                            <>
+                              <Pause className="h-4 w-4" /> Jeda Preview
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4" /> Putar Animasi + TTS
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsMuted((m) => !m)}
+                          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 text-xs font-semibold text-slate-200"
+                        >
+                          {isMuted ? (
+                            <VolumeX className="h-4 w-4 text-rose-400" />
+                          ) : (
+                            <Volume2 className="h-4 w-4 text-emerald-400" />
+                          )}
+                          <span>{isMuted ? "Mute" : "Suara Aktif"}</span>
+                        </button>
+                      </div>
+
+                      {/* Real Editing Outputs: Video Blob + HD Thumbnail */}
+                      {editingOut && (
+                        <div className="mt-4 space-y-2.5 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3">
+                          <div className="text-xs font-black text-emerald-200">
+                            ✅ File Ekspor Divisi Editing Siap
+                          </div>
+                          <div className="text-[11px] text-slate-300">
+                            Video {(editingOut.videoSizeBytes / (1024 * 1024)).toFixed(2)}{" "}
+                            MB ({editingOut.videoDurationSec}d) · Thumbnail HD{" "}
+                            {editingOut.thumbnailWidth}×{editingOut.thumbnailHeight}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {activeVideoUrl && (
+                              <a
+                                href={activeVideoUrl}
+                                download={editingOut.fileName}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-emerald-400 px-3.5 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300"
+                              >
+                                <Download className="h-4 w-4" />
+                                <span>Download Video</span>
+                              </a>
+                            )}
+                            {editingOut.thumbnailDataUrl && (
+                              <a
+                                href={editingOut.thumbnailDataUrl}
+                                download={`thumbnail-ep-${activeEpisode.episodeNumber}.png`}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-3.5 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/30"
+                              >
+                                <ImageDown className="h-4 w-4" />
+                                <span>Download Thumbnail HD</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Motion Keyframes Strip */}
+                      {motionOut && motionOut.sceneFrames.some((f) => f.keyframeDataUrl) && (
+                        <div className="mt-3">
+                          <div className="mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                            Keyframe Motion per Adegan
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {motionOut.sceneFrames.map((f) =>
+                              f.keyframeDataUrl ? (
+                                <div
+                                  key={f.sceneNumber}
+                                  className="shrink-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-950"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={f.keyframeDataUrl}
+                                    alt={`Adegan ${f.sceneNumber}`}
+                                    className="h-20 w-auto object-cover"
+                                  />
+                                  <div className="px-1.5 py-0.5 text-[9px] text-slate-300">
+                                    #{f.sceneNumber} ({f.durationSec}d)
+                                  </div>
+                                </div>
+                              ) : null
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="py-10 text-center text-xs text-slate-400">
+                      Menunggu naskah adegan selesai...
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* RIGHT: SEO, NASKAH + TTS PER ADEGAN, QC REPORT */}
+              <div className="space-y-4 lg:col-span-7">
+                {/* SEO METADATA */}
+                {seoOut && (
+                  <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-xs font-black tracking-wide text-emerald-300 uppercase">
+                        2️⃣ Hasil Divisi SEO
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            "seo",
+                            `${seoOut.title}\n\n${seoOut.description}\n\n${seoOut.hashtags.join(
+                              " "
+                            )}\nTags: ${seoOut.tags.join(", ")}`
+                          )
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-emerald-400"
+                      >
+                        {copiedKey === "seo" ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        <span>{copiedKey === "seo" ? "Disalin!" : "Salin SEO"}</span>
+                      </button>
+                    </div>
+                    <div className="mt-2 space-y-2 text-xs">
+                      <div className="font-black text-white">{seoOut.title}</div>
+                      <p className="whitespace-pre-line text-slate-300">
+                        {seoOut.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {seoOut.hashtags.map((h) => (
+                          <span
+                            key={h}
+                            className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold text-cyan-200"
+                          >
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        <strong>Tags:</strong> {seoOut.tags.join(", ")}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* NASKAH + TTS PER ADEGAN */}
+                {scriptOut && (
+                  <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-xs font-black tracking-wide text-amber-300 uppercase">
+                          3️⃣ &amp; 4️⃣ Naskah &amp; Suara TTS per Adegan (
+                          {scriptOut.scenes.length} Adegan · {scriptOut.totalDurationSec}d)
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Struktur: {scriptOut.storyStructure} · Latar: {scriptOut.setting}{" "}
+                          · Karakter: {scriptOut.supportingCharacter}
+                        </p>
+                      </div>
+                      {voiceOut && (
+                        <span className="rounded-lg bg-indigo-500/20 px-2 py-1 text-[10px] font-bold text-indigo-200">
+                          🎙️ {voiceOut.voiceName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {scriptOut.scenes.map((scene) => (
+                        <div
+                          key={scene.sceneNumber}
+                          className={`rounded-2xl border p-3 text-xs ${
+                            speakingScene === scene.sceneNumber
+                              ? "border-indigo-400 bg-indigo-500/15"
+                              : "border-slate-800 bg-slate-950/75"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-amber-300">
+                              Adegan {scene.sceneNumber}: {scene.label} ({scene.durationSec}
+                              d)
+                            </span>
+                            {voiceOut && (
+                              <button
+                                type="button"
+                                onClick={() => handleSpeakScene(scene.sceneNumber)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2 py-1 text-[10px] font-bold text-indigo-200 hover:bg-indigo-500/30"
+                              >
+                                <Volume2 className="h-3 w-3" />
+                                <span>Dengar TTS</span>
+                              </button>
+                            )}
+                          </div>
+                          <p className="mt-1 text-slate-100">{scene.narration}</p>
+                          <div className="mt-1 text-[10px] text-slate-400">
+                            Visual: {scene.visualCue}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* QC REPORT */}
+                {qcOut && (
+                  <section
+                    className={`rounded-3xl border p-4 ${
+                      qcOut.passed
+                        ? "border-emerald-500/45 bg-emerald-950/20"
+                        : "border-rose-500/60 bg-rose-950/25"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {qcOut.passed ? (
+                          <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                        ) : (
+                          <ShieldAlert className="h-5 w-5 text-rose-400" />
+                        )}
+                        <div>
+                          <h3 className="text-xs font-black tracking-wide text-white uppercase">
+                            7️⃣ Laporan Divisi QC —{" "}
+                            {qcOut.passed ? "LOLOS QC" : "DIBLOKIR QC"} ({qcOut.score}
+                            /100)
+                          </h3>
+                          <p className="text-[11px] text-slate-300">
+                            Kemiripan dengan episode lama: {qcOut.similarityScore}%
+                            {qcOut.mostSimilarEpisodeTitle
+                              ? ` (terdekat: "${qcOut.mostSimilarEpisodeTitle}")`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://studio.youtube.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-slate-200 hover:border-cyan-400"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>YouTube Studio (Upload Manual)</span>
+                      </a>
+                    </div>
+
+                    <div className="mt-3 space-y-1.5">
+                      {qcOut.checks.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-start gap-2 rounded-xl bg-slate-950/70 px-3 py-2 text-[11px]"
+                        >
+                          {c.passed ? (
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                          ) : (
+                            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+                          )}
+                          <div>
+                            <div className="font-bold text-white">{c.label}</div>
+                            <div className="text-slate-300">{c.detail}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
