@@ -113,6 +113,7 @@ export function KidsStudioPanel() {
     selectIdeaAndContinue,
     runDivision,
     runProductionAndExport,
+    continueEpisodeAuto,
     updateBossOriginality,
     updateEpisodeMetrics,
     deleteEpisode,
@@ -468,7 +469,35 @@ export function KidsStudioPanel() {
                   log &amp; tombol Retry per divisi.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {PIPELINE_DIVISIONS.some(
+                  (d) => activeEpisode.divisions[d.key].status !== "done"
+                ) && (
+                  <button
+                    type="button"
+                    disabled={Boolean(runningDivision)}
+                    onClick={() => {
+                      void continueEpisodeAuto(activeEpisode.id);
+                      if (autoWatch3D) {
+                        setActiveFloor("l2");
+                        setCameraPreset("interior");
+                        setActiveSection("office");
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400 px-3 py-2 text-xs font-black text-slate-950 hover:brightness-110 disabled:opacity-50"
+                  >
+                    {runningDivision ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                      {runningDivision
+                        ? "Auto-Produksi Berjalan..."
+                        : "Jalankan Otomatis Sisa Divisi → Video"}
+                    </span>
+                  </button>
+                )}
                 {scriptOut && (
                   <button
                     type="button"

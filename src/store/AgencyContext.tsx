@@ -101,6 +101,8 @@ interface AgencyContextValue {
   ) => Promise<RealEpisode | null>;
   /** Run Voice -> Motion -> Editing -> QC sequentially */
   runProductionAndExport: (episodeId: string) => Promise<void>;
+  /** Resume and automatically finish all remaining queued/failed divisions of an episode straight to video */
+  continueEpisodeAuto: (episodeId: string) => Promise<RealEpisode | null>;
   /** Update Bos mandatory originality fields */
   updateBossOriginality: (
     episodeId: string,
@@ -269,15 +271,13 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
   const patchEpisode = useCallback(
     (episodeId: string, updater: (ep: RealEpisode) => RealEpisode): RealEpisode | null => {
       let updated: RealEpisode | null = null;
-      setEpisodes((prev) => {
-        const next = prev.map((ep) => {
-          if (ep.id !== episodeId) return ep;
-          updated = updater(ep);
-          return updated;
-        });
-        episodesRef.current = next;
-        return next;
+      const next = episodesRef.current.map((ep) => {
+        if (ep.id !== episodeId) return ep;
+        updated = updater(ep);
+        return updated;
       });
+      episodesRef.current = next;
+      setEpisodes(next);
       return updated;
     },
     []
@@ -984,11 +984,9 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         },
       };
 
-      setEpisodes((prev) => {
-        const next = [newEpisode, ...prev];
-        episodesRef.current = next;
-        return next;
-      });
+      const nextList = [newEpisode, ...episodesRef.current];
+      episodesRef.current = nextList;
+      setEpisodes(nextList);
       setActiveEpisodeId(newEpisode.id);
 
       addActivity(
@@ -1100,6 +1098,111 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
     [runDivision, syncAgent3D]
   );
 
+  const continueEpisodeAuto = useCallback(
+    async (episodeId: string): Promise<RealEpisode | null> => {
+      let ep = episodesRef.current.find((e) => e.id === episodeId) ?? null;
+      if (!ep) return null;
+
+      PIPELINE_DIVISIONS.forEach((d) => {
+        if (ep!.divisions[d.key].status !== "done") {
+          syncAgent3D(d.key, "working", `Melanjutkan otomatis ${d.label}`);
+        }
+      });
+
+      const releaseNonFailed = (latest: RealEpisode | null) => {
+        PIPELINE_DIVISIONS.forEach((d) => {
+          if (latest?.divisions[d.key]?.status !== "failed") {
+            syncAgent3D(d.key, "idle");
+          }
+        });
+      };
+
+      const paceIfPollinations = async (provider?: string | null) => {
+        if (provider === "pollinations") {
+          await new Promise((r) => setTimeout(r, 6000));
+        }
+      };
+
+      if (ep.divisions.research.status !== "done") {
+        ep = await runDivision(episodeId, "research", ep, true);
+        if (!ep || ep.divisions.research.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("research", "idle");
+
+      if (!ep.selectedIdeaId) {
+        const bestIdea = ep.divisions.research.output?.ideas?.[0];
+        if (!bestIdea) {
+          releaseNonFailed(ep);
+          return ep;
+        }
+        ep = patchEpisode(episodeId, (cur) => ({
+          ...cur,
+          selectedIdeaId: bestIdea.id,
+          updatedAt: new Date().toISOString(),
+        }));
+        if (!ep) return null;
+      }
+
+      if (ep.divisions.seo.status !== "done") {
+        await paceIfPollinations(ep.divisions.research.provider);
+        ep = await runDivision(episodeId, "seo", ep, true);
+        if (!ep || ep.divisions.seo.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("seo", "idle");
+
+      if (ep.divisions.script.status !== "done") {
+        await paceIfPollinations(ep.divisions.seo.provider);
+        ep = await runDivision(episodeId, "script", ep, true);
+        if (!ep || ep.divisions.script.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("script", "idle");
+
+      if (ep.divisions.voice.status !== "done") {
+        ep = await runDivision(episodeId, "voice", ep, true);
+        if (!ep || ep.divisions.voice.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("voice", "idle");
+
+      if (ep.divisions.motion.status !== "done") {
+        ep = await runDivision(episodeId, "motion", ep, true);
+        if (!ep || ep.divisions.motion.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("motion", "idle");
+
+      if (ep.divisions.editing.status !== "done") {
+        ep = await runDivision(episodeId, "editing", ep, true);
+        if (!ep || ep.divisions.editing.status !== "done") {
+          releaseNonFailed(ep);
+          return ep;
+        }
+      }
+      syncAgent3D("editing", "idle");
+
+      if (ep.divisions.qc.status !== "done") {
+        await paceIfPollinations(ep.divisions.script.provider);
+        ep = await runDivision(episodeId, "qc", ep, true);
+      }
+      releaseNonFailed(ep);
+      return ep;
+    },
+    [patchEpisode, runDivision, syncAgent3D]
+  );
+
   const updateBossOriginality = useCallback(
     (episodeId: string, patch: Partial<BossOriginalityInput>) => {
       patchEpisode(episodeId, (ep) => ({
@@ -1201,6 +1304,7 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         selectIdeaAndContinue,
         runDivision,
         runProductionAndExport,
+        continueEpisodeAuto,
         updateBossOriginality,
         updateEpisodeMetrics,
         deleteEpisode,
