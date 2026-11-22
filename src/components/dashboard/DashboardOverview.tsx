@@ -35,7 +35,7 @@ export function DashboardOverview() {
         <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-[#081229] to-[#050b1a] p-4 shadow-[0_0_24px_rgba(0,229,255,0.06)]">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-slate-400">
-              Robot Placeholder
+              Karyawan Placeholder
             </span>
             <Bot className="h-4 w-4 text-cyan-400" />
           </div>
@@ -48,7 +48,7 @@ export function DashboardOverview() {
             </span>
           </div>
           <p className="mt-1 text-[10px] text-slate-400">
-            Idle, kerja & patroli 3D lokal
+            10 staff di L1, L2 Ops & L3 Exec
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export function DashboardOverview() {
             </span>
           </div>
           <p className="mt-1 text-[10px] text-slate-400">
-            + Holo Hub & 2 Quantum Server Racks
+            + Server Room, Espresso Bar & Boardroom L3
           </p>
         </div>
 
@@ -125,11 +125,11 @@ export function DashboardOverview() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold tracking-wide text-white">
-                Virtual Office 3D — Modern Architectural 3-Floor HQ
+                Virtual Office 3D — Grand 28m 3-Floor Architectural HQ
               </h2>
               <p className="text-xs text-slate-400">
-                Pencahayaan realistis (Siang / Sore / Malam), gedung kaca 3
-                lantai, kolam resort, supercar, atap helipad & interior L2
+                10 staff 3D, Free-Roam zoom bebas (HP & PC), 8 workstation L2,
+                boardroom L3, infinity pool, supercar & helipad
               </p>
             </div>
             <button
@@ -142,15 +142,16 @@ export function DashboardOverview() {
             </button>
           </div>
 
-          <DynamicVirtualOffice className="h-[360px] sm:h-[480px] xl:h-[540px]" />
+          <DynamicVirtualOffice className="h-[490px] sm:h-[580px] xl:h-[640px]" />
 
           {/* Clear Non-AI Disclaimer Footer */}
           <div className="flex items-center gap-2 rounded-xl border border-slate-800/90 bg-[#060c1d]/80 px-3 py-2 text-[11px] text-slate-400">
             <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-purple-400" />
             <span>
               <strong className="text-slate-200">Transparansi Tahap 1:</strong>{" "}
-              Ketiga unit robot (NOVA-X, VEXA-9, KAIRO-7) adalah placeholder
-              visual interaktif tanpa eksekusi AI nyata.
+              Seluruh 10 karyawan 3D (Raka, Nadia, Dimas, Clara, Bima, Salsa,
+              Fajar, Alya, Reza, Tania) adalah placeholder visual interaktif
+              berbasis simulasi lokal tanpa eksekusi AI nyata.
             </span>
           </div>
         </div>

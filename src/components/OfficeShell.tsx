@@ -32,7 +32,7 @@ function OfficeWorkspace() {
 
           {activeSection === "office" && (
             <div className="space-y-3">
-              <DynamicVirtualOffice className="h-[calc(100vh-170px)] min-h-[440px] lg:h-[calc(100vh-120px)]" />
+              <DynamicVirtualOffice className="h-[calc(100vh-140px)] min-h-[540px] lg:h-[calc(100vh-110px)]" />
             </div>
           )}
 
