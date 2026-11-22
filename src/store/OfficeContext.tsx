@@ -51,6 +51,7 @@ interface OfficeContextValue {
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
   performanceMode: PerformanceMode;
+  performanceReady: boolean;
   setPerformanceMode: (mode: PerformanceMode) => void;
   isSimulationRunning: boolean;
   setIsSimulationRunning: (running: boolean) => void;
@@ -95,24 +96,76 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     setCameraPresetState(preset);
     setCameraResetTick((tick) => tick + 1);
   }, []);
-  const [performanceMode, setPerformanceMode] =
+  const [performanceMode, setPerformanceModeState] =
     useState<PerformanceMode>("balanced");
+  const [performanceReady, setPerformanceReady] = useState<boolean>(false);
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(true);
   const [showLabelsIn3D, setShowLabelsIn3D] = useState<boolean>(true);
 
-  // Auto-optimize performance mode for Android / mobile devices
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const isMobileViewport = window.innerWidth < 768;
-    const isAndroidUA = /Android/i.test(navigator.userAgent);
-    const hasLowHardwareConcurrency =
-      typeof navigator.hardwareConcurrency === "number" &&
-      navigator.hardwareConcurrency <= 4;
-
-    if (isMobileViewport || isAndroidUA || hasLowHardwareConcurrency) {
-      setPerformanceMode("eco");
+  const setPerformanceMode = useCallback((mode: PerformanceMode) => {
+    setPerformanceModeState(mode);
+    try {
+      window.localStorage.setItem("fajrezzz_perf_mode", mode);
+    } catch {
+      // Ignore storage errors on restricted mobile browsers
     }
   }, []);
+
+  // Auto-optimize performance mode for Android / mobile devices & hydrate local tasks
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const savedPerf = window.localStorage.getItem("fajrezzz_perf_mode");
+      if (
+        savedPerf === "eco" ||
+        savedPerf === "balanced" ||
+        savedPerf === "high"
+      ) {
+        setPerformanceModeState(savedPerf);
+      } else {
+        const isMobileViewport = window.innerWidth < 768;
+        const isAndroidUA = /Android/i.test(navigator.userAgent);
+        const isCoarsePointer =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(pointer: coarse)").matches;
+        const hasLowHardwareConcurrency =
+          typeof navigator.hardwareConcurrency === "number" &&
+          navigator.hardwareConcurrency <= 4;
+
+        if (
+          isMobileViewport ||
+          isAndroidUA ||
+          isCoarsePointer ||
+          hasLowHardwareConcurrency
+        ) {
+          setPerformanceModeState("eco");
+        }
+      }
+
+      const savedTasks = window.localStorage.getItem("fajrezzz_local_tasks");
+      if (savedTasks) {
+        const parsed = JSON.parse(savedTasks) as OfficeTask[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTasks(parsed);
+        }
+      }
+    } catch {
+      // Ignore invalid localStorage state
+    } finally {
+      setPerformanceReady(true);
+    }
+  }, []);
+
+  // Persist local simulation tasks automatically
+  useEffect(() => {
+    if (!performanceReady || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("fajrezzz_local_tasks", JSON.stringify(tasks));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [performanceReady, tasks]);
 
   const addActivity = useCallback(
     (
@@ -515,6 +568,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraResetTick,
       setCameraPreset,
       performanceMode,
+      performanceReady,
       setPerformanceMode,
       isSimulationRunning,
       setIsSimulationRunning,
@@ -542,6 +596,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraResetTick,
       setCameraPreset,
       performanceMode,
+      performanceReady,
+      setPerformanceMode,
       isSimulationRunning,
       showLabelsIn3D,
       setAgentStatus,

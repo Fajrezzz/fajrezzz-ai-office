@@ -135,19 +135,21 @@ export function OfficeScene() {
         shadow-camera-top={10}
         shadow-camera-bottom={-10}
       />
-      {/* Electric blue & purple neon accent fill lights */}
+      {/* Electric blue & purple neon accent fill lights (1 light in Eco mode for Android GPU savings) */}
       <pointLight
         position={[-4.5, 3.6, -4.2]}
-        intensity={6}
-        distance={14}
+        intensity={performanceMode === "eco" ? 7 : 6}
+        distance={16}
         color="#00e5ff"
       />
-      <pointLight
-        position={[3.8, 3.4, 2.8]}
-        intensity={6}
-        distance={14}
-        color="#a855f7"
-      />
+      {performanceMode !== "eco" && (
+        <pointLight
+          position={[3.8, 3.4, 2.8]}
+          intensity={6}
+          distance={14}
+          color="#a855f7"
+        />
+      )}
 
       <CameraRig preset={cameraPreset} resetTick={cameraResetTick} />
 

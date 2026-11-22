@@ -40,6 +40,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     setIsSimulationRunning,
     showLabelsIn3D,
     setShowLabelsIn3D,
+    setAgentStatus,
     sendAgentToWaypoint,
   } = useOffice();
 
@@ -162,13 +163,28 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
           })}
         </div>
 
-        {/* Quick Move Command Chips for Selected Robot */}
+        {/* Quick Status + Move Command Chips for Selected Robot */}
         {!compact && selectedAgent && (
           <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/20 bg-[#050b1d]/82 px-2.5 py-1.5 backdrop-blur-md">
             <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium text-cyan-300">
               <Navigation className="h-3 w-3" />
-              Kirim {selectedAgent.name}:
+              {selectedAgent.name}:
             </span>
+            {(["idle", "working", "walking"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setAgentStatus(selectedAgent.id, mode)}
+                className={`shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase transition ${
+                  selectedAgent.status === mode
+                    ? "border-purple-400/70 bg-purple-500/25 text-purple-100"
+                    : "border-slate-700/70 bg-slate-900/80 text-slate-300 hover:border-purple-400/50"
+                }`}
+              >
+                {mode === "working" ? "Work" : mode === "walking" ? "Walk" : "Idle"}
+              </button>
+            ))}
+            <span className="h-3 w-px shrink-0 bg-slate-700/80" />
             {DESTINATION_PRESETS.slice(0, 5).map((dest) => (
               <button
                 key={dest.id}
