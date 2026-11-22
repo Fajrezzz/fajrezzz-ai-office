@@ -627,25 +627,189 @@ function NightSkyStarsAndMoon() {
   );
 }
 
+const POOL_WATER_VERTEX = /* glsl */ `
+  uniform float uTime;
+  varying vec2 vUv;
+  varying float vWave;
+
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    float wave = sin(pos.x * 1.9 + uTime * 2.1) * 0.014 +
+                 cos(pos.y * 2.3 - uTime * 1.7) * 0.012;
+    pos.z += wave;
+    vWave = wave;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+const POOL_WATER_FRAGMENT = /* glsl */ `
+  uniform float uTime;
+  uniform float uNight;
+  uniform float uSunset;
+  varying vec2 vUv;
+  varying float vWave;
+
+  void main() {
+    // Lightweight procedural underwater caustic shimmer
+    vec2 p = vUv * vec2(12.0, 6.0);
+    float c1 = sin(p.x * 2.1 + uTime * 1.6 + sin(p.y * 2.4 - uTime * 1.2));
+    float c2 = cos(p.y * 2.7 - uTime * 1.4 + cos(p.x * 1.8 + uTime * 1.5));
+    float caustic = smoothstep(0.35, 1.0, (c1 * c2) * 0.5 + 0.5);
+
+    // Edge underwater LED glow from pool perimeter walls
+    float edgeX = min(vUv.x, 1.0 - vUv.x);
+    float edgeY = min(vUv.y, 1.0 - vUv.y);
+    float edgeGlow = smoothstep(0.18, 0.0, min(edgeX, edgeY));
+
+    vec3 dayWater = mix(vec3(0.05, 0.58, 0.78), vec3(0.24, 0.84, 0.96), caustic);
+    vec3 sunsetWater = mix(vec3(0.08, 0.44, 0.66), vec3(0.45, 0.72, 0.88), caustic) +
+                       vec3(0.35, 0.16, 0.18) * 0.25;
+    vec3 nightWater = mix(vec3(0.02, 0.36, 0.58), vec3(0.16, 0.88, 1.0), caustic) * 1.35 +
+                      vec3(0.12, 0.86, 1.0) * edgeGlow * 0.95;
+
+    vec3 col = mix(dayWater, sunsetWater, uSunset);
+    col = mix(col, nightWater, uNight);
+
+    // Crisp specular ripple glints
+    float glint = smoothstep(0.015, 0.026, vWave);
+    col += vec3(0.95, 0.99, 1.0) * glint * (uNight > 0.5 ? 0.55 : 0.35);
+
+    float alpha = mix(0.76, 0.84, uNight);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+/** Modern Architectural Street Lamp with Soft Volumetric Light Cone onto Sidewalk & Wet Asphalt */
+function StreetLampWithCone({
+  position,
+  isNight,
+  isSunset,
+  isCyan = false,
+}: {
+  position: [number, number, number];
+  isNight: boolean;
+  isSunset: boolean;
+  isCyan?: boolean;
+}) {
+  const showBeam = isNight || isSunset;
+  const lampColor = isCyan ? "#67e8f9" : "#ffe2a6";
+  const coneOpacity = isNight ? 0.16 : 0.08;
+
+  return (
+    <group position={position}>
+      {/* Pole Base & Sleek Curved Arm facing the Road (+Z) */}
+      <mesh position={[0, 0.14, 0]}>
+        <cylinderGeometry args={[0.14, 0.18, 0.28, 10]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.32} />
+      </mesh>
+      <mesh position={[0, 2.75, 0]} castShadow>
+        <cylinderGeometry args={[0.065, 0.095, 5.2, 10]} />
+        <meshStandardMaterial color="#273140" metalness={0.78} roughness={0.28} />
+      </mesh>
+      {/* Cantilevered Head overhanging the Avenue */}
+      <mesh position={[0, 5.28, 0.72]} rotation={[0.12, 0, 0]}>
+        <boxGeometry args={[0.16, 0.1, 1.55]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
+      </mesh>
+      {/* Glowing LED Street Luminaire */}
+      <mesh position={[0, 5.22, 1.32]}>
+        <boxGeometry args={[0.42, 0.08, 0.28]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive={lampColor}
+          emissiveIntensity={isNight ? 3.2 : isSunset ? 1.8 : 0.25}
+          toneMapped={!(isNight || isSunset)}
+        />
+      </mesh>
+      {/* Soft Volumetric Light Cone */}
+      {showBeam && (
+        <mesh position={[0, 2.6, 1.38]}>
+          <coneGeometry args={[2.55, 5.15, 16, 1, true]} />
+          <meshBasicMaterial
+            color={lampColor}
+            transparent
+            opacity={coneOpacity}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Manicured Architectural Sidewalk Tree in a Clean Stone Planter */
+function OrnamentalSidewalkTree({
+  position,
+  scale = 1,
+}: {
+  position: [number, number, number];
+  scale?: number;
+}) {
+  return (
+    <group position={position} scale={scale}>
+      {/* Square modern stone curb planter */}
+      <mesh position={[0, 0.14, 0]} receiveShadow>
+        <boxGeometry args={[1.15, 0.28, 1.15]} />
+        <meshStandardMaterial color="#d6d2c9" roughness={0.75} />
+      </mesh>
+      <mesh position={[0, 0.26, 0]}>
+        <boxGeometry args={[0.95, 0.06, 0.95]} />
+        <meshStandardMaterial color="#3f3124" roughness={0.95} />
+      </mesh>
+      {/* Clean straight trunk */}
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <cylinderGeometry args={[0.09, 0.13, 2.0, 10]} />
+        <meshStandardMaterial color="#684e38" roughness={0.88} />
+      </mesh>
+      {/* Sculpted layered lush emerald crown */}
+      <mesh position={[0, 2.65, 0]} castShadow>
+        <sphereGeometry args={[0.92, 14, 12]} />
+        <meshStandardMaterial color="#2f7d3a" roughness={0.78} />
+      </mesh>
+      <mesh position={[0.42, 2.38, 0.28]} castShadow>
+        <sphereGeometry args={[0.58, 12, 10]} />
+        <meshStandardMaterial color="#3c8f46" roughness={0.76} />
+      </mesh>
+      <mesh position={[-0.4, 2.45, -0.22]} castShadow>
+        <sphereGeometry args={[0.56, 12, 10]} />
+        <meshStandardMaterial color="#276b31" roughness={0.8} />
+      </mesh>
+      <mesh position={[0.05, 3.3, -0.05]} castShadow>
+        <sphereGeometry args={[0.52, 12, 10]} />
+        <meshStandardMaterial color="#469d50" roughness={0.74} />
+      </mesh>
+    </group>
+  );
+}
+
 export function CyberOutdoorCampus({
   performanceMode,
   lightingPreset,
   onFocusPoint,
 }: CyberOutdoorCampusProps) {
   const textures = useMemo(() => getRealisticTextures(), []);
-  const waterRef = useRef<THREE.Mesh>(null);
+  const waterMatRef = useRef<THREE.ShaderMaterial>(null);
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
 
-  useFrame((state, delta) => {
-    if (waterRef.current) {
-      waterRef.current.position.y =
-        0.165 + Math.sin(state.clock.elapsedTime * 1.6) * 0.012;
+  const waterUniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uNight: { value: 0 },
+      uSunset: { value: 0 },
+    }),
+    []
+  );
+
+  useFrame((state) => {
+    if (waterMatRef.current) {
+      waterMatRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+      waterMatRef.current.uniforms.uNight.value = isNight ? 1.0 : 0.0;
+      waterMatRef.current.uniforms.uSunset.value = isSunset ? 1.0 : 0.0;
     }
-    textures.poolWaterBump.offset.x =
-      (textures.poolWaterBump.offset.x + delta * 0.05) % 1;
-    textures.poolWaterBump.offset.y =
-      (textures.poolWaterBump.offset.y + delta * 0.03) % 1;
   });
 
   const handleGroundDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -698,7 +862,21 @@ export function CyberOutdoorCampus({
         />
       </mesh>
 
-      {/* Architectural dark asphalt avenue in front of campus */}
+      {/* Raised Concrete Sidewalks (Trotoar Utara & Selatan) with Stone Curbs */}
+      <mesh position={[0, 0.06, 19.65]} receiveShadow onDoubleClick={handleGroundDoubleClick}>
+        <boxGeometry args={[120, 0.14, 1.9]} />
+        <meshStandardMaterial color="#cfd5dc" roughness={0.78} />
+      </mesh>
+      <mesh position={[0, 0.08, 20.56]} receiveShadow>
+        <boxGeometry args={[120, 0.16, 0.16]} />
+        <meshStandardMaterial color="#9aa4b2" roughness={0.68} />
+      </mesh>
+      <mesh position={[0, 0.06, 29.45]} receiveShadow onDoubleClick={handleGroundDoubleClick}>
+        <boxGeometry args={[120, 0.14, 1.8]} />
+        <meshStandardMaterial color="#cfd5dc" roughness={0.78} />
+      </mesh>
+
+      {/* Architectural Asphalt Avenue — Wet Reflective Glossy Asphalt at Night! */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.01, 24.5]}
@@ -706,13 +884,96 @@ export function CyberOutdoorCampus({
         onDoubleClick={handleGroundDoubleClick}
       >
         <planeGeometry args={[140, 8.2]} />
-        <meshStandardMaterial map={textures.asphalt} roughness={0.86} />
+        {isNight && performanceMode !== "eco" ? (
+          <meshPhysicalMaterial
+            map={textures.asphalt}
+            color="#202a3b"
+            roughness={0.14}
+            metalness={0.55}
+            clearcoat={0.92}
+            clearcoatRoughness={0.1}
+          />
+        ) : (
+          <meshStandardMaterial
+            map={textures.asphalt}
+            color={isNight ? "#263247" : "#ffffff"}
+            roughness={isNight ? 0.2 : 0.86}
+            metalness={isNight ? 0.45 : 0.05}
+          />
+        )}
       </mesh>
-      {[-30, -20, -10, 0, 10, 20, 30].map((x) => (
+
+      {/* Wet Night Neon Reflection Sheen Puddles on the Asphalt Avenue */}
+      {isNight && (
+        <group position={[0, 0.008, 24.5]}>
+          {[
+            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#22d3ee" },
+            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#38bdf8" },
+            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#e879f9" },
+            { x: -24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
+            { x: 24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
+          ].map((p, idx) => (
+            <mesh key={idx} position={[p.x, 0, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[p.w, p.d]} />
+              <meshBasicMaterial
+                color={p.col}
+                transparent
+                opacity={0.14}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+        </group>
+      )}
+
+      {/* Crisp Road Edge Lines + Dashed Center Line + Pedestrian Zebra Crosswalk */}
+      <mesh position={[0, 0.004, 20.85]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[120, 0.14]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.72} />
+      </mesh>
+      <mesh position={[0, 0.004, 28.25]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[120, 0.14]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.72} />
+      </mesh>
+      {[-40, -30, -20, -10, 0, 10, 20, 30, 40].map((x) => (
         <mesh key={x} position={[x, 0.005, 24.5]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[4.2, 0.22]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.75} />
+          <planeGeometry args={[4.4, 0.22]} />
+          <meshStandardMaterial color="#facc15" roughness={0.68} />
         </mesh>
+      ))}
+      {/* Zebra Crosswalk near Main Entrance */}
+      {[-2.4, -1.2, 0, 1.2, 2.4].map((cz, i) => (
+        <mesh key={`zebra-${i}`} position={[-1.5, 0.006, 24.5 + cz]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[3.2, 0.56]} />
+          <meshStandardMaterial color="#f1f5f9" roughness={0.72} />
+        </mesh>
+      ))}
+
+      {/* 5 Modern Street Lamps with Volumetric Light Cones along Front Sidewalk */}
+      {[
+        { x: -24, cyan: false },
+        { x: -12, cyan: true },
+        { x: 0, cyan: false },
+        { x: 12, cyan: true },
+        { x: 24, cyan: false },
+      ].map((sl, i) => (
+        <StreetLampWithCone
+          key={`streetlamp-${i}`}
+          position={[sl.x, 0.12, 19.65]}
+          isNight={isNight}
+          isSunset={isSunset}
+          isCyan={sl.cyan}
+        />
+      ))}
+
+      {/* Clean Manicured Sidewalk Trees flanking the Avenue */}
+      {[-29, -19.5, 19.5, 29].map((tx, i) => (
+        <OrnamentalSidewalkTree
+          key={`ortree-${i}`}
+          position={[tx, 0.12, 19.45]}
+          scale={i % 2 === 0 ? 1.08 : 0.96}
+        />
       ))}
 
       {/* Grand travertine arrival motor court leading to supercar */}
@@ -868,25 +1129,16 @@ export function CyberOutdoorCampus({
           <meshStandardMaterial color="#fb7185" roughness={0.24} />
         </mesh>
 
-        {/* Crystal Reflective Animated Swimming Pool Water Surface */}
-        <mesh
-          ref={waterRef}
-          position={[0, 0.165, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <planeGeometry args={[13.16, 6.16]} />
-          <meshPhysicalMaterial
-            color="#22c7eb"
-            roughness={0.06}
-            metalness={0.12}
+        {/* Custom GLSL Animated Caustic Water Shader + Underwater Pool Glow */}
+        <mesh position={[0, 0.165, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[13.16, 6.16, 20, 10]} />
+          <shaderMaterial
+            ref={waterMatRef}
+            vertexShader={POOL_WATER_VERTEX}
+            fragmentShader={POOL_WATER_FRAGMENT}
+            uniforms={waterUniforms}
             transparent
-            opacity={performanceMode === "high" ? 0.72 : 0.78}
-            bumpMap={textures.poolWaterBump}
-            bumpScale={0.06}
-            clearcoat={1}
-            clearcoatRoughness={0.04}
-            emissive="#0891b2"
-            emissiveIntensity={isNight ? 0.48 : 0.16}
+            depthWrite={false}
           />
         </mesh>
 
