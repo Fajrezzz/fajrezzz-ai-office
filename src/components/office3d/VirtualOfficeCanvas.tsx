@@ -77,12 +77,12 @@ export function VirtualOfficeCanvas({
   }, []);
 
   const isEco = performanceMode === "eco";
-  // Keep crisp antialiasing & clean DPR even in Eco Mode so 3D looks realistic on Android
+  // Sharp crisp DPR across Android phones and desktop monitors
   const dpr: [number, number] = isEco
-    ? [1, 1.5]
+    ? [1.25, 1.65]
     : performanceMode === "balanced"
-    ? [1, 1.75]
-    : [1, 2];
+    ? [1.35, 2.0]
+    : [1.5, 2.5];
 
   const readyToRender = mounted && performanceReady;
 
@@ -137,13 +137,13 @@ export function VirtualOfficeCanvas({
             className="h-full w-full touch-none"
             shadows="percentage"
             dpr={dpr}
-            camera={{ position: [2.5, 11.2, 26.5], fov: 38, near: 0.5, far: 140 }}
+            camera={{ position: [14, 12.2, 28.5], fov: 45, near: 0.4, far: 220 }}
             gl={{
               antialias: true,
               powerPreference: isEco ? "default" : "high-performance",
               alpha: false,
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.08,
+              toneMappingExposure: 1.05,
             }}
             onCreated={({ gl }) => {
               const dom = gl.domElement;

@@ -14,7 +14,8 @@ export type CameraPreset =
   | "interior"
   | "pool"
   | "supercar"
-  | "rooftop";
+  | "rooftop"
+  | "executive";
 
 export type TaskStatus = "backlog" | "in_progress" | "review" | "done";
 
@@ -27,16 +28,18 @@ export type Vector3Tuple = [number, number, number];
 export interface WaypointNode {
   id: string;
   label: string;
+  floor: 1 | 2 | 3;
   position: Vector3Tuple;
   facingYaw: number;
   neighbors: string[];
-  zone: "workstation" | "holohub" | "server" | "corridor";
+  zone: "workstation" | "holohub" | "server" | "corridor" | "executive" | "lobby" | "outdoor";
 }
 
 export interface Workstation {
   id: string;
   code: string;
   name: string;
+  floor: 1 | 2 | 3;
   position: Vector3Tuple;
   rotationY: number;
   accentColor: string;
@@ -45,13 +48,24 @@ export interface Workstation {
   specs: string;
 }
 
+export interface AvatarAppearance {
+  skinColor: string;
+  hairColor: string;
+  hairStyle: "short" | "bob" | "ponytail" | "executive";
+  suitColor: string;
+  shirtColor: string;
+  pantsColor: string;
+}
+
 export interface OfficeAgent {
   id: string;
   code: string;
   name: string;
   role: string;
+  floor: 1 | 2 | 3;
   accentColor: string;
   secondaryColor: string;
+  appearance: AvatarAppearance;
   /** Explicit flag ensuring UI always communicates visual placeholder status in Phase 1 */
   isVisualPlaceholder: true;
   status: RobotAnimationState;

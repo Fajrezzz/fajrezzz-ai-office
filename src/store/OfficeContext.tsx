@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -28,6 +29,7 @@ import type {
   PerformanceMode,
   RobotAnimationState,
   TaskStatus,
+  Vector3Tuple,
   Workstation,
 } from "@/types/office";
 
@@ -38,6 +40,18 @@ function formatClock(date = new Date()): string {
     second: "2-digit",
     hour12: false,
   });
+}
+
+export interface CameraFocusCommand {
+  target: Vector3Tuple;
+  offset?: Vector3Tuple;
+  tick: number;
+}
+
+export interface CameraNudgeState {
+  forward: number;
+  right: number;
+  up: number;
 }
 
 interface OfficeContextValue {
@@ -52,6 +66,10 @@ interface OfficeContextValue {
   cameraPreset: CameraPreset;
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
+  cameraFocusCommand: CameraFocusCommand | null;
+  focusCameraOn: (target: Vector3Tuple, offset?: Vector3Tuple) => void;
+  focusOnAgent: (agentId: string) => void;
+  cameraNudgeRef: React.MutableRefObject<CameraNudgeState>;
   activeFloor: FloorView;
   setActiveFloor: (floor: FloorView) => void;
   lightingPreset: LightingPreset;
@@ -94,41 +112,92 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [activities, setActivities] =
     useState<ActivityEvent[]>(INITIAL_ACTIVITIES);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
-    "unit-01"
+    "staff-01"
   );
   const [cameraPreset, setCameraPresetState] =
     useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
+  const [cameraFocusCommand, setCameraFocusCommand] =
+    useState<CameraFocusCommand | null>(null);
+  const cameraNudgeRef = useRef<CameraNudgeState>({
+    forward: 0,
+    right: 0,
+    up: 0,
+  });
+
   const [activeFloor, setActiveFloorState] = useState<FloorView>("all");
   const [lightingPreset, setLightingPreset] =
-    useState<LightingPreset>("sunset");
+    useState<LightingPreset>("day");
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
   const setCameraPreset = useCallback((preset: CameraPreset) => {
+    setCameraFocusCommand(null);
     setCameraPresetState(preset);
     setCameraResetTick((tick) => tick + 1);
     if (preset === "interior") {
       setActiveFloorState("l2");
+    } else if (preset === "executive") {
+      setActiveFloorState("l3");
     } else if (preset === "rooftop") {
       setActiveFloorState("roof");
-    } else if (preset === "front" || preset === "isometric" || preset === "pool" || preset === "supercar") {
+    } else {
       setActiveFloorState("all");
     }
   }, []);
 
   const setActiveFloor = useCallback((floor: FloorView) => {
+    setCameraFocusCommand(null);
     setActiveFloorState(floor);
     if (floor === "l2") {
       setCameraPresetState("interior");
+    } else if (floor === "l3") {
+      setCameraPresetState("executive");
     } else if (floor === "roof") {
       setCameraPresetState("rooftop");
     } else if (floor === "all") {
       setCameraPresetState("front");
-    } else if (floor === "l1" || floor === "l3") {
-      setCameraPresetState("isometric");
+    } else if (floor === "l1") {
+      setCameraPresetState("pool");
     }
     setCameraResetTick((tick) => tick + 1);
   }, []);
+
+  const focusCameraOn = useCallback(
+    (target: Vector3Tuple, offset?: Vector3Tuple) => {
+      setAutoRotate(false);
+      setCameraFocusCommand({
+        target,
+        offset,
+        tick: Date.now() + Math.random(),
+      });
+    },
+    []
+  );
+
+  const focusOnAgent = useCallback(
+    (agentId: string) => {
+      const targetAgent = agents.find((a) => a.id === agentId);
+      if (!targetAgent) return;
+      setSelectedAgentId(agentId);
+      const wp = OFFICE_WAYPOINTS[targetAgent.currentWaypointId];
+      if (!wp) return;
+
+      if (wp.floor === 2) {
+        setActiveFloorState("l2");
+      } else if (wp.floor === 3) {
+        setActiveFloorState("l3");
+      } else {
+        setActiveFloorState("all");
+      }
+
+      focusCameraOn(
+        [wp.position[0], wp.position[1] + 1.15, wp.position[2]],
+        [3.6, 2.4, 4.6]
+      );
+    },
+    [agents, focusCameraOn]
+  );
+
   const [performanceMode, setPerformanceModeState] =
     useState<PerformanceMode>("balanced");
   const [performanceReady, setPerformanceReady] = useState<boolean>(false);
@@ -140,11 +209,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     try {
       window.localStorage.setItem("fajrezzz_perf_mode", mode);
     } catch {
-      // Ignore storage errors on restricted mobile browsers
+      // Ignore storage errors
     }
   }, []);
 
-  // Auto-optimize performance mode for Android / mobile devices & hydrate local tasks
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -176,7 +244,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const savedTasks = window.localStorage.getItem("fajrezzz_local_tasks");
+      const savedTasks = window.localStorage.getItem("fajrezzz_local_tasks_v2");
       if (savedTasks) {
         const parsed = JSON.parse(savedTasks) as OfficeTask[];
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -190,13 +258,15 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Persist local simulation tasks automatically
   useEffect(() => {
     if (!performanceReady || typeof window === "undefined") return;
     try {
-      window.localStorage.setItem("fajrezzz_local_tasks", JSON.stringify(tasks));
+      window.localStorage.setItem(
+        "fajrezzz_local_tasks_v2",
+        JSON.stringify(tasks)
+      );
     } catch {
-      // Ignore storage quota errors
+      // Ignore quota errors
     }
   }, [performanceReady, tasks]);
 
@@ -251,7 +321,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
             );
             targetWaypointId =
               candidates[Math.floor(Math.random() * candidates.length)] ??
-              "wp-hub-north";
+              agent.patrolWaypoints[0] ??
+              agent.currentWaypointId;
             const destLabel =
               OFFICE_WAYPOINTS[targetWaypointId]?.label ?? targetWaypointId;
             currentActionLabel = `Berjalan menuju ${destLabel}`;
@@ -259,16 +330,22 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
             const ws = workstations.find(
               (w) => w.id === agent.assignedWorkstationId
             );
-            if (ws && agent.currentWaypointId !== ws.waypointId) {
+            if (
+              agent.floor === 2 &&
+              ws &&
+              agent.currentWaypointId !== ws.waypointId
+            ) {
               targetWaypointId = ws.waypointId;
               currentActionLabel = `Menuju ${ws.name} untuk simulasi kerja`;
             } else {
-              currentActionLabel = `Simulasi kerja aktif di ${ws?.name ?? "Workstation"}`;
+              currentActionLabel = `Simulasi kerja aktif di ${
+                OFFICE_WAYPOINTS[agent.currentWaypointId]?.label ?? "Area Kantor"
+              }`;
             }
           } else if (status === "idle") {
-            currentActionLabel = "Mode idle visual (animasi pernapasan & scan)";
+            currentActionLabel = "Mode idle visual (bernapas & melihat sekitar)";
           } else {
-            currentActionLabel = "Mode standby hemat daya";
+            currentActionLabel = "Mode standby istirahat";
           }
 
           return {
@@ -281,12 +358,12 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
             currentActionLabel,
             simulatedLoad:
               status === "working"
-                ? 68
+                ? 74
                 : status === "walking"
-                ? 44
+                ? 48
                 : status === "idle"
-                ? 18
-                : 5,
+                ? 22
+                : 8,
           };
         })
       );
@@ -316,6 +393,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           if (agent.currentWaypointId === waypointId) {
             return {
               ...agent,
+              floor: destination.floor,
               status: "idle",
               targetWaypointId: waypointId,
               currentActionLabel: `Sudah berada di ${destination.label}`,
@@ -323,10 +401,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           }
           return {
             ...agent,
+            floor: destination.floor,
             status: "walking",
             targetWaypointId: waypointId,
             currentActionLabel: `Berjalan menuju ${destination.label}`,
-            simulatedLoad: 46,
+            simulatedLoad: 50,
           };
         })
       );
@@ -368,6 +447,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           const alreadyThere = agent.currentWaypointId === ws.waypointId;
           return {
             ...agent,
+            floor: ws.floor,
             assignedWorkstationId: workstationId,
             targetWaypointId: ws.waypointId,
             status: alreadyThere ? "working" : "walking",
@@ -408,10 +488,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
 
           return {
             ...agent,
+            floor: wp?.floor ?? agent.floor,
             currentWaypointId: waypointId,
             targetWaypointId: waypointId,
             status: nextStatus,
-            simulatedLoad: isHomeWorkstation ? 62 : 24,
+            simulatedLoad: isHomeWorkstation ? 72 : 28,
             currentActionLabel: isHomeWorkstation
               ? `Simulasi kerja di ${assignedWs?.name}`
               : `Idle di ${wp?.label ?? "Area Kantor"}`,
@@ -424,7 +505,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           targetAgent.name,
           "robot-placeholder",
-          `Tiba di ${wp.label} (${wp.zone === "workstation" ? "mode kerja simulasi" : "mode idle"}).`,
+          `Tiba di ${wp.label} (${
+            wp.zone === "workstation" ? "mode kerja simulasi" : "mode idle"
+          }).`,
           "success",
           wp.label
         );
@@ -433,7 +516,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     [addActivity, agents, workstations]
   );
 
-  // Autonomous subtle patrol loop when simulation is active
+  // Lively autonomous patrol loop across all 10 staff
   useEffect(() => {
     if (!isSimulationRunning) return;
 
@@ -460,13 +543,13 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
                 ...agent,
                 status: "walking",
                 targetWaypointId: nextWp,
-                simulatedLoad: 45,
-                currentActionLabel: `Patroli otomatis menuju ${destLabel}`,
+                simulatedLoad: 48,
+                currentActionLabel: `Patroli menuju ${destLabel}`,
               }
             : agent
         );
       });
-    }, 11000);
+    }, 6500);
 
     return () => window.clearInterval(timer);
   }, [isSimulationRunning]);
@@ -492,7 +575,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       addActivity(
         "OPERATOR",
         "user",
-        `Task baru dibuat: "${newTask.title}"${assigned ? ` → ${assigned.name}` : ""}.`,
+        `Task baru dibuat: "${newTask.title}"${
+          assigned ? ` → ${assigned.name}` : ""
+        }.`,
         "success",
         "Task Manager"
       );
@@ -532,7 +617,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           "OPERATOR",
           "user",
-          `Status task "${updatedTaskTitle}" diubah ke ${status.replace("_", " ").toUpperCase()}.`,
+          `Status task "${updatedTaskTitle}" diubah ke ${status
+            .replace("_", " ")
+            .toUpperCase()}.`,
           status === "done" ? "success" : "info",
           "Task Manager"
         );
@@ -561,7 +648,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           "OPERATOR",
           "user",
-          `Task "${taskTitle}" ditugaskan ke ${assigned ? `${assigned.name} (Placeholder)` : "Unassigned"}.`,
+          `Task "${taskTitle}" ditugaskan ke ${
+            assigned ? `${assigned.name} (Placeholder)` : "Unassigned"
+          }.`,
           "info",
           "Task Manager"
         );
@@ -600,6 +689,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
+      cameraFocusCommand,
+      focusCameraOn,
+      focusOnAgent,
+      cameraNudgeRef,
       activeFloor,
       setActiveFloor,
       lightingPreset,
@@ -634,6 +727,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
+      cameraFocusCommand,
+      focusCameraOn,
+      focusOnAgent,
       activeFloor,
       setActiveFloor,
       lightingPreset,
