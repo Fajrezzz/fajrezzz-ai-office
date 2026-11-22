@@ -294,56 +294,104 @@ function StaffFigure({
 
   const isSeated = person.pose === "seated";
   const isFemale = person.gender === "female";
-  const torsoY = isSeated ? 0.86 : 1.14;
-  const headY = isSeated ? 1.28 : 1.56;
+  const torsoY = isSeated ? 0.86 : 1.11;
+  const headY = isSeated ? 1.26 : 1.52;
 
   return (
     <group position={person.position} rotation={[0, person.rotationY, 0]}>
-      {/* Legs */}
+      {/* Pelvis / Hip Connector + Belt (Eliminates Any Gap Between Torso & Legs!) */}
       {isSeated ? (
         <group>
+          <mesh position={[0, 0.54, 0.02]} castShadow>
+            <boxGeometry args={[isFemale ? 0.34 : 0.4, 0.18, 0.24]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.8} />
+          </mesh>
           {/* Seated thighs forward */}
-          <mesh position={[-0.12, 0.52, 0.18]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <mesh position={[-0.11, 0.52, 0.18]} rotation={[Math.PI / 2, 0, 0]} castShadow>
             <capsuleGeometry args={[0.075, 0.32, 6, 8]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
-          <mesh position={[0.12, 0.52, 0.18]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <mesh position={[0.11, 0.52, 0.18]} rotation={[Math.PI / 2, 0, 0]} castShadow>
             <capsuleGeometry args={[0.075, 0.32, 6, 8]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
-          {/* Seated lower shins down to floor */}
-          <mesh position={[-0.12, 0.26, 0.36]} castShadow>
+          {/* Seated lower shins down to floor + Shoes */}
+          <mesh position={[-0.11, 0.26, 0.36]} castShadow>
             <capsuleGeometry args={[0.068, 0.36, 6, 8]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
-          <mesh position={[0.12, 0.26, 0.36]} castShadow>
+          <mesh position={[0.11, 0.26, 0.36]} castShadow>
             <capsuleGeometry args={[0.068, 0.36, 6, 8]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
+          {[-0.11, 0.11].map((sx, si) => (
+            <mesh key={si} position={[sx, 0.055, 0.41]} castShadow>
+              <boxGeometry args={[0.11, 0.08, 0.21]} />
+              <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.2} />
+            </mesh>
+          ))}
         </group>
       ) : (
         <group>
-          <mesh position={[-0.11, 0.44, 0]} castShadow>
-            <capsuleGeometry args={[0.075, 0.62, 6, 8]} />
+          {/* Seamless Pelvis / Hip Block Connecting Legs Straight into Torso */}
+          <mesh position={[0, 0.83, 0]} castShadow>
+            <boxGeometry args={[isFemale ? 0.32 : 0.41, 0.18, isFemale ? 0.2 : 0.24]} />
+            <meshStandardMaterial color={isFemale ? person.suitColor : "#0f172a"} roughness={0.78} />
+          </mesh>
+          {/* Tailored Leather Belt & Metallic Buckle */}
+          <mesh position={[0, 0.88, 0]}>
+            <boxGeometry args={[isFemale ? 0.335 : 0.425, 0.045, isFemale ? 0.215 : 0.255]} />
+            <meshStandardMaterial color="#18181b" roughness={0.42} />
+          </mesh>
+          <mesh position={[0, 0.88, isFemale ? 0.11 : 0.132]}>
+            <boxGeometry args={[0.055, 0.04, 0.014]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.22} />
+          </mesh>
+          {/* Connected Standing Legs Reaching Seamlessly Up into Hip Block */}
+          <mesh position={[-0.105, 0.46, 0]} castShadow>
+            <capsuleGeometry args={[0.078, 0.66, 6, 10]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
-          <mesh position={[0.11, 0.44, 0]} castShadow>
-            <capsuleGeometry args={[0.075, 0.62, 6, 8]} />
+          <mesh position={[0.105, 0.46, 0]} castShadow>
+            <capsuleGeometry args={[0.078, 0.66, 6, 10]} />
             <meshStandardMaterial color="#0f172a" roughness={0.8} />
           </mesh>
-          {/* Tailored office skirt for standing female staff */}
+          {/* Polished Formal Dress Shoes */}
+          {[-0.105, 0.105].map((sx, si) => (
+            <mesh key={si} position={[sx, 0.055, 0.045]} castShadow>
+              <boxGeometry args={[0.11, 0.085, 0.22]} />
+              <meshStandardMaterial color="#111827" roughness={0.38} metalness={0.22} />
+            </mesh>
+          ))}
+          {/* Tailored Office A-Line Skirt for Standing Female Staff */}
           {isFemale && (
-            <mesh position={[0, 0.72, 0]} castShadow>
-              <cylinderGeometry args={[0.15, 0.2, 0.34, 14]} />
+            <mesh position={[0, 0.71, 0]} castShadow>
+              <cylinderGeometry args={[0.16, 0.215, 0.38, 14]} />
               <meshStandardMaterial color={person.suitColor} roughness={0.74} />
             </mesh>
           )}
         </group>
       )}
 
+      {/* Seamless Neck Cylinder Connecting Torso to Head */}
+      <mesh position={[0, torsoY + 0.3, 0]}>
+        <cylinderGeometry args={[0.058, 0.068, 0.14, 12]} />
+        <meshStandardMaterial color={person.skinColor} roughness={0.7} />
+      </mesh>
+
+      {/* Rounded Shoulder Caps so Arms Join Seamlessly with Zero Gap */}
+      <mesh position={[isFemale ? -0.19 : -0.24, torsoY + 0.21, 0]} castShadow>
+        <sphereGeometry args={[isFemale ? 0.068 : 0.08, 10, 10]} />
+        <meshStandardMaterial color={person.suitColor} roughness={0.72} />
+      </mesh>
+      <mesh position={[isFemale ? 0.19 : 0.24, torsoY + 0.21, 0]} castShadow>
+        <sphereGeometry args={[isFemale ? 0.068 : 0.08, 10, 10]} />
+        <meshStandardMaterial color={person.suitColor} roughness={0.72} />
+      </mesh>
+
       {/* Gender-Tailored Suit Torso (Broad Male vs Slim Tapered Female + Sculpted Bust Contour) */}
       <mesh position={[0, torsoY, 0]} castShadow>
-        <boxGeometry args={[isFemale ? 0.34 : 0.44, 0.52, isFemale ? 0.2 : 0.25]} />
+        <boxGeometry args={[isFemale ? 0.34 : 0.44, 0.5, isFemale ? 0.2 : 0.25]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.72} />
       </mesh>
       {isFemale && (
@@ -376,7 +424,7 @@ function StaffFigure({
             <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
           </mesh>
           {[-0.17, 0.17].map((ex, ei) => (
-            <mesh key={ei} position={[ex, torsoY + 0.27, 0]}>
+            <mesh key={ei} position={[ex, torsoY + 0.26, 0]}>
               <boxGeometry args={[0.09, 0.025, 0.12]} />
               <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
             </mesh>
@@ -384,23 +432,23 @@ function StaffFigure({
         </group>
       )}
 
-      {/* Animated Arms (alert guard stance vs typing/presenting) */}
+      {/* Connected Animated Arms + Hands (alert guard stance vs reception typing/greeting) */}
       <mesh
         ref={leftArmRef}
-        position={[isFemale ? -0.23 : -0.28, torsoY + (person.isSecurity ? -0.02 : 0.06), person.isSecurity ? 0.02 : 0.12]}
-        rotation={[person.isSecurity ? 0.06 : -0.82, 0, 0.1]}
+        position={[isFemale ? -0.21 : -0.255, torsoY + (person.isSecurity ? -0.02 : 0.07), person.isSecurity ? 0.01 : 0.11]}
+        rotation={[person.isSecurity ? 0.06 : -0.82, 0, 0.08]}
         castShadow
       >
-        <capsuleGeometry args={[isFemale ? 0.05 : 0.06, 0.38, 6, 8]} />
+        <capsuleGeometry args={[isFemale ? 0.052 : 0.062, 0.4, 6, 8]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.75} />
       </mesh>
       <mesh
         ref={rightArmRef}
-        position={[isFemale ? 0.23 : 0.28, torsoY + (person.isSecurity ? -0.02 : 0.06), person.isSecurity ? 0.02 : 0.12]}
-        rotation={[person.isSecurity ? 0.06 : -0.82, 0, -0.1]}
+        position={[isFemale ? 0.21 : 0.255, torsoY + (person.isSecurity ? -0.02 : 0.07), person.isSecurity ? 0.01 : 0.11]}
+        rotation={[person.isSecurity ? 0.06 : -0.82, 0, -0.08]}
         castShadow
       >
-        <capsuleGeometry args={[isFemale ? 0.05 : 0.06, 0.38, 6, 8]} />
+        <capsuleGeometry args={[isFemale ? 0.052 : 0.062, 0.4, 6, 8]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.75} />
       </mesh>
 

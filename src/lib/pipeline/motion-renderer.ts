@@ -404,23 +404,44 @@ export function renderEditorialFrame(
   const stageH = Math.max(180, stageBottom - stageTop);
   const stageCY = stageTop + stageH * 0.5;
 
-  // Choose one of 5 signature Claude-style motion modules based on scene role!
+  // Choose one of 6 signature viral TikTok motion-graphics modules based on scene role!
   const isFirst = activeIndex === 0;
   const isLast = activeIndex === episode.scenes.length - 1 && episode.scenes.length > 1;
-  const moduleType: "hook" | "chart" | "workflow" | "bento" | "cta" = isFirst
+  const moduleType: "hook" | "chart" | "workflow" | "compare" | "bento" | "cta" = isFirst
     ? "hook"
     : isLast
     ? "cta"
-    : activeIndex % 3 === 1
+    : activeIndex % 4 === 1
     ? "chart"
-    : activeIndex % 3 === 2
+    : activeIndex % 4 === 2
     ? "workflow"
+    : activeIndex % 4 === 3
+    ? "compare"
     : "bento";
+
+  // Subtle Floating Ambient Viral Spark Particles behind stage
+  ctx.save();
+  for (let sp = 0; sp < 14; sp++) {
+    const px = ((sp * 197 + elapsedSec * (18 + (sp % 4) * 9)) % (width + 80)) - 40;
+    const py = ((sp * 131 - elapsedSec * (22 + (sp % 3) * 11)) % (height + 80) + height + 80) % (height + 80) - 40;
+    const pr = 1.6 + (sp % 3) * 1.1;
+    const pa = (0.14 + Math.sin(elapsedSec * 2.4 + sp) * 0.1) * exitAlpha;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = sp % 2 === 0 ? pal.accent : pal.accent2;
+    ctx.globalAlpha = Math.max(0.03, pa);
+    ctx.fill();
+  }
+  ctx.restore();
 
   ctx.save();
   ctx.globalAlpha = clamp01(enterSpring) * exitAlpha;
-  const slideOffsetY = (1 - enterSpring) * 34;
-  ctx.translate(0, slideOffsetY);
+  // Viral TikTok Beat-Sync Zoom Punch-In on every scene cut!
+  const punchScale = 1 + (1 - clamp01(enterSpring)) * 0.055 + Math.sin(elapsedSec * 1.2) * 0.005;
+  const slideOffsetY = (1 - enterSpring) * 28;
+  ctx.translate(width / 2, stageCY + slideOffsetY);
+  ctx.scale(punchScale, punchScale);
+  ctx.translate(-width / 2, -stageCY);
 
   if (moduleType === "hook") {
     // === MODULE A: VIRAL CLAUDE KEYNOTE IMPACT HOOK ===
@@ -561,6 +582,92 @@ export function renderEditorialFrame(
       ctx.fillStyle = "#94a3b8";
       ctx.textBaseline = "top";
       ctx.fillText(m.label, bx + barW / 2, chartBottom + 14);
+    });
+
+    // Live-Drawing Golden Bezier Growth Trendline Overlay + Pulsing Peak Dot!
+    const curveProg = easeOutCubic((localSec - 0.35) / 0.85);
+    if (curveProg > 0.05 && metrics.length >= 2) {
+      const pts = metrics.map((m, mi) => {
+        const bx = cardX + 38 + mi * slotW + slotW / 2;
+        const bh = Math.max(12, ((chartH * 0.86 * m.value) / 100));
+        return { x: bx, y: chartBottom - bh - 12 };
+      });
+      ctx.save();
+      ctx.strokeStyle = "#fde047";
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = "rgba(253, 224, 71, 0.65)";
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      const maxSeg = (pts.length - 1) * curveProg;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const segT = clamp01(maxSeg - i);
+        if (segT <= 0) break;
+        const nx = pts[i].x + (pts[i + 1].x - pts[i].x) * segT;
+        const ny = pts[i].y + (pts[i + 1].y - pts[i].y) * segT;
+        ctx.lineTo(nx, ny);
+        if (segT < 1 || i === pts.length - 2) {
+          ctx.stroke();
+          // Pulsing Peak Spark Dot
+          ctx.beginPath();
+          ctx.arc(nx, ny, 7 + Math.sin(elapsedSec * 7) * 2, 0, Math.PI * 2);
+          ctx.fillStyle = "#fde047";
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  } else if (moduleType === "compare") {
+    // === MODULE C2: VIRAL BEFORE-VS-AFTER SPLIT COMPARISON METER ===
+    const cardH = Math.min(stageH * 0.94, isVertical ? 450 : 290);
+    const cardY = stageCY - cardH / 2;
+    drawGlassCard(ctx, padX, cardY, safeW, cardH, 24, pal.accent, 0.82);
+
+    const hSize = isVertical ? Math.round(width * 0.044) : Math.round(width * 0.025);
+    ctx.font = `800 ${hSize}px system-ui, -apple-system, sans-serif`;
+    const tLines = wrapLines(ctx, activeScene.onScreenText || activeScene.visualPrompt, safeW - 56, 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    tLines.forEach((tl, ti) => {
+      ctx.fillText(tl, padX + 28, cardY + 24 + ti * (hSize * 1.24));
+    });
+
+    const meterStartY = cardY + 34 + tLines.length * (hSize * 1.24) + 18;
+    const rows = [
+      { label: "CARA LAMA (MANUAL)", pct: 28, col: "#f43f5e", delay: 0.15 },
+      { label: "SISTEM BARU (OPTIMAL)", pct: 94, col: pal.accent2, delay: 0.35 },
+    ];
+    const barMaxW = safeW - 56;
+    const rowGap = isVertical ? 96 : 68;
+
+    rows.forEach((r, ri) => {
+      const ry = meterStartY + ri * rowGap;
+      const grow = springOut((localSec - r.delay) / 0.72);
+      const val = Math.round(r.pct * clamp01(grow));
+
+      ctx.font = `800 ${isVertical ? 17 : 14}px ui-monospace, monospace`;
+      ctx.fillStyle = ri === 1 ? "#ffffff" : "#cbd5e1";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText(r.label, padX + 28, ry);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = r.col;
+      ctx.fillText(`${val}%`, padX + safeW - 28, ry);
+
+      // Track
+      const trackY = ry + (isVertical ? 28 : 22);
+      const trackH = isVertical ? 28 : 22;
+      drawRoundedRect(ctx, padX + 28, trackY, barMaxW, trackH, trackH / 2);
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fill();
+
+      // Animated Glowing Fill
+      const fillW = Math.max(trackH, (barMaxW * r.pct * clamp01(grow)) / 100);
+      drawRoundedRect(ctx, padX + 28, trackY, fillW, trackH, trackH / 2);
+      ctx.fillStyle = r.col;
+      ctx.fill();
     });
   } else if (moduleType === "workflow") {
     // === MODULE C: VIRAL CLAUDE NODE-GRAPH FLOWCHART WITH LASER PULSES ===
@@ -871,21 +978,21 @@ export function renderEditorialFrame(
     ctx.fill();
   }
 
-  // Karaoke Active-Word Kinetic Caption Chunking (5-7 words per page, highlighted active word!)
+  // Viral CapCut / Hormozi Pop-Scale Karaoke Captions (4 punchy words on vertical, 7 on landscape!)
   const allWords = activeScene.narration.trim().split(/\s+/).filter(Boolean);
-  const wordsPerChunk = isVertical ? 6 : 9;
+  const wordsPerChunk = isVertical ? 4 : 7;
   const totalWordCount = Math.max(1, allWords.length);
-  const activeWordGlobal = Math.min(
-    totalWordCount - 1,
-    Math.floor(sceneProg * totalWordCount)
-  );
+  const wordFloat = sceneProg * totalWordCount;
+  const activeWordGlobal = Math.min(totalWordCount - 1, Math.floor(wordFloat));
+  const wordLocalT = wordFloat - Math.floor(wordFloat);
+  const activePopScale = 1 + Math.sin(clamp01(wordLocalT / 0.35) * Math.PI) * 0.11;
   const chunkIdx = Math.floor(activeWordGlobal / wordsPerChunk);
   const chunkStart = chunkIdx * wordsPerChunk;
   const chunkWords = allWords.slice(chunkStart, chunkStart + wordsPerChunk);
   const activeWordLocal = activeWordGlobal - chunkStart;
 
-  const capFont = isVertical ? Math.round(width * 0.044) : Math.round(width * 0.024);
-  ctx.font = `800 ${capFont}px system-ui, -apple-system, sans-serif`;
+  const capFont = isVertical ? Math.round(width * 0.048) : Math.round(width * 0.026);
+  ctx.font = `900 ${capFont}px system-ui, -apple-system, sans-serif`;
 
   // Layout words cleanly into 1 or 2 centered lines strictly inside safeW - 44
   const maxCapW = safeW - 44;
@@ -917,23 +1024,37 @@ export function renderEditorialFrame(
     row.forEach((item) => {
       const isActive = item.idx === activeWordLocal;
       if (isActive) {
+        ctx.save();
+        const cx = rx + item.w / 2;
+        ctx.translate(cx, ry);
+        ctx.scale(activePopScale, activePopScale);
         drawRoundedRect(
           ctx,
-          rx - 8,
-          ry - capFont * 0.62,
-          item.w + 16,
-          capFont * 1.24,
-          10
+          -item.w / 2 - 10,
+          -capFont * 0.64,
+          item.w + 20,
+          capFont * 1.28,
+          12
         );
-        ctx.fillStyle = pal.accent;
+        const pillGrad = ctx.createLinearGradient(-item.w / 2, 0, item.w / 2, 0);
+        pillGrad.addColorStop(0, pal.accent);
+        pillGrad.addColorStop(1, pal.accent2);
+        ctx.shadowColor = pal.glow;
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = pillGrad;
         ctx.fill();
-        ctx.fillStyle = "#060b18";
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#040812";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(item.word, 0, 1);
+        ctx.restore();
       } else {
         ctx.fillStyle = item.idx < activeWordLocal ? "#ffffff" : "rgba(226, 232, 240, 0.72)";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(item.word, rx, ry);
       }
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(item.word, rx, ry);
       rx += item.w + wordGap;
     });
   });

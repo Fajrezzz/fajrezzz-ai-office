@@ -55,6 +55,7 @@ export function RobotCharacter({
   const torsoRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
+  const leftElbowRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
   const rightElbowRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
@@ -238,10 +239,15 @@ export function RobotCharacter({
         rightKneeRef.current.rotation.x = Math.max(0, stride * 0.45);
       if (leftArmRef.current) {
         leftArmRef.current.rotation.x = -stride * 0.44;
+        leftArmRef.current.rotation.y = 0;
         leftArmRef.current.rotation.z = 0.08;
+      }
+      if (leftElbowRef.current) {
+        leftElbowRef.current.rotation.x = -0.18;
       }
       if (rightArmRef.current) {
         rightArmRef.current.rotation.x = stride * 0.44;
+        rightArmRef.current.rotation.y = 0;
         rightArmRef.current.rotation.z = -0.08;
       }
       if (rightElbowRef.current) {
@@ -261,24 +267,35 @@ export function RobotCharacter({
       if (rightLegRef.current) rightLegRef.current.rotation.x = -1.48;
       if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
       if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
+
+      // REALISTIC OFFICE WORK: Left hand actively typing over mechanical keyboard, Right hand gliding & clicking mouse!
+      const typeTap = Math.sin(t * 15.5) * 0.08 + Math.sin(t * 23.0) * 0.04;
+      const mouseGlide = Math.sin(t * 2.1) * 0.14;
+      const mouseClick = Math.sin(t * 7.4) > 0.86 ? 0.06 : 0;
+
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.78 + Math.sin(t * 10.5) * 0.07;
-        leftArmRef.current.rotation.z = -0.08;
+        leftArmRef.current.rotation.x = -0.44 + Math.sin(t * 3.8) * 0.03;
+        leftArmRef.current.rotation.y = 0.14 + Math.sin(t * 2.6) * 0.05;
+        leftArmRef.current.rotation.z = -0.06;
+      }
+      if (leftElbowRef.current) {
+        leftElbowRef.current.rotation.x = -1.08 + typeTap;
       }
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = -0.35 + Math.cos(t * 10.5) * 0.05;
-        rightArmRef.current.rotation.z = 0.08;
+        rightArmRef.current.rotation.x = -0.4 + Math.cos(t * 2.2) * 0.03;
+        rightArmRef.current.rotation.y = -0.12 + mouseGlide;
+        rightArmRef.current.rotation.z = 0.12;
       }
       if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = -0.68 + Math.sin(t * 10.5) * 0.08;
+        rightElbowRef.current.rotation.x = -1.06 + mouseClick;
       }
       if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0.1;
+        torsoRef.current.rotation.x = 0.12;
         torsoRef.current.position.y = 1.02;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.9) * 0.18;
-        headRef.current.rotation.x = 0.08;
+        headRef.current.rotation.y = Math.sin(t * 0.85) * 0.22;
+        headRef.current.rotation.x = 0.1;
       }
     } else if (isIdleSeatedCoffee) {
       // REAL 90-DEGREE SEATED RELAXED POSE WITH BENT ELBOW & COFFEE MUG
@@ -295,8 +312,12 @@ export function RobotCharacter({
 
       // Left arm rests relaxed on armrest / lap
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.52 + breathe * 0.03;
+        leftArmRef.current.rotation.x = -0.34 + breathe * 0.02;
+        leftArmRef.current.rotation.y = 0;
         leftArmRef.current.rotation.z = 0.12;
+      }
+      if (leftElbowRef.current) {
+        leftElbowRef.current.rotation.x = -0.72;
       }
 
       // Right arm bends naturally at elbow to hold mug in front of torso, then lifts to sip
@@ -349,10 +370,15 @@ export function RobotCharacter({
       if (rightKneeRef.current) rightKneeRef.current.rotation.x = 0;
       if (leftArmRef.current) {
         leftArmRef.current.rotation.x = 0.04 + breathe * 0.02;
+        leftArmRef.current.rotation.y = 0;
         leftArmRef.current.rotation.z = 0.08;
+      }
+      if (leftElbowRef.current) {
+        leftElbowRef.current.rotation.x = -0.06;
       }
       if (rightArmRef.current) {
         rightArmRef.current.rotation.x = 0.04 - breathe * 0.02;
+        rightArmRef.current.rotation.y = 0;
         rightArmRef.current.rotation.z = -0.08;
       }
       if (rightElbowRef.current) {
@@ -560,20 +586,26 @@ export function RobotCharacter({
           />
         </mesh>
 
-        {/* LEFT ARM (Smooth Capsule + Shirt Cuff + Hand) */}
+        {/* ARTICULATED LEFT ARM (UPPER ARM + BENT ELBOW FOREARM FOR REAL KEYBOARD TYPING!) */}
         <group ref={leftArmRef} position={[-0.24, 0.33, 0]}>
-          <mesh position={[0, -0.23, 0]} castShadow>
-            <capsuleGeometry args={[0.056, 0.38, 8, 12]} />
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
             <meshStandardMaterial color={suitColor} roughness={0.66} />
           </mesh>
-          <mesh position={[0, -0.44, 0]}>
-            <cylinderGeometry args={[0.046, 0.046, 0.05, 10]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.55} />
-          </mesh>
-          <mesh position={[0, -0.5, 0]}>
-            <sphereGeometry args={[0.05, 10, 10]} />
-            <meshStandardMaterial color={skinColor} roughness={0.72} />
-          </mesh>
+          <group ref={leftElbowRef} position={[0, -0.24, 0]}>
+            <mesh position={[0, -0.11, 0]} castShadow>
+              <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
+              <meshStandardMaterial color={suitColor} roughness={0.66} />
+            </mesh>
+            <mesh position={[0, -0.21, 0]}>
+              <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.55} />
+            </mesh>
+            <mesh position={[0, -0.26, 0]}>
+              <sphereGeometry args={[0.048, 10, 10]} />
+              <meshStandardMaterial color={skinColor} roughness={0.72} />
+            </mesh>
+          </group>
         </group>
 
         {/* ARTICULATED RIGHT ARM (UPPER ARM + BENT ELBOW FOREARM + REAL 3D COFFEE MUG) */}

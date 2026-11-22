@@ -6,6 +6,7 @@ import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { CyberpunkSkyline } from "@/components/office3d/CyberpunkSkyline";
+import { CYBERPUNK_THEME } from "@/lib/config/cyberpunk-theme";
 import { useOffice } from "@/store/OfficeContext";
 import type {
   LightingPreset,
@@ -605,7 +606,115 @@ function PoolsideTradingBot({
   );
 }
 
-/** Iconic 2022 Porsche 911 GT3 ("Porsche 22") — Sculpted Fastback Coupe, Oval 4-Point LED Headlights, Swan-Neck Wing & Yellow PCCB Calipers */
+/** Circular Architectural Courtyard Water Fountain with Slow Shifting RGB Neon Glow */
+function CyberpunkRGBFountain({
+  position,
+  isNight,
+}: {
+  position: [number, number, number];
+  isNight: boolean;
+}) {
+  const ringMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const jetMatRef = useRef<THREE.MeshStandardMaterial>(null);
+  const jetGroupRef = useRef<THREE.Group>(null);
+  const tmpColor = useMemo(() => new THREE.Color(), []);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const hue = (t * 0.08) % 1;
+    tmpColor.setHSL(hue, 0.92, 0.56);
+    if (ringMatRef.current) {
+      ringMatRef.current.color.copy(tmpColor);
+      ringMatRef.current.emissive.copy(tmpColor);
+    }
+    if (jetMatRef.current) {
+      jetMatRef.current.emissive.copy(tmpColor);
+    }
+    if (jetGroupRef.current) {
+      jetGroupRef.current.scale.y = 0.88 + Math.sin(t * 4.2) * 0.14;
+      jetGroupRef.current.rotation.y = t * 0.6;
+    }
+  });
+
+  const emissiveBoost = isNight
+    ? CYBERPUNK_THEME.intensity.fountainNight
+    : CYBERPUNK_THEME.intensity.fountainDay;
+
+  return (
+    <group position={position}>
+      {/* Circular Limestone Basin Wall */}
+      <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[1.62, 1.72, 0.48, 28]} />
+        <meshStandardMaterial color="#e2ddd4" roughness={0.58} />
+      </mesh>
+      {/* Inner Water Surface */}
+      <mesh position={[0, 0.43, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.44, 24]} />
+        <meshPhysicalMaterial
+          color="#0284c7"
+          roughness={0.14}
+          metalness={0.15}
+          transparent
+          opacity={0.86}
+        />
+      </mesh>
+      {/* Animated RGB Neon Ring Around Inner Water Rim */}
+      <mesh position={[0, 0.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.42, 0.045, 10, 32]} />
+        <meshStandardMaterial
+          ref={ringMatRef}
+          color={CYBERPUNK_THEME.neon.cyan}
+          emissive={CYBERPUNK_THEME.neon.cyanEmissive}
+          emissiveIntensity={emissiveBoost}
+        />
+      </mesh>
+      {/* Center Sculpted Tiered Pedestal */}
+      <mesh position={[0, 0.56, 0]} castShadow>
+        <cylinderGeometry args={[0.34, 0.48, 0.55, 16]} />
+        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.25} />
+      </mesh>
+      <mesh position={[0, 0.84, 0]} castShadow>
+        <cylinderGeometry args={[0.68, 0.28, 0.18, 20]} />
+        <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+      </mesh>
+      {/* Animated Glowing RGB Water Jets */}
+      <group ref={jetGroupRef} position={[0, 0.92, 0]}>
+        <mesh position={[0, 0.42, 0]}>
+          <cylinderGeometry args={[0.045, 0.14, 0.84, 12]} />
+          <meshStandardMaterial
+            ref={jetMatRef}
+            color="#e0f2fe"
+            emissive={CYBERPUNK_THEME.neon.cyan}
+            emissiveIntensity={emissiveBoost * 0.72}
+            transparent
+            opacity={0.78}
+          />
+        </mesh>
+        {[0, 1, 2, 3, 4, 5].map((ji) => {
+          const ang = (ji / 6) * Math.PI * 2;
+          return (
+            <mesh
+              key={ji}
+              position={[Math.cos(ang) * 0.46, 0.18, Math.sin(ang) * 0.46]}
+              rotation={[Math.sin(ang) * 0.45, 0, -Math.cos(ang) * 0.45]}
+            >
+              <cylinderGeometry args={[0.022, 0.04, 0.52, 8]} />
+              <meshStandardMaterial
+                color="#e0f2fe"
+                emissive={CYBERPUNK_THEME.neon.magenta}
+                emissiveIntensity={isNight ? 0.95 : 0.3}
+                transparent
+                opacity={0.68}
+              />
+            </mesh>
+          );
+        })}
+      </group>
+    </group>
+  );
+}
+
+/** Iconic Lugano Blue Porsche 911 Carrera 992.2 — Sculpted Fastback Coupe, Full-Width Rear Lightbar & 5-Spoke Bi-Color Wheels */
 function Porsche22Car({
   position,
   rotationY = -0.34,
@@ -1731,12 +1840,15 @@ export function CyberOutdoorCampus({
         </mesh>
       </group>
 
-      {/* Iconic 2022 Porsche 911 GT3 ("Porsche 22") in Arrival Bay */}
+      {/* Iconic Lugano Blue Porsche 911 Carrera 992.2 in Arrival Bay */}
       <Porsche22Car
         position={[9.4, 0.18, 11.3]}
         rotationY={-0.36}
         isNight={isNight}
       />
+
+      {/* Circular Animated RGB Courtyard Water Fountain */}
+      <CyberpunkRGBFountain position={[12.8, 0.18, 16.0]} isNight={isNight} />
 
       {/* 4 Tall Poolside & Front Yard Luxury Garden Lamp Posts */}
       <PoolsideGardenLamp position={[-14.6, 0.18, 17.2]} isNight={isNight} isSunset={isSunset} />

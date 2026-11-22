@@ -187,19 +187,56 @@ export function WorkstationCluster({
               </group>
             )}
 
-            {/* Desk Mat, Mechanical Keyboard & Mouse */}
+            {/* Large Stitched Desk Mat + Backlit Mechanical Keyboard + Ergonomic Wireless Mouse */}
             <mesh position={[0, 0.778, 0.16]} receiveShadow>
-              <boxGeometry args={[1.08, 0.01, 0.42]} />
-              <meshStandardMaterial color="#1f2937" roughness={0.88} />
+              <boxGeometry args={[1.14, 0.01, 0.44]} />
+              <meshStandardMaterial color="#18202c" roughness={0.9} />
             </mesh>
-            <mesh position={[-0.08, 0.79, 0.18]}>
-              <boxGeometry args={[0.48, 0.024, 0.17]} />
-              <meshStandardMaterial color="#0f172a" roughness={0.45} />
-            </mesh>
-            <mesh position={[0.32, 0.79, 0.18]}>
-              <boxGeometry args={[0.08, 0.024, 0.12]} />
-              <meshStandardMaterial color="#1e293b" roughness={0.4} />
-            </mesh>
+            {/* Detailed Mechanical Keyboard */}
+            <group position={[-0.1, 0.79, 0.18]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.48, 0.024, 0.175]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.38} metalness={0.45} />
+              </mesh>
+              {/* Sculpted Keycap Grid Rows */}
+              {[-0.05, -0.016, 0.018, 0.052].map((kz, ri) => (
+                <mesh key={ri} position={[-0.03, 0.016, kz]}>
+                  <boxGeometry args={[0.37, 0.01, 0.024]} />
+                  <meshStandardMaterial
+                    color={isActive ? "#334155" : "#1e293b"}
+                    emissive={isActive ? "#38bdf8" : "#000000"}
+                    emissiveIntensity={isActive ? (isNight ? 0.55 : 0.22) : 0}
+                    roughness={0.5}
+                  />
+                </mesh>
+              ))}
+              {/* Numpad / Arrow Keys Cluster */}
+              <mesh position={[0.195, 0.016, 0]}>
+                <boxGeometry args={[0.058, 0.01, 0.12]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.5} />
+              </mesh>
+            </group>
+            {/* Dedicated Ergonomic Mouse Pad Accent + Sculpted Wireless Office Mouse */}
+            <group position={[0.32, 0.785, 0.18]}>
+              <mesh position={[0, -0.002, 0]}>
+                <boxGeometry args={[0.24, 0.006, 0.26]} />
+                <meshStandardMaterial color="#111827" roughness={0.85} />
+              </mesh>
+              {/* Contoured Ergonomic Mouse Body */}
+              <mesh position={[0, 0.016, 0]} scale={[0.76, 0.48, 1.24]} castShadow>
+                <sphereGeometry args={[0.056, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+                <meshStandardMaterial color="#1e293b" metalness={0.35} roughness={0.28} />
+              </mesh>
+              {/* Glowing Mouse Scroll Wheel LED */}
+              <mesh position={[0, 0.031, -0.028]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.008, 0.008, 0.012, 10]} />
+                <meshStandardMaterial
+                  color="#38bdf8"
+                  emissive={isActive ? "#22d3ee" : "#0ea5e9"}
+                  emissiveIntensity={isActive ? 1.4 : 0.4}
+                />
+              </mesh>
+            </group>
 
             {/* Ceramic Coffee Mug */}
             <mesh position={[-0.86, 0.83, 0.24]} castShadow>
