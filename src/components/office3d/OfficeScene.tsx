@@ -397,7 +397,7 @@ export function OfficeScene() {
       <Environment resolution={isEco ? 64 : 128} frames={1}>
         <Lightformer
           form="ring"
-          intensity={isNight ? 0.72 : isSunset ? 1.9 : 2.3}
+          intensity={isNight ? 0.28 : isSunset ? 1.1 : 1.35}
           color={isNight ? "#38bdf8" : isSunset ? "#ff8fb1" : "#ffffff"}
           scale={18}
           position={[0, 18, 0]}
@@ -405,7 +405,7 @@ export function OfficeScene() {
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.55 : isSunset ? 2.4 : 1.7}
+          intensity={isNight ? 0.22 : isSunset ? 1.25 : 0.95}
           color={isNight ? "#e879f9" : isSunset ? "#ff8c42" : "#e0f2fe"}
           scale={[24, 10, 1]}
           position={[18, 8, 16]}
@@ -413,7 +413,7 @@ export function OfficeScene() {
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.45 : isSunset ? 1.3 : 0.9}
+          intensity={isNight ? 0.18 : isSunset ? 0.75 : 0.6}
           color={isNight ? "#22d3ee" : isSunset ? "#c084fc" : "#cbd5e1"}
           scale={[24, 10, 1]}
           position={[-18, 7, -14]}
@@ -507,24 +507,24 @@ export function OfficeScene() {
       {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
 
-      {/* Selective Emissive Bloom — OFF in Eco, Light in Bal, Full in High */}
+      {/* Selective Anti-Glare Emissive Bloom — Subtle & Crisp Without Blinding Reflection Glare */}
       {!isEco && (
         <EffectComposer multisampling={0}>
           <Bloom
             mipmapBlur
-            luminanceThreshold={isHigh ? 1.08 : 1.15}
-            luminanceSmoothing={0.22}
-            levels={isHigh ? 6 : 4}
+            luminanceThreshold={isHigh ? 1.42 : 1.48}
+            luminanceSmoothing={0.38}
+            levels={isHigh ? 5 : 4}
             intensity={
               isNight
                 ? isHigh
-                  ? 1.15
-                  : 0.65
+                  ? 0.34
+                  : 0.22
                 : isSunset
                 ? isHigh
-                  ? 0.48
-                  : 0.3
-                : 0.14
+                  ? 0.24
+                  : 0.16
+                : 0.08
             }
           />
         </EffectComposer>

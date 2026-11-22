@@ -341,11 +341,23 @@ function StaffFigure({
         </group>
       )}
 
-      {/* Gender-Tailored Suit Torso (Broad Male vs Slim Female) */}
+      {/* Gender-Tailored Suit Torso (Broad Male vs Slim Tapered Female + Sculpted Bust Contour) */}
       <mesh position={[0, torsoY, 0]} castShadow>
-        <boxGeometry args={[isFemale ? 0.36 : 0.44, 0.52, isFemale ? 0.21 : 0.25]} />
+        <boxGeometry args={[isFemale ? 0.34 : 0.44, 0.52, isFemale ? 0.2 : 0.25]} />
         <meshStandardMaterial color={person.suitColor} roughness={0.72} />
       </mesh>
+      {isFemale && (
+        <group>
+          <mesh position={[-0.072, torsoY + 0.08, 0.112]} scale={[0.95, 0.9, 0.96]} castShadow>
+            <sphereGeometry args={[0.074, 14, 12]} />
+            <meshStandardMaterial color={person.suitColor} roughness={0.68} />
+          </mesh>
+          <mesh position={[0.072, torsoY + 0.08, 0.112]} scale={[0.95, 0.9, 0.96]} castShadow>
+            <sphereGeometry args={[0.074, 14, 12]} />
+            <meshStandardMaterial color={person.suitColor} roughness={0.68} />
+          </mesh>
+        </group>
+      )}
       <mesh position={[0, torsoY + 0.12, isFemale ? 0.11 : 0.13]}>
         <boxGeometry args={[0.12, 0.24, 0.02]} />
         <meshStandardMaterial color={person.shirtColor} roughness={0.6} />
@@ -435,17 +447,24 @@ function StaffFigure({
 
         {person.hairStyle === "bob" && (
           <group>
+            {/* Full Rounded Hair Crown */}
             <mesh position={[0, 0.05, -0.02]} castShadow>
-              <sphereGeometry args={[0.165, 14, 12]} />
-              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+              <sphereGeometry args={[0.168, 14, 12]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
             </mesh>
-            <mesh position={[-0.125, -0.05, -0.02]} castShadow>
-              <capsuleGeometry args={[0.042, 0.15, 6, 8]} />
-              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            {/* Long Flowing Back Hair Drape Past Shoulders */}
+            <mesh position={[0, -0.21, -0.11]} castShadow>
+              <boxGeometry args={[0.27, 0.48, 0.11]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
             </mesh>
-            <mesh position={[0.125, -0.05, -0.02]} castShadow>
-              <capsuleGeometry args={[0.042, 0.15, 6, 8]} />
-              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
+            {/* Long Face-Framing Side Hair Strands */}
+            <mesh position={[-0.132, -0.14, 0.015]} castShadow>
+              <capsuleGeometry args={[0.044, 0.34, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            <mesh position={[0.132, -0.14, 0.015]} castShadow>
+              <capsuleGeometry args={[0.044, 0.34, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
             </mesh>
           </group>
         )}
@@ -453,12 +472,22 @@ function StaffFigure({
         {person.hairStyle === "ponytail" && (
           <group>
             <mesh position={[0, 0.06, -0.02]} castShadow>
-              <sphereGeometry args={[0.164, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
-              <meshStandardMaterial color={person.hairColor} roughness={0.78} />
-            </mesh>
-            <mesh position={[0, 0.01, -0.17]} rotation={[0.38, 0, 0]} castShadow>
-              <capsuleGeometry args={[0.055, 0.2, 6, 10]} />
+              <sphereGeometry args={[0.166, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
               <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            {/* Soft Side Strands */}
+            <mesh position={[-0.128, -0.09, 0.02]} castShadow>
+              <capsuleGeometry args={[0.034, 0.22, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            <mesh position={[0.128, -0.09, 0.02]} castShadow>
+              <capsuleGeometry args={[0.034, 0.22, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            {/* Long Flowing High Ponytail Tail Reaching Mid-Back */}
+            <mesh position={[0, -0.16, -0.18]} rotation={[0.18, 0, 0]} castShadow>
+              <capsuleGeometry args={[0.064, 0.44, 8, 12]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.74} />
             </mesh>
           </group>
         )}

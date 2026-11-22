@@ -188,19 +188,19 @@ function SlidingGlassDoorPortal({
         <boxGeometry args={[width + 0.12, 0.1, 0.16]} />
         <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Warm Recessed Doorway Header LED Strip */}
+      {/* Warm Recessed Doorway Header LED Strip (Anti-Glare Soft Warm Glow) */}
       <mesh position={[0, height - 0.06, 0.02]}>
         <boxGeometry args={[width - 0.16, 0.025, 0.04]} />
         <meshStandardMaterial
           color="#fff7e6"
           emissive="#ffd48a"
-          emissiveIntensity={isNight ? 2.4 : 0.7}
+          emissiveIntensity={isNight ? 0.72 : 0.32}
         />
       </mesh>
       {/* Stainless Bottom Floor Threshold Track */}
       <mesh position={[0, 0.015, 0]}>
         <boxGeometry args={[width, 0.02, 0.12]} />
-        <meshStandardMaterial color="#94a3b8" metalness={0.82} roughness={0.22} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.55} roughness={0.38} />
       </mesh>
 
       {/* Left & Right Tempered Glass Sliding Door Panels (Slid Partially Open with Vertical Steel Handles) */}
@@ -209,15 +209,15 @@ function SlidingGlassDoorPortal({
         const handleX = panelCenterX - side * (leafW / 2 - 0.12);
         return (
           <group key={side}>
-            {/* Tempered Glass Door Leaf */}
+            {/* Tempered Anti-Glare Glass Door Leaf */}
             <mesh position={[panelCenterX, (height - 0.08) / 2, 0.015]}>
               <boxGeometry args={[leafW, height - 0.12, 0.035]} />
               <meshPhysicalMaterial
                 color="#dbeafe"
                 transparent
-                opacity={0.32}
-                roughness={0.05}
-                metalness={0.14}
+                opacity={0.26}
+                roughness={0.34}
+                metalness={0.04}
               />
             </mesh>
             {/* Slim Black Aluminum Door Edge Frame */}
@@ -243,7 +243,7 @@ function SlidingGlassDoorPortal({
   );
 }
 
-/** 3-Floor Animated Panoramic Glass Elevator Shaft & Gliding Illuminated Cabin */
+/** 3-Floor Animated Panoramic Glass Elevator Shaft with REAL Office Passengers Riding L1 <-> L2 <-> L3 */
 function PanoramicGlassElevator({
   position,
   showL2,
@@ -258,16 +258,79 @@ function PanoramicGlassElevator({
   isSimulationRunning: boolean;
 }) {
   const cabinRef = useRef<THREE.Group>(null);
+  const cabinDoorLeftRef = useRef<THREE.Mesh>(null);
+  const cabinDoorRightRef = useRef<THREE.Mesh>(null);
+  const rider1HeadRef = useRef<THREE.Group>(null);
+  const rider2HeadRef = useRef<THREE.Group>(null);
   const topY = showL3 ? FLOOR_3_Y + 3.65 : showL2 ? FLOOR_2_Y + 3.7 : 3.75;
 
   useFrame((state) => {
     if (!cabinRef.current) return;
     if (!isSimulationRunning) return;
-    const t = state.clock.elapsedTime * 0.28;
-    // Smooth elevator wave cycling L1 (0.22) -> L2 (3.94) -> L3 (7.84) with gentle floor pauses
-    const maxY = showL3 ? FLOOR_3_Y + 0.04 : showL2 ? FLOOR_2_Y + 0.04 : FLOOR_1_Y + 0.04;
-    const wave = (Math.sin(t) + 1) / 2;
-    cabinRef.current.position.y = FLOOR_1_Y + 0.04 + wave * (maxY - (FLOOR_1_Y + 0.04));
+    const t = state.clock.elapsedTime;
+    const yL1 = FLOOR_1_Y + 0.04;
+    const yL2 = showL2 ? FLOOR_2_Y + 0.04 : yL1;
+    const yL3 = showL3 ? FLOOR_3_Y + 0.04 : yL2;
+
+    // 20-second realistic elevator cycle with smooth easing & 2.2s floor stops at L1, L2, L3, L2!
+    const cycle = t % 20;
+    const smooth = (u: number) => {
+      const c = Math.max(0, Math.min(1, u));
+      return c * c * (3 - 2 * c);
+    };
+
+    let targetY = yL1;
+    let doorOpen = 0;
+
+    if (cycle < 2.2) {
+      // Stopped at L1 (doors open smoothly)
+      targetY = yL1;
+      doorOpen = Math.sin((cycle / 2.2) * Math.PI);
+    } else if (cycle < 5.0) {
+      // Riding UP: L1 -> L2
+      targetY = yL1 + (yL2 - yL1) * smooth((cycle - 2.2) / 2.8);
+    } else if (cycle < 7.2) {
+      // Stopped at L2
+      targetY = yL2;
+      doorOpen = Math.sin(((cycle - 5.0) / 2.2) * Math.PI);
+    } else if (cycle < 10.0) {
+      // Riding UP: L2 -> L3
+      targetY = yL2 + (yL3 - yL2) * smooth((cycle - 7.2) / 2.8);
+    } else if (cycle < 12.2) {
+      // Stopped at L3
+      targetY = yL3;
+      doorOpen = Math.sin(((cycle - 10.0) / 2.2) * Math.PI);
+    } else if (cycle < 15.0) {
+      // Riding DOWN: L3 -> L2
+      targetY = yL3 + (yL2 - yL3) * smooth((cycle - 12.2) / 2.8);
+    } else if (cycle < 17.2) {
+      // Stopped at L2
+      targetY = yL2;
+      doorOpen = Math.sin(((cycle - 15.0) / 2.2) * Math.PI);
+    } else {
+      // Riding DOWN: L2 -> L1
+      targetY = yL2 + (yL1 - yL2) * smooth((cycle - 17.2) / 2.8);
+    }
+
+    cabinRef.current.position.y = targetY;
+
+    // Slide cabin front glass doors open smoothly at every floor stop
+    const slideOffset = doorOpen * 0.34;
+    if (cabinDoorLeftRef.current) {
+      cabinDoorLeftRef.current.position.x = -0.39 - slideOffset;
+    }
+    if (cabinDoorRightRef.current) {
+      cabinDoorRightRef.current.position.x = 0.39 + slideOffset;
+    }
+
+    // Subtle natural passenger head/look movement inside the lift
+    if (rider1HeadRef.current) {
+      rider1HeadRef.current.rotation.y = Math.sin(t * 0.7) * 0.22;
+    }
+    if (rider2HeadRef.current) {
+      rider2HeadRef.current.rotation.y = Math.cos(t * 0.65) * 0.2;
+      rider2HeadRef.current.rotation.x = 0.08 + Math.sin(t * 1.1) * 0.04;
+    }
   });
 
   const floorLandings = [
@@ -278,7 +341,7 @@ function PanoramicGlassElevator({
 
   return (
     <group position={position}>
-      {/* 4 Matte-Black Steel Corner Shaft Columns + Full-Height Architectural Vertical LED Strip Lights */}
+      {/* 4 Matte-Black Steel Corner Shaft Columns + Subtle Vertical LED Strip Lights */}
       {[
         [-0.95, -0.95],
         [0.95, -0.95],
@@ -288,32 +351,31 @@ function PanoramicGlassElevator({
         <group key={i}>
           <mesh position={[cx, topY / 2, cz]} castShadow>
             <boxGeometry args={[0.1, topY, 0.1]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.28} />
+            <meshStandardMaterial color="#1e293b" metalness={0.65} roughness={0.38} />
           </mesh>
-          {/* Warm-White / Cyan Architectural Vertical Shaft LED Light Strip */}
+          {/* Balanced Warm-White / Cyan Architectural Vertical Shaft LED Light Strip */}
           <mesh position={[cx * 0.9, topY / 2, cz * 0.9]}>
-            <boxGeometry args={[0.032, topY - 0.16, 0.032]} />
+            <boxGeometry args={[0.028, topY - 0.16, 0.028]} />
             <meshStandardMaterial
               color="#fff8e7"
               emissive={i >= 2 ? "#38bdf8" : "#ffd89b"}
-              emissiveIntensity={isNight ? 2.6 : 1.15}
-              toneMapped={!isNight}
+              emissiveIntensity={isNight ? 0.95 : 0.45}
             />
           </mesh>
         </group>
       ))}
-      {/* Crystal-Clear Glass Shaft Enclosure Panels (Sides & Back) */}
+      {/* Crystal-Clear Anti-Glare Glass Shaft Enclosure Panels (Sides & Back) */}
       <mesh position={[-0.95, topY / 2, 0]}>
         <boxGeometry args={[0.04, topY, 1.85]} />
-        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.26} roughness={0.06} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.2} roughness={0.34} metalness={0.04} />
       </mesh>
       <mesh position={[0.95, topY / 2, 0]}>
         <boxGeometry args={[0.04, topY, 1.85]} />
-        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.26} roughness={0.06} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.2} roughness={0.34} metalness={0.04} />
       </mesh>
       <mesh position={[0, topY / 2, -0.95]}>
         <boxGeometry args={[1.85, topY, 0.04]} />
-        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.24} roughness={0.06} />
+        <meshPhysicalMaterial color="#dbeafe" transparent opacity={0.18} roughness={0.34} metalness={0.04} />
       </mesh>
 
       {/* Landing Glass Doors + Illuminated Floor Call Panels & Warm Overhead Lobby Lights on L1, L2, L3 */}
@@ -324,16 +386,15 @@ function PanoramicGlassElevator({
             {/* Door Frame Header */}
             <mesh position={[0, 2.38, 0]}>
               <boxGeometry args={[1.95, 0.14, 0.12]} />
-              <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
+              <meshStandardMaterial color="#1e293b" metalness={0.65} roughness={0.38} />
             </mesh>
-            {/* Warm Architectural Cove Light Strip Above Elevator Doors */}
+            {/* Soft Warm Cove Light Strip Above Elevator Doors */}
             <mesh position={[0, 2.49, 0.06]}>
-              <boxGeometry args={[1.82, 0.045, 0.06]} />
+              <boxGeometry args={[1.82, 0.04, 0.06]} />
               <meshStandardMaterial
                 color="#fff9eb"
                 emissive="#ffe0a3"
-                emissiveIntensity={isNight ? 2.5 : 1.1}
-                toneMapped={!isNight}
+                emissiveIntensity={isNight ? 0.9 : 0.42}
               />
             </mesh>
             {/* Glowing Cyan Floor Indicator Display */}
@@ -342,7 +403,7 @@ function PanoramicGlassElevator({
               <meshStandardMaterial
                 color="#0f172a"
                 emissive="#22d3ee"
-                emissiveIntensity={isNight ? 1.8 : 0.9}
+                emissiveIntensity={isNight ? 0.95 : 0.55}
               />
             </mesh>
             <Text
@@ -354,82 +415,234 @@ function PanoramicGlassElevator({
             >
               {`LIFT · ${fl.label}`}
             </Text>
-            {/* Double Glass Elevator Landing Doors */}
+            {/* Double Glass Elevator Landing Doors (Low-Opacity Anti-Glare so Riders Inside Are Clearly Visible!) */}
             {[-0.44, 0.44].map((dx, di) => (
               <mesh key={di} position={[dx, 1.15, 0]}>
                 <boxGeometry args={[0.84, 2.28, 0.04]} />
                 <meshPhysicalMaterial
                   color="#bae6fd"
                   transparent
-                  opacity={0.34}
-                  roughness={0.06}
-                  metalness={0.15}
+                  opacity={0.18}
+                  roughness={0.34}
+                  metalness={0.04}
                 />
               </mesh>
             ))}
             {/* Illuminated Call Button Panel on Right Jamb */}
             <mesh position={[0.98, 1.18, 0.07]}>
               <boxGeometry args={[0.1, 0.24, 0.03]} />
-              <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.25} />
+              <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.35} />
             </mesh>
             <mesh position={[0.98, 1.22, 0.09]}>
               <sphereGeometry args={[0.018, 8, 8]} />
               <meshStandardMaterial
                 color="#38bdf8"
                 emissive="#38bdf8"
-                emissiveIntensity={1.8}
+                emissiveIntensity={1.1}
               />
             </mesh>
           </group>
         ))}
 
-      {/* Animated Illuminated Glass Elevator Cabin with Warm Downlight & Floor Halo */}
+      {/* Animated Illuminated Glass Elevator Cabin with 2 REAL Office Passengers Riding Up & Down! */}
       <group ref={cabinRef} position={[0, FLOOR_1_Y + 0.04, 0]}>
         {/* Cabin Oak Floor Platform */}
         <mesh position={[0, 0.04, 0]} castShadow>
           <boxGeometry args={[1.68, 0.08, 1.68]} />
-          <meshStandardMaterial color="#8b5e3c" roughness={0.45} />
+          <meshStandardMaterial color="#8b5e3c" roughness={0.5} />
         </mesh>
-        {/* Glowing Warm-Gold Cabin Floor Perimeter LED Halo */}
+        {/* Warm Cabin Floor Perimeter LED Strip */}
         <mesh position={[0, 0.09, 0.8]}>
           <boxGeometry args={[1.56, 0.03, 0.03]} />
           <meshStandardMaterial
             color="#fff7e6"
             emissive="#facc15"
-            emissiveIntensity={isNight ? 2.4 : 1.0}
+            emissiveIntensity={isNight ? 0.95 : 0.45}
           />
         </mesh>
-        {/* Cabin Ceiling Roof with Bright Warm Recessed LED Light Panel */}
+        {/* Cabin Ceiling Roof with Soft Warm Recessed LED Light Panel */}
         <mesh position={[0, 2.24, 0]}>
           <boxGeometry args={[1.7, 0.08, 1.7]} />
-          <meshStandardMaterial color="#1e293b" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial color="#1e293b" metalness={0.6} roughness={0.38} />
         </mesh>
         <mesh position={[0, 2.18, 0]}>
-          <boxGeometry args={[1.42, 0.03, 1.42]} />
+          <boxGeometry args={[1.38, 0.03, 1.38]} />
           <meshStandardMaterial
             color="#fff9eb"
             emissive="#ffe4b5"
-            emissiveIntensity={isNight ? 3.0 : 1.5}
-            toneMapped={!isNight}
+            emissiveIntensity={isNight ? 1.15 : 0.65}
           />
         </mesh>
-        {/* Live Warm Cabin Interior PointLight Gliding Across All 3 Floors */}
+        {/* Soft Warm Cabin Interior PointLight Gliding Across All 3 Floors */}
         <pointLight
           position={[0, 1.85, 0.25]}
           color="#ffe8c2"
-          intensity={isNight ? 8 : 3.5}
-          distance={7}
+          intensity={isNight ? 3.2 : 1.6}
+          distance={6}
         />
         {/* Brushed Stainless Interior Handrail */}
         <mesh position={[0, 0.96, -0.76]}>
           <boxGeometry args={[1.4, 0.035, 0.035]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.18} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.65} roughness={0.3} />
         </mesh>
-        {/* Subtle Glass Cabin Sides */}
+        {/* Animated Cabin Front Sliding Glass Doors */}
+        <mesh ref={cabinDoorLeftRef} position={[-0.39, 1.12, 0.82]}>
+          <boxGeometry args={[0.76, 2.08, 0.03]} />
+          <meshPhysicalMaterial color="#e0f2fe" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
+        </mesh>
+        <mesh ref={cabinDoorRightRef} position={[0.39, 1.12, 0.82]}>
+          <boxGeometry args={[0.76, 2.08, 0.03]} />
+          <meshPhysicalMaterial color="#e0f2fe" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
+        </mesh>
+        {/* Subtle Glass Cabin Back Panel */}
         <mesh position={[0, 1.14, -0.8]}>
           <boxGeometry args={[1.64, 2.12, 0.03]} />
-          <meshPhysicalMaterial color="#e0f2fe" transparent opacity={0.26} roughness={0.05} />
+          <meshPhysicalMaterial color="#e0f2fe" transparent opacity={0.2} roughness={0.34} metalness={0.04} />
         </mesh>
+
+        {/* REAL PASSENGER #1 INSIDE LIFT: Male Executive Riding Up & Down with Leather Briefcase */}
+        <group position={[-0.36, 0.08, -0.08]} rotation={[0, 0.14, 0]}>
+          {/* Legs & Shoes */}
+          {[-0.085, 0.085].map((lx, i) => (
+            <group key={i} position={[lx, 0, 0]}>
+              <mesh position={[0, 0.42, 0]} castShadow>
+                <capsuleGeometry args={[0.062, 0.56, 6, 8]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.78} />
+              </mesh>
+              <mesh position={[0, 0.05, 0.03]}>
+                <boxGeometry args={[0.095, 0.08, 0.17]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.5} />
+              </mesh>
+            </group>
+          ))}
+          {/* Male Blazer Torso + Shirt + Cyan Tie */}
+          <mesh position={[0, 1.08, 0]} castShadow>
+            <boxGeometry args={[0.39, 0.52, 0.22]} />
+            <meshStandardMaterial color="#1e3a5f" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 1.18, 0.115]}>
+            <boxGeometry args={[0.1, 0.24, 0.015]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.55} />
+          </mesh>
+          <mesh position={[0, 1.12, 0.125]}>
+            <boxGeometry args={[0.036, 0.22, 0.012]} />
+            <meshStandardMaterial color="#38bdf8" roughness={0.4} />
+          </mesh>
+          {/* Arms + Leather Briefcase in Right Hand */}
+          <mesh position={[-0.24, 1.02, 0.02]} rotation={[0.05, 0, 0.08]} castShadow>
+            <capsuleGeometry args={[0.05, 0.38, 6, 8]} />
+            <meshStandardMaterial color="#1e3a5f" roughness={0.72} />
+          </mesh>
+          <mesh position={[0.24, 1.02, 0.02]} rotation={[0.08, 0, -0.08]} castShadow>
+            <capsuleGeometry args={[0.05, 0.38, 6, 8]} />
+            <meshStandardMaterial color="#1e3a5f" roughness={0.72} />
+          </mesh>
+          <mesh position={[0.28, 0.65, 0.05]} castShadow>
+            <boxGeometry args={[0.07, 0.24, 0.32]} />
+            <meshStandardMaterial color="#451a03" roughness={0.55} />
+          </mesh>
+          {/* Head & Short Male Hair */}
+          <group ref={rider1HeadRef} position={[0, 1.5, 0]}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.135, 14, 12]} />
+              <meshStandardMaterial color="#d8a682" roughness={0.7} />
+            </mesh>
+            <mesh position={[0, 0.05, -0.015]}>
+              <sphereGeometry args={[0.142, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.56]} />
+              <meshStandardMaterial color="#18181b" roughness={0.82} />
+            </mesh>
+            <mesh position={[-0.042, 0.015, 0.122]}>
+              <sphereGeometry args={[0.013, 8, 8]} />
+              <meshStandardMaterial color="#18181b" roughness={0.2} />
+            </mesh>
+            <mesh position={[0.042, 0.015, 0.122]}>
+              <sphereGeometry args={[0.013, 8, 8]} />
+              <meshStandardMaterial color="#18181b" roughness={0.2} />
+            </mesh>
+          </group>
+        </group>
+
+        {/* REAL PASSENGER #2 INSIDE LIFT: Female Staff (Long Hair + Feminine Silhouette + Tablet) */}
+        <group position={[0.36, 0.08, 0.04]} rotation={[0, -0.18, 0]}>
+          {/* Slim Legs & Office Heels */}
+          {[-0.072, 0.072].map((lx, i) => (
+            <group key={i} position={[lx, 0, 0]}>
+              <mesh position={[0, 0.36, 0]} castShadow>
+                <capsuleGeometry args={[0.05, 0.48, 6, 8]} />
+                <meshStandardMaterial color="#e6b99a" roughness={0.72} />
+              </mesh>
+              <mesh position={[0, 0.045, 0.03]}>
+                <boxGeometry args={[0.08, 0.07, 0.15]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.45} />
+              </mesh>
+            </group>
+          ))}
+          {/* A-Line Office Skirt */}
+          <mesh position={[0, 0.68, 0]} castShadow>
+            <cylinderGeometry args={[0.13, 0.185, 0.36, 14]} />
+            <meshStandardMaterial color="#1f2937" roughness={0.74} />
+          </mesh>
+          {/* Tapered Female Blazer Torso + Natural Feminine Bust Contour */}
+          <mesh position={[0, 1.06, 0]} castShadow>
+            <cylinderGeometry args={[0.155, 0.12, 0.46, 14]} />
+            <meshStandardMaterial color="#0f766e" roughness={0.68} />
+          </mesh>
+          {[-0.068, 0.068].map((bx, bi) => (
+            <mesh key={bi} position={[bx, 1.12, 0.115]} scale={[0.92, 0.9, 0.95]} castShadow>
+              <sphereGeometry args={[0.066, 12, 10]} />
+              <meshStandardMaterial color="#0f766e" roughness={0.66} />
+            </mesh>
+          ))}
+          <mesh position={[0, 1.17, 0.105]}>
+            <boxGeometry args={[0.09, 0.2, 0.02]} />
+            <meshStandardMaterial color="#fdf2f8" roughness={0.55} />
+          </mesh>
+          {/* Arms Holding Glowing Work Tablet */}
+          <mesh position={[-0.2, 1.04, 0.09]} rotation={[-0.65, 0, 0.14]} castShadow>
+            <capsuleGeometry args={[0.044, 0.34, 6, 8]} />
+            <meshStandardMaterial color="#0f766e" roughness={0.7} />
+          </mesh>
+          <mesh position={[0.2, 1.04, 0.09]} rotation={[-0.65, 0, -0.14]} castShadow>
+            <capsuleGeometry args={[0.044, 0.34, 6, 8]} />
+            <meshStandardMaterial color="#0f766e" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.96, 0.24]} rotation={[-0.45, 0, 0]}>
+            <boxGeometry args={[0.22, 0.16, 0.016]} />
+            <meshStandardMaterial color="#0f172a" emissive="#38bdf8" emissiveIntensity={0.5} />
+          </mesh>
+          {/* Head & Long Flowing Dark-Brown Feminine Hair Past Shoulders */}
+          <group ref={rider2HeadRef} position={[0, 1.44, 0]}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.128, 14, 12]} />
+              <meshStandardMaterial color="#ecc0a2" roughness={0.68} />
+            </mesh>
+            {/* Hair Crown */}
+            <mesh position={[0, 0.04, -0.015]} castShadow>
+              <sphereGeometry args={[0.136, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
+              <meshStandardMaterial color="#2a1911" roughness={0.76} />
+            </mesh>
+            {/* Long Flowing Back Hair Drape Past Shoulders */}
+            <mesh position={[0, -0.17, -0.1]} castShadow>
+              <boxGeometry args={[0.24, 0.42, 0.1]} />
+              <meshStandardMaterial color="#2a1911" roughness={0.76} />
+            </mesh>
+            {/* Long Side-Framing Hair Strands */}
+            {[-0.11, 0.11].map((hx, hi) => (
+              <mesh key={hi} position={[hx, -0.12, 0.01]} castShadow>
+                <capsuleGeometry args={[0.036, 0.3, 6, 8]} />
+                <meshStandardMaterial color="#2a1911" roughness={0.76} />
+              </mesh>
+            ))}
+            <mesh position={[-0.04, 0.012, 0.116]}>
+              <sphereGeometry args={[0.012, 8, 8]} />
+              <meshStandardMaterial color="#18181b" roughness={0.2} />
+            </mesh>
+            <mesh position={[0.04, 0.012, 0.116]}>
+              <sphereGeometry args={[0.012, 8, 8]} />
+              <meshStandardMaterial color="#18181b" roughness={0.2} />
+            </mesh>
+          </group>
+        </group>
       </group>
     </group>
   );
@@ -446,9 +659,9 @@ export function OfficeArchitecture({
 
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
-  const interiorLightEmissive = isNight ? 2.6 : isSunset ? 1.65 : 0.95;
-  const cyanNeonIntensity = isNight ? 2.4 : isSunset ? 1.15 : 0.12;
-  const magentaNeonIntensity = isNight ? 2.25 : isSunset ? 1.1 : 0.1;
+  const interiorLightEmissive = isNight ? 1.05 : isSunset ? 0.85 : 0.6;
+  const cyanNeonIntensity = isNight ? 1.25 : isSunset ? 0.75 : 0.1;
+  const magentaNeonIntensity = isNight ? 1.15 : isSunset ? 0.7 : 0.08;
 
   const showL2 = activeFloor !== "l1";
   const showL3 =
@@ -557,9 +770,9 @@ export function OfficeArchitecture({
               <meshPhysicalMaterial
                 color="#d8ecf8"
                 transparent
-                opacity={0.28}
-                roughness={0.06}
-                metalness={0.12}
+                opacity={0.22}
+                roughness={0.34}
+                metalness={0.04}
               />
             </mesh>
             {/* Slim Black Aluminum Vertical Mullions */}
@@ -579,9 +792,9 @@ export function OfficeArchitecture({
             <meshPhysicalMaterial
               color="#d8edf8"
               transparent
-              opacity={0.2}
-              roughness={0.06}
-              metalness={0.12}
+              opacity={0.18}
+              roughness={0.34}
+              metalness={0.04}
             />
           </mesh>
         ))}
@@ -592,9 +805,9 @@ export function OfficeArchitecture({
             <meshPhysicalMaterial
               color="#d8edf8"
               transparent
-              opacity={0.2}
-              roughness={0.06}
-              metalness={0.12}
+              opacity={0.18}
+              roughness={0.34}
+              metalness={0.04}
             />
           </mesh>
         ))}
@@ -851,12 +1064,12 @@ export function OfficeArchitecture({
         <PendantLight position={[0, 3.22, -4.5]} isNight={isNight} isSunset={isSunset} />
         <PendantLight position={[6, 3.22, -1.5]} isNight={isNight} isSunset={isSunset} />
 
-        {/* Warm L1 Interior Light (always active so lobby never looks dark/shadowed!) */}
+        {/* Balanced Anti-Glare L1 Interior Light */}
         <pointLight
-          position={[0, 3.2, -2.2]}
+          position={[0, 3.2, -3.4]}
           color="#fff0d6"
-          intensity={isNight ? 20 : isSunset ? 13 : 9}
-          distance={26}
+          intensity={isNight ? 9.5 : isSunset ? 8.5 : 6.5}
+          distance={22}
         />
       </group>
 
@@ -1213,9 +1426,9 @@ export function OfficeArchitecture({
                 <meshPhysicalMaterial
                   color="#d8ecf8"
                   transparent
-                  opacity={0.28}
-                  roughness={0.06}
-                  metalness={0.14}
+                  opacity={0.22}
+                  roughness={0.34}
+                  metalness={0.04}
                 />
               </mesh>
               {/* Side Glass Mullion Posts + Horizontal Transom */}
@@ -1252,17 +1465,17 @@ export function OfficeArchitecture({
               {/* Far-left glass curtain (-13.6 to -6.9) */}
               <mesh position={[-10.25, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[6.7, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
               {/* Center panoramic glass curtain (-4.1 to +4.1) */}
               <mesh position={[0, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[8.2, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
               {/* Far-right glass curtain (+6.9 to +13.6) */}
               <mesh position={[10.25, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[6.7, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.18} roughness={0.05} metalness={0.14} />
+                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
             </group>
           )}
@@ -1320,19 +1533,19 @@ export function OfficeArchitecture({
             </group>
           ))}
 
-          {/* L2 Bright Interior Illumination */}
+          {/* L2 Balanced Anti-Glare Interior Illumination */}
           <pointLight
             position={[-6, FLOOR_2_Y + 3.2, -3.2]}
             color="#fff2dc"
-            intensity={isNight ? 18 : isSunset ? 12 : 8}
-            distance={24}
+            intensity={isNight ? 9.5 : isSunset ? 8.5 : 6}
+            distance={22}
           />
           {performanceMode !== "eco" && (
             <pointLight
               position={[6, FLOOR_2_Y + 3.2, -3.2]}
               color="#fff2dc"
-              intensity={isNight ? 18 : isSunset ? 12 : 8}
-              distance={24}
+              intensity={isNight ? 9.5 : isSunset ? 8.5 : 6}
+              distance={22}
             />
           )}
         </group>
@@ -1410,9 +1623,9 @@ export function OfficeArchitecture({
                 <meshPhysicalMaterial
                   color="#d8ecf8"
                   transparent
-                  opacity={0.28}
-                  roughness={0.06}
-                  metalness={0.14}
+                  opacity={0.22}
+                  roughness={0.34}
+                  metalness={0.04}
                 />
               </mesh>
               {[-3.0, -0.65, 1.7, 4.0].map((mz, mi) => (
@@ -1498,19 +1711,30 @@ export function OfficeArchitecture({
               <boxGeometry args={[3.1, 0.06, 0.02]} />
               <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
             </mesh>
-            {/* Ultrawide CEO Display */}
+            {/* Ultrawide CEO Display (Screen Faces North -Z Toward CEO Hendra Wijaya, Sleek Back Toward Visitors!) */}
             <mesh position={[0, 1.18, -0.25]}>
               <boxGeometry args={[1.45, 0.54, 0.05]} />
-              <meshStandardMaterial color="#0f172a" roughness={0.25} />
+              <meshStandardMaterial color="#0f172a" roughness={0.38} metalness={0.45} />
             </mesh>
-            <mesh position={[0, 1.18, -0.22]}>
+            {/* Monitor Stand Base */}
+            <mesh position={[0, 0.87, -0.25]}>
+              <boxGeometry args={[0.12, 0.14, 0.06]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.5} />
+            </mesh>
+            {/* Active Dashboard Display Plane Facing CEO at -Z */}
+            <mesh position={[0, 1.18, -0.282]} rotation={[0, Math.PI, 0]}>
               <planeGeometry args={[1.38, 0.48]} />
               <meshStandardMaterial
                 map={textures.monitorScreen}
                 emissiveMap={textures.monitorScreen}
                 emissive="#ffffff"
-                emissiveIntensity={0.65}
+                emissiveIntensity={0.55}
               />
+            </mesh>
+            {/* Subtle Gold Executive Emblem on Visitor-Facing Rear Shell (+Z) */}
+            <mesh position={[0, 1.18, -0.222]}>
+              <boxGeometry args={[0.24, 0.03, 0.008]} />
+              <meshStandardMaterial color="#d4af37" metalness={0.6} roughness={0.35} />
             </mesh>
             {/* Real Ergonomic Gold-Trimmed CEO Executive Leather Chair */}
             <ExecutiveLeatherChair position={[0, 0, -1.05]} rotationY={0} isCeo />
@@ -1621,9 +1845,9 @@ export function OfficeArchitecture({
               <meshPhysicalMaterial
                 color="#d8eef8"
                 transparent
-                opacity={0.22}
-                roughness={0.05}
-                metalness={0.14}
+                opacity={0.18}
+                roughness={0.34}
+                metalness={0.04}
               />
             </mesh>
           )}

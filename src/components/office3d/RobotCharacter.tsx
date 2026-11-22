@@ -470,19 +470,32 @@ export function RobotCharacter({
           <meshStandardMaterial color="#18181b" roughness={0.4} />
         </mesh>
 
-        {/* Blazer Chest & Shoulders (Slim feminine vs Broad masculine) */}
+        {/* Blazer Chest & Shoulders (Slim feminine with sculpted bust contour vs Broad masculine) */}
         <mesh
           position={[0, 0.14, 0]}
-          scale={isFemale ? [1.04, 1, 0.72] : [1.24, 1, 0.76]}
+          scale={isFemale ? [1.0, 1, 0.7] : [1.24, 1, 0.76]}
           castShadow
         >
-          <cylinderGeometry args={[0.185, 0.14, 0.5, 16]} />
+          <cylinderGeometry args={[0.18, isFemale ? 0.125 : 0.14, 0.5, 16]} />
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
+        {/* Sculpted Natural Feminine Bust Contour */}
+        {isFemale && (
+          <group>
+            <mesh position={[-0.072, 0.21, 0.118]} scale={[0.95, 0.9, 0.96]} castShadow>
+              <sphereGeometry args={[0.074, 14, 12]} />
+              <meshStandardMaterial color={suitColor} roughness={0.64} />
+            </mesh>
+            <mesh position={[0.072, 0.21, 0.118]} scale={[0.95, 0.9, 0.96]} castShadow>
+              <sphereGeometry args={[0.074, 14, 12]} />
+              <meshStandardMaterial color={suitColor} roughness={0.64} />
+            </mesh>
+          </group>
+        )}
         {/* Shoulder Cap */}
         <mesh
           position={[0, 0.35, 0]}
-          scale={isFemale ? [1.08, 0.44, 0.7] : [1.3, 0.48, 0.76]}
+          scale={isFemale ? [1.04, 0.44, 0.68] : [1.3, 0.48, 0.76]}
           castShadow
         >
           <sphereGeometry args={[0.185, 16, 12]} />
@@ -681,32 +694,59 @@ export function RobotCharacter({
 
           {hairStyle === "bob" && (
             <group>
+              {/* Full Rounded Hair Crown */}
               <mesh position={[0, 0.24, -0.02]} scale={[0.98, 1.05, 1.0]} castShadow>
-                <sphereGeometry args={[0.15, 16, 14]} />
-                <meshStandardMaterial color={hairColor} roughness={0.78} />
+                <sphereGeometry args={[0.152, 16, 14]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
               </mesh>
-              <mesh position={[-0.115, 0.14, -0.02]} castShadow>
-                <capsuleGeometry args={[0.04, 0.14, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.78} />
+              {/* Long Flowing Back Hair Drape Past Shoulders */}
+              <mesh position={[0, -0.03, -0.11]} castShadow>
+                <boxGeometry args={[0.26, 0.48, 0.11]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
               </mesh>
-              <mesh position={[0.115, 0.14, -0.02]} castShadow>
-                <capsuleGeometry args={[0.04, 0.14, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.78} />
+              <mesh position={[0, -0.26, -0.115]} scale={[1.0, 0.65, 0.55]} castShadow>
+                <sphereGeometry args={[0.13, 12, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              {/* Long Face-Framing Side Hair Strands Reaching Chest/Shoulders */}
+              <mesh position={[-0.122, 0.03, 0.015]} castShadow>
+                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              <mesh position={[0.122, 0.03, 0.015]} castShadow>
+                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
               </mesh>
             </group>
           )}
 
           {hairStyle === "ponytail" && (
             <group>
+              {/* Sleek Hair Crown */}
               <mesh position={[0, 0.25, -0.02]} castShadow>
                 <sphereGeometry
-                  args={[0.146, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58]}
+                  args={[0.15, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]}
                 />
-                <meshStandardMaterial color={hairColor} roughness={0.78} />
-              </mesh>
-              <mesh position={[0, 0.21, -0.15]} rotation={[0.38, 0, 0]} castShadow>
-                <capsuleGeometry args={[0.05, 0.16, 6, 10]} />
                 <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              {/* Soft Front Side-Framing Wisps */}
+              <mesh position={[-0.12, 0.1, 0.02]} castShadow>
+                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              <mesh position={[0.12, 0.1, 0.02]} castShadow>
+                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              {/* Hair Tie Accent */}
+              <mesh position={[0, 0.24, -0.145]}>
+                <torusGeometry args={[0.042, 0.012, 8, 12]} />
+                <meshStandardMaterial color={agent.accentColor} roughness={0.4} />
+              </mesh>
+              {/* Long Flowing High Ponytail Tail Reaching Mid-Back */}
+              <mesh position={[0, 0.02, -0.175]} rotation={[0.18, 0, 0]} castShadow>
+                <capsuleGeometry args={[0.06, 0.44, 8, 12]} />
+                <meshStandardMaterial color={hairColor} roughness={0.74} />
               </mesh>
             </group>
           )}
