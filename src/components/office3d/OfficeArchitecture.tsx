@@ -32,7 +32,7 @@ function PendantLight({
   isNight: boolean;
   isSunset: boolean;
 }) {
-  const glow = isNight ? 2.6 : isSunset ? 1.5 : 0.7;
+  const glow = isNight ? 2.6 : isSunset ? 1.5 : 0.85;
   return (
     <group position={position}>
       <mesh position={[0, 0.36, 0]}>
@@ -60,7 +60,7 @@ function IndoorPlanter({ position }: { position: [number, number, number] }) {
     <group position={position}>
       <mesh position={[0, 0.32, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.34, 0.28, 0.64, 14]} />
-        <meshStandardMaterial color="#e6e1d8" roughness={0.65} />
+        <meshStandardMaterial color="#e8e3da" roughness={0.62} />
       </mesh>
       <mesh position={[0, 0.78, 0]} castShadow>
         <cylinderGeometry args={[0.05, 0.07, 0.55, 8]} />
@@ -73,6 +73,10 @@ function IndoorPlanter({ position }: { position: [number, number, number] }) {
       <mesh position={[0.18, 1.44, 0.1]} castShadow>
         <sphereGeometry args={[0.28, 10, 10]} />
         <meshStandardMaterial color="#4b8d43" roughness={0.8} />
+      </mesh>
+      <mesh position={[-0.16, 1.38, -0.1]} castShadow>
+        <sphereGeometry args={[0.24, 10, 10]} />
+        <meshStandardMaterial color="#2f6b2c" roughness={0.84} />
       </mesh>
     </group>
   );
@@ -88,11 +92,12 @@ export function OfficeArchitecture({
 
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
-  const interiorLightEmissive = isNight ? 2.5 : isSunset ? 1.55 : 0.85;
-  const facadeGlow = isNight ? 1.9 : isSunset ? 0.9 : 0.15;
+  const interiorLightEmissive = isNight ? 2.5 : isSunset ? 1.55 : 0.95;
+  const facadeGlow = isNight ? 1.9 : isSunset ? 0.9 : 0.2;
 
   const showL2 = activeFloor !== "l1";
-  const showL3 = activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof";
+  const showL3 =
+    activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof";
   const showRoof = activeFloor === "all" || activeFloor === "roof";
 
   const handleSurfaceDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -102,12 +107,52 @@ export function OfficeArchitecture({
     }
   };
 
-  // Architectural column positions across the grand 28m span
   const frontColumnsX = [-13.7, -6.9, 0, 6.9, 13.7];
   const timberFins = [-13.2, -12.6, -12.0, -11.4, 11.4, 12.0, 12.6, 13.2];
 
   return (
     <group>
+      {/* ============================================================
+          GLASS PANORAMIC ELEVATOR SHAFT (West Rear Corner X=-11.6, Z=-8.4)
+          Visibly connects L1 -> L2 -> L3 -> Rooftop!
+          ============================================================ */}
+      <group position={[-11.8, 0, -8.4]}>
+        <mesh
+          position={[0, showRoof ? 5.8 : showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0]}
+        >
+          <boxGeometry
+            args={[
+              2.1,
+              showRoof ? 11.4 : showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
+              2.0,
+            ]}
+          />
+          <meshPhysicalMaterial
+            color="#cde7f8"
+            transparent
+            opacity={0.22}
+            roughness={0.08}
+            metalness={0.18}
+          />
+        </mesh>
+        {/* Brushed bronze vertical guide rails */}
+        {[-0.98, 0.98].map((rx, i) => (
+          <mesh
+            key={i}
+            position={[rx, showRoof ? 5.8 : showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0.96]}
+          >
+            <boxGeometry
+              args={[
+                0.08,
+                showRoof ? 11.4 : showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
+                0.08,
+              ]}
+            />
+            <meshStandardMaterial color="#b48a46" metalness={0.8} roughness={0.25} />
+          </mesh>
+        ))}
+      </group>
+
       {/* ============================================================
           FLOOR 1 — GRAND LOBBY, RECEPTION & ARRIVAL PAVILION (Y=0.18)
           ============================================================ */}
@@ -124,7 +169,7 @@ export function OfficeArchitecture({
             map={textures.marbleTile}
             bumpMap={textures.marbleBump}
             bumpScale={0.025}
-            roughness={0.28}
+            roughness={0.26}
             metalness={0.08}
           />
         </mesh>
@@ -136,11 +181,11 @@ export function OfficeArchitecture({
             map={textures.stuccoWall}
             bumpMap={textures.stuccoBump}
             bumpScale={0.03}
-            roughness={0.74}
+            roughness={0.72}
           />
         </mesh>
 
-        {/* Side Architectural Structural Walls (West X=-14, East X=14) */}
+        {/* Side Architectural Walls + Side Panoramic Windows */}
         {[-14, 14].map((x, idx) => (
           <group key={idx}>
             <mesh position={[x, 2.02, -5.2]} castShadow receiveShadow>
@@ -149,16 +194,15 @@ export function OfficeArchitecture({
                 map={textures.stuccoWall}
                 bumpMap={textures.stuccoBump}
                 bumpScale={0.03}
-                roughness={0.74}
+                roughness={0.72}
               />
             </mesh>
-            {/* Side glass windows */}
             <mesh position={[x, 2.02, 1.8]}>
               <boxGeometry args={[0.08, 3.55, 4.4]} />
               <meshPhysicalMaterial
                 color="#d8ecf8"
                 transparent
-                opacity={0.28}
+                opacity={0.25}
                 roughness={0.06}
                 metalness={0.1}
               />
@@ -173,7 +217,7 @@ export function OfficeArchitecture({
             <meshPhysicalMaterial
               color="#d8edf8"
               transparent
-              opacity={0.24}
+              opacity={0.2}
               roughness={0.06}
               metalness={0.12}
             />
@@ -198,36 +242,51 @@ export function OfficeArchitecture({
           <meshStandardMaterial color="#2a303a" metalness={0.62} roughness={0.35} />
         </mesh>
 
-        {/* Warm Marble Reception Desk */}
+        {/* Luxury Marble Reception Desk with Dual Monitors & Floral Accent */}
         <group position={[0, FLOOR_1_Y, -5.2]}>
           <mesh position={[0, 0.56, 0]} castShadow receiveShadow>
-            <boxGeometry args={[5.4, 1.12, 1.15]} />
+            <boxGeometry args={[5.6, 1.12, 1.2]} />
             <meshStandardMaterial
               map={textures.marbleTile}
-              roughness={0.22}
+              roughness={0.2}
               metalness={0.08}
             />
           </mesh>
-          {/* Warm oak top counter & gold trim */}
-          <mesh position={[0, 1.14, 0.05]} castShadow>
-            <boxGeometry args={[5.55, 0.08, 1.24]} />
-            <meshStandardMaterial color="#8f633b" roughness={0.48} />
+          <mesh position={[0, 1.14, 0.04]} castShadow>
+            <boxGeometry args={[5.75, 0.08, 1.28]} />
+            <meshStandardMaterial color="#8f633b" roughness={0.46} />
           </mesh>
-          <mesh position={[0, 0.58, 0.59]}>
-            <boxGeometry args={[5.2, 0.06, 0.03]} />
+          <mesh position={[0, 0.58, 0.62]}>
+            <boxGeometry args={[5.4, 0.06, 0.03]} />
             <meshStandardMaterial
               color="#d4af37"
               metalness={0.85}
               roughness={0.2}
               emissive="#f59e0b"
-              emissiveIntensity={isNight ? 1.2 : 0.25}
+              emissiveIntensity={isNight ? 1.3 : 0.35}
             />
+          </mesh>
+          {/* Receptionist Monitors */}
+          {[-1.1, 1.1].map((mx, i) => (
+            <mesh key={i} position={[mx, 1.44, -0.15]}>
+              <boxGeometry args={[0.72, 0.44, 0.04]} />
+              <meshStandardMaterial color="#111827" roughness={0.3} />
+            </mesh>
+          ))}
+          {/* Reception Floral Vase */}
+          <mesh position={[0, 1.34, 0.22]}>
+            <cylinderGeometry args={[0.1, 0.08, 0.28, 12]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.2} />
+          </mesh>
+          <mesh position={[0, 1.56, 0.22]}>
+            <sphereGeometry args={[0.18, 10, 10]} />
+            <meshStandardMaterial color="#ec4899" roughness={0.75} />
           </mesh>
         </group>
 
         {/* Wood-slat feature wall behind Reception + Brand Signage */}
         <mesh position={[0, 2.08, -9.72]} castShadow>
-          <boxGeometry args={[9.4, 3.2, 0.18]} />
+          <boxGeometry args={[9.8, 3.2, 0.18]} />
           <meshStandardMaterial color="#6e4b2e" roughness={0.62} />
         </mesh>
         <Text
@@ -243,32 +302,54 @@ export function OfficeArchitecture({
         <Text
           position={[0, 1.92, -9.58]}
           fontSize={0.2}
-          color="#cbd5e1"
+          color="#fde68a"
           letterSpacing={0.2}
           anchorX="center"
           anchorY="middle"
         >
-          GLOBAL HEADQUARTERS · SIMULATION MODE
+          EXECUTIVE HEADQUARTERS · 10 STAFF + BOS FAJREZ
         </Text>
 
-        {/* West & East Lobby Waiting Lounge Sets */}
+        {/* West & East Luxury Lobby Lounge Sets (Sofas + Armrests + Pillows + Marble Tables) */}
         {[-8.4, 8.4].map((lx, idx) => (
           <group key={idx} position={[lx, FLOOR_1_Y, -1.6]}>
-            <mesh position={[0, 0.26, -1.25]} castShadow receiveShadow>
-              <boxGeometry args={[3.4, 0.48, 0.96]} />
-              <meshStandardMaterial color="#3c4654" roughness={0.84} />
+            <mesh position={[0, 0.02, -0.2]} receiveShadow>
+              <boxGeometry args={[4.6, 0.03, 3.6]} />
+              <meshStandardMaterial color="#dfd8cc" roughness={0.92} />
+            </mesh>
+            {/* Plush 3-seater sofa */}
+            <mesh position={[0, 0.28, -1.25]} castShadow receiveShadow>
+              <boxGeometry args={[3.5, 0.44, 0.98]} />
+              <meshStandardMaterial color="#3c4654" roughness={0.82} />
             </mesh>
             <mesh position={[0, 0.64, -1.62]} castShadow>
-              <boxGeometry args={[3.4, 0.48, 0.24]} />
-              <meshStandardMaterial color="#333c49" roughness={0.84} />
+              <boxGeometry args={[3.5, 0.48, 0.24]} />
+              <meshStandardMaterial color="#333c49" roughness={0.82} />
             </mesh>
-            <mesh position={[0, 0.24, 0.35]} castShadow receiveShadow>
-              <boxGeometry args={[1.9, 0.38, 0.95]} />
-              <meshStandardMaterial color="#8b623c" roughness={0.45} />
+            {/* Sofa Armrests */}
+            {[-1.68, 1.68].map((ax, ai) => (
+              <mesh key={ai} position={[ax, 0.46, -1.25]} castShadow>
+                <boxGeometry args={[0.18, 0.42, 0.98]} />
+                <meshStandardMaterial color="#2f3744" roughness={0.8} />
+              </mesh>
+            ))}
+            {/* Accent throw pillows */}
+            <mesh position={[-1.2, 0.62, -1.35]} rotation={[0.2, 0.2, 0]}>
+              <boxGeometry args={[0.38, 0.34, 0.14]} />
+              <meshStandardMaterial color="#d97706" roughness={0.86} />
             </mesh>
-            <mesh position={[0, 0.02, -0.2]} receiveShadow>
-              <boxGeometry args={[4.4, 0.03, 3.4]} />
-              <meshStandardMaterial color="#dcd6cb" roughness={0.94} />
+            <mesh position={[1.2, 0.62, -1.35]} rotation={[0.2, -0.2, 0]}>
+              <boxGeometry args={[0.38, 0.34, 0.14]} />
+              <meshStandardMaterial color="#0284c7" roughness={0.86} />
+            </mesh>
+            {/* Oak & Marble Coffee Table */}
+            <mesh position={[0, 0.26, 0.35]} castShadow receiveShadow>
+              <boxGeometry args={[1.95, 0.36, 0.95]} />
+              <meshStandardMaterial color="#8b623c" roughness={0.44} />
+            </mesh>
+            <mesh position={[0, 0.45, 0.35]}>
+              <boxGeometry args={[1.85, 0.04, 0.85]} />
+              <meshStandardMaterial map={textures.marbleTile} roughness={0.2} />
             </mesh>
           </group>
         ))}
@@ -283,30 +364,39 @@ export function OfficeArchitecture({
               receiveShadow
             >
               <boxGeometry args={[2.1, 0.1, 0.42]} />
-              <meshStandardMaterial color="#9a6e45" roughness={0.58} />
+              <meshStandardMaterial color="#9a6e45" roughness={0.55} />
             </mesh>
           ))}
+          {/* Glass side balustrade */}
+          <mesh position={[-1.06, 2.0, 2.2]} rotation={[0.64, 0, 0]}>
+            <boxGeometry args={[0.05, 0.95, 5.8]} />
+            <meshPhysicalMaterial
+              color="#d8eef8"
+              transparent
+              opacity={0.32}
+              roughness={0.08}
+            />
+          </mesh>
         </group>
 
         {/* Indoor Olive Planters */}
         <IndoorPlanter position={[-5.4, FLOOR_1_Y, 2.8]} />
         <IndoorPlanter position={[5.4, FLOOR_1_Y, 2.8]} />
-        <IndoorPlanter position={[-12.2, FLOOR_1_Y, -8.2]} />
+        <IndoorPlanter position={[-12.6, FLOOR_1_Y, 2.8]} />
+        <IndoorPlanter position={[12.6, FLOOR_1_Y, 2.8]} />
 
         {/* Warm Lobby Pendant Lamps */}
         <PendantLight position={[-6, 3.22, -1.5]} isNight={isNight} isSunset={isSunset} />
         <PendantLight position={[0, 3.22, -4.5]} isNight={isNight} isSunset={isSunset} />
         <PendantLight position={[6, 3.22, -1.5]} isNight={isNight} isSunset={isSunset} />
 
-        {/* Lobby Interior Point Light */}
-        {(isNight || isSunset || performanceMode !== "eco") && (
-          <pointLight
-            position={[0, 3.2, -2.5]}
-            color="#ffe6c2"
-            intensity={isNight ? 18 : isSunset ? 10 : 5}
-            distance={20}
-          />
-        )}
+        {/* Warm L1 Interior Light (always active so lobby never looks dark/shadowed!) */}
+        <pointLight
+          position={[0, 3.2, -2.2]}
+          color="#fff0d6"
+          intensity={isNight ? 20 : isSunset ? 13 : 9}
+          distance={26}
+        />
       </group>
 
       {/* ============================================================
@@ -314,7 +404,6 @@ export function OfficeArchitecture({
           ============================================================ */}
       {showL2 && (
         <group>
-          {/* Main L2 Architectural Slab + Cantilevered Front Terrace */}
           <mesh
             position={[0, FLOOR_2_Y - 0.14, -2.5]}
             castShadow
@@ -330,7 +419,6 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Warm Oak Plank Interior Floor Surface */}
           <mesh
             position={[0, FLOOR_2_Y + 0.01, -3.0]}
             receiveShadow
@@ -341,11 +429,10 @@ export function OfficeArchitecture({
               map={textures.officeOak}
               bumpMap={textures.officeOakBump}
               bumpScale={0.04}
-              roughness={0.52}
+              roughness={0.5}
             />
           </mesh>
 
-          {/* Warm LED architectural under-slab glow strip */}
           <mesh position={[0, FLOOR_2_Y - 0.27, 5.28]}>
             <boxGeometry args={[28.4, 0.05, 0.08]} />
             <meshStandardMaterial
@@ -355,7 +442,6 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* L2 Rear Wall (Z = -10) */}
           <mesh position={[0, FLOOR_2_Y + 1.9, -10]} castShadow receiveShadow>
             <boxGeometry args={[28.2, 3.82, 0.34]} />
             <meshStandardMaterial
@@ -366,7 +452,7 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* GIANT 20m High-Res Global Operations Command Wall */}
+          {/* GIANT 19m High-Res Global Operations Command Wall */}
           <group position={[0, FLOOR_2_Y + 1.95, -9.76]}>
             <mesh castShadow>
               <boxGeometry args={[18.8, 2.75, 0.16]} />
@@ -378,17 +464,16 @@ export function OfficeArchitecture({
                 map={textures.commandWallScreen}
                 emissiveMap={textures.commandWallScreen}
                 emissive="#ffffff"
-                emissiveIntensity={isNight ? 0.9 : 0.45}
+                emissiveIntensity={isNight ? 0.95 : 0.55}
                 roughness={0.2}
               />
             </mesh>
           </group>
 
-          {/* West Wing Glass Server Room (X = -12.1) */}
-          <group position={[-12.2, FLOOR_2_Y, -6.4]}>
-            {/* Glass partition */}
+          {/* West Wing Glass Server Room (X = -12.2) */}
+          <group position={[-12.2, FLOOR_2_Y, -4.4]}>
             <mesh position={[1.45, 1.85, 0]}>
-              <boxGeometry args={[0.06, 3.65, 6.4]} />
+              <boxGeometry args={[0.06, 3.65, 5.4]} />
               <meshPhysicalMaterial
                 color="#bae6fd"
                 transparent
@@ -396,8 +481,7 @@ export function OfficeArchitecture({
                 roughness={0.06}
               />
             </mesh>
-            {/* 3 High-Tech Server Racks */}
-            {[-2.0, 0, 2.0].map((rz, idx) => (
+            {[-1.6, 0, 1.6].map((rz, idx) => (
               <group key={idx} position={[0, 1.15, rz]}>
                 <mesh castShadow>
                   <boxGeometry args={[0.92, 2.25, 1.15]} />
@@ -407,7 +491,6 @@ export function OfficeArchitecture({
                     roughness={0.32}
                   />
                 </mesh>
-                {/* Status LED indicators */}
                 {[-0.6, -0.1, 0.4, 0.8].map((ly, li) => (
                   <mesh key={li} position={[0.47, ly, 0]}>
                     <boxGeometry args={[0.02, 0.05, 0.85]} />
@@ -422,23 +505,31 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* East Wing Espresso & Collaboration Lounge (X = 12.1) */}
-          <group position={[12.2, FLOOR_2_Y, -5.8]}>
-            {/* Espresso counter */}
+          {/* East Wing Espresso & Collaboration Bar (X = 12.2) */}
+          <group position={[12.2, FLOOR_2_Y, -4.6]}>
             <mesh position={[0.2, 0.54, 0]} castShadow receiveShadow>
-              <boxGeometry args={[1.1, 1.06, 4.6]} />
-              <meshStandardMaterial color="#875d39" roughness={0.5} />
+              <boxGeometry args={[1.1, 1.06, 4.8]} />
+              <meshStandardMaterial color="#875d39" roughness={0.48} />
             </mesh>
             <mesh position={[0.2, 1.09, 0]}>
-              <boxGeometry args={[1.18, 0.06, 4.7]} />
-              <meshStandardMaterial map={textures.marbleTile} roughness={0.22} />
+              <boxGeometry args={[1.18, 0.06, 4.9]} />
+              <meshStandardMaterial map={textures.marbleTile} roughness={0.2} />
             </mesh>
             {/* Espresso Machine */}
-            <mesh position={[0.25, 1.38, -0.6]} castShadow>
+            <mesh position={[0.25, 1.38, -0.8]} castShadow>
               <boxGeometry args={[0.52, 0.52, 0.68]} />
               <meshStandardMaterial color="#cbd5e1" metalness={0.82} roughness={0.2} />
             </mesh>
-            {/* High bar stools */}
+            {/* Coffee Cups & Pastry Display Dome */}
+            <mesh position={[0.22, 1.24, 0.9]}>
+              <sphereGeometry args={[0.22, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+              <meshPhysicalMaterial
+                color="#e0f2fe"
+                transparent
+                opacity={0.45}
+                roughness={0.08}
+              />
+            </mesh>
             {[-1.3, 0, 1.3].map((sz, i) => (
               <group key={i} position={[-0.78, 0, sz]}>
                 <mesh position={[0, 0.36, 0]}>
@@ -453,7 +544,7 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* Side Walls & Timber Architectural Louver Fins */}
+          {/* Side Walls & Timber Louver Fins */}
           {[-14, 14].map((x, idx) => (
             <mesh key={idx} position={[x, FLOOR_2_Y + 1.9, -6.2]} castShadow receiveShadow>
               <boxGeometry args={[0.34, 3.82, 7.6]} />
@@ -466,7 +557,6 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Architectural Vertical Cedar Louver Fins (Exterior Front Corners) */}
           {timberFins.map((fx, i) => (
             <mesh key={i} position={[fx, FLOOR_2_Y + 1.9, 4.18]} castShadow>
               <boxGeometry args={[0.12, 3.74, 0.42]} />
@@ -474,7 +564,6 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Structural Bronze Mullions (L2 Front Glass) */}
           {frontColumnsX.map((cx, i) => (
             <mesh key={i} position={[cx, FLOOR_2_Y + 1.9, 4.02]} castShadow>
               <boxGeometry args={[0.28, 3.82, 0.28]} />
@@ -482,27 +571,26 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Front Panoramic Glass Curtain (only when viewing full building; hidden in L2 cutaway so desks are ultra clear!) */}
           {activeFloor !== "l2" && (
             <mesh position={[0, FLOOR_2_Y + 1.9, 4.0]}>
               <boxGeometry args={[27.2, 3.62, 0.07]} />
               <meshPhysicalMaterial
                 color="#d8eef8"
                 transparent
-                opacity={0.2}
+                opacity={0.18}
                 roughness={0.05}
                 metalness={0.14}
               />
             </mesh>
           )}
 
-          {/* Cantilevered Front Glass Balcony Railing (Z = 5.25) */}
+          {/* Cantilevered Front Glass Balcony Railing */}
           <mesh position={[0, FLOOR_2_Y + 0.56, 5.28]}>
             <boxGeometry args={[28.4, 1.06, 0.06]} />
             <meshPhysicalMaterial
               color="#d6eaf8"
               transparent
-              opacity={0.28}
+              opacity={0.26}
               roughness={0.08}
             />
           </mesh>
@@ -510,6 +598,9 @@ export function OfficeArchitecture({
             <boxGeometry args={[28.5, 0.06, 0.1]} />
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>
+
+          <IndoorPlanter position={[-12.6, FLOOR_2_Y, 2.4]} />
+          <IndoorPlanter position={[12.6, FLOOR_2_Y, 2.4]} />
 
           {/* Linear Architectural Ceiling Light Bars for L2 */}
           {[-9, -3, 3, 9].map((lx, i) => (
@@ -523,32 +614,29 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* L2 Interior Lights */}
-          {(isNight || isSunset || performanceMode !== "eco") && (
-            <>
-              <pointLight
-                position={[-6, FLOOR_2_Y + 3.2, -3.2]}
-                color="#fff1d8"
-                intensity={isNight ? 18 : isSunset ? 11 : 6}
-                distance={22}
-              />
-              <pointLight
-                position={[6, FLOOR_2_Y + 3.2, -3.2]}
-                color="#fff1d8"
-                intensity={isNight ? 18 : isSunset ? 11 : 6}
-                distance={22}
-              />
-            </>
+          {/* L2 Bright Interior Illumination */}
+          <pointLight
+            position={[-6, FLOOR_2_Y + 3.2, -3.2]}
+            color="#fff2dc"
+            intensity={isNight ? 18 : isSunset ? 12 : 8}
+            distance={24}
+          />
+          {performanceMode !== "eco" && (
+            <pointLight
+              position={[6, FLOOR_2_Y + 3.2, -3.2]}
+              color="#fff2dc"
+              intensity={isNight ? 18 : isSunset ? 12 : 8}
+              distance={24}
+            />
           )}
         </group>
       )}
 
       {/* ============================================================
-          FLOOR 3 — EXECUTIVE DIRECTOR SUITE & BOARDROOM (Y=7.8)
+          FLOOR 3 — EXECUTIVE SUITE, BOARDROOM & BOS FAJREZ OFFICE (Y=7.8)
           ============================================================ */}
       {showL3 && (
         <group>
-          {/* L3 Architectural Slab + Cantilevered Sky Terrace */}
           <mesh
             position={[0, FLOOR_3_Y - 0.14, -2.6]}
             castShadow
@@ -564,7 +652,6 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Polished Light Oak & Marble Floor */}
           <mesh
             position={[0, FLOOR_3_Y + 0.01, -3.0]}
             receiveShadow
@@ -575,11 +662,10 @@ export function OfficeArchitecture({
               map={textures.marbleTile}
               bumpMap={textures.marbleBump}
               bumpScale={0.025}
-              roughness={0.28}
+              roughness={0.26}
             />
           </mesh>
 
-          {/* Warm LED architectural under-slab accent */}
           <mesh position={[0, FLOOR_3_Y - 0.27, 5.18]}>
             <boxGeometry args={[28.4, 0.05, 0.08]} />
             <meshStandardMaterial
@@ -589,7 +675,6 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Rear & Side Architectural Walls */}
           <mesh position={[0, FLOOR_3_Y + 1.85, -10]} castShadow receiveShadow>
             <boxGeometry args={[28.2, 3.72, 0.34]} />
             <meshStandardMaterial
@@ -611,7 +696,23 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Vertical Timber Louvers L3 */}
+          {/* Executive Boardroom Wall Presentation Display */}
+          <group position={[-4.5, FLOOR_3_Y + 1.9, -9.76]}>
+            <mesh>
+              <boxGeometry args={[6.2, 2.2, 0.14]} />
+              <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0, 0.08]}>
+              <planeGeometry args={[5.9, 1.96]} />
+              <meshStandardMaterial
+                map={textures.commandWallScreen}
+                emissiveMap={textures.commandWallScreen}
+                emissive="#ffffff"
+                emissiveIntensity={isNight ? 0.85 : 0.45}
+              />
+            </mesh>
+          </group>
+
           {timberFins.map((fx, i) => (
             <mesh key={i} position={[fx, FLOOR_3_Y + 1.85, 4.18]} castShadow>
               <boxGeometry args={[0.12, 3.68, 0.42]} />
@@ -619,12 +720,11 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Executive Boardroom Table & Chairs (West/Center) */}
+          {/* Executive Boardroom Table with Open Laptops & 6 Leather Chairs */}
           <group position={[-4.5, FLOOR_3_Y, -3.5]}>
-            {/* Grand Walnut & Marble Conference Table */}
             <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
               <boxGeometry args={[6.4, 0.1, 2.2]} />
-              <meshStandardMaterial color="#5e3e24" roughness={0.34} metalness={0.08} />
+              <meshStandardMaterial color="#5e3e24" roughness={0.32} metalness={0.08} />
             </mesh>
             {[-2.2, 2.2].map((px, i) => (
               <mesh key={i} position={[px, 0.38, 0]} castShadow>
@@ -632,9 +732,17 @@ export function OfficeArchitecture({
                 <meshStandardMaterial color="#252c38" metalness={0.65} roughness={0.35} />
               </mesh>
             ))}
-            {/* 6 Executive Leather Chairs */}
-            {[-2.0, 0, 2.0].map((cx, i) => (
+            {/* Open Laptops on Conference Table */}
+            {[-1.8, 0, 1.8].map((cx, i) => (
               <React.Fragment key={i}>
+                <mesh position={[cx, 0.85, -0.68]}>
+                  <boxGeometry args={[0.38, 0.02, 0.26]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.75} roughness={0.25} />
+                </mesh>
+                <mesh position={[cx, 0.85, 0.68]}>
+                  <boxGeometry args={[0.38, 0.02, 0.26]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.75} roughness={0.25} />
+                </mesh>
                 <mesh position={[cx, 0.56, -1.52]} castShadow>
                   <boxGeometry args={[0.62, 0.96, 0.58]} />
                   <meshStandardMaterial color="#232934" roughness={0.7} />
@@ -647,24 +755,48 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* Executive Sky Lounge & CEO Desk (East Side) */}
-          <group position={[7.2, FLOOR_3_Y, -3.5]}>
-            <mesh position={[0, 0.3, -1.6]} castShadow receiveShadow>
-              <boxGeometry args={[4.4, 0.52, 1.05]} />
+          {/* BOS FAJREZ PRIVATE CEO DESK + SKY LOUNGE (East Wing) */}
+          <group position={[7.4, FLOOR_3_Y, -4.2]}>
+            {/* Executive Walnut & Gold CEO Desk */}
+            <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
+              <boxGeometry args={[3.4, 0.1, 1.35]} />
+              <meshStandardMaterial color="#5a391f" roughness={0.34} />
+            </mesh>
+            <mesh position={[0, 0.39, 0.64]}>
+              <boxGeometry args={[3.3, 0.72, 0.08]} />
+              <meshStandardMaterial color="#202632" roughness={0.5} />
+            </mesh>
+            <mesh position={[0, 0.4, 0.69]}>
+              <boxGeometry args={[3.1, 0.06, 0.02]} />
+              <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
+            </mesh>
+            {/* Ultrawide CEO Display */}
+            <mesh position={[0, 1.18, -0.25]}>
+              <boxGeometry args={[1.45, 0.54, 0.05]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.25} />
+            </mesh>
+            <mesh position={[0, 1.18, -0.22]}>
+              <planeGeometry args={[1.38, 0.48]} />
+              <meshStandardMaterial
+                map={textures.monitorScreen}
+                emissiveMap={textures.monitorScreen}
+                emissive="#ffffff"
+                emissiveIntensity={0.65}
+              />
+            </mesh>
+            {/* Executive High-Back Chair */}
+            <mesh position={[0, 0.64, -1.05]} castShadow>
+              <boxGeometry args={[0.74, 1.12, 0.66]} />
+              <meshStandardMaterial color="#1f2532" roughness={0.65} />
+            </mesh>
+            {/* Sky Lounge Sofa facing balcony */}
+            <mesh position={[0, 0.3, 3.2]} castShadow receiveShadow>
+              <boxGeometry args={[4.2, 0.48, 1.0]} />
               <meshStandardMaterial color="#dfd8cc" roughness={0.86} />
             </mesh>
-            <mesh position={[0, 0.68, -2.02]} castShadow>
-              <boxGeometry args={[4.4, 0.5, 0.24]} />
-              <meshStandardMaterial color="#d3cbbe" roughness={0.86} />
-            </mesh>
-            <mesh position={[0, 0.26, 0.2]} castShadow receiveShadow>
-              <boxGeometry args={[2.1, 0.38, 1.05]} />
-              <meshStandardMaterial color="#7d5634" roughness={0.42} />
-            </mesh>
-            <IndoorPlanter position={[4.2, 0, -2.2]} />
+            <IndoorPlanter position={[4.2, 0, -2.0]} />
           </group>
 
-          {/* Columns & Panoramic Glass */}
           {frontColumnsX.map((cx, i) => (
             <mesh key={i} position={[cx, FLOOR_3_Y + 1.85, 4.02]} castShadow>
               <boxGeometry args={[0.28, 3.74, 0.28]} />
@@ -677,7 +809,7 @@ export function OfficeArchitecture({
               <meshPhysicalMaterial
                 color="#d8eef8"
                 transparent
-                opacity={0.2}
+                opacity={0.18}
                 roughness={0.05}
                 metalness={0.14}
               />
@@ -690,7 +822,7 @@ export function OfficeArchitecture({
             <meshPhysicalMaterial
               color="#d6eaf8"
               transparent
-              opacity={0.28}
+              opacity={0.26}
               roughness={0.08}
             />
           </mesh>
@@ -699,24 +831,20 @@ export function OfficeArchitecture({
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>
 
-          {/* L3 Warm Lighting */}
-          {(isNight || isSunset) && (
-            <pointLight
-              position={[0, FLOOR_3_Y + 3.0, -3.2]}
-              color="#ffe9c8"
-              intensity={isNight ? 16 : 9}
-              distance={22}
-            />
-          )}
+          <pointLight
+            position={[0, FLOOR_3_Y + 3.0, -3.2]}
+            color="#fff0d8"
+            intensity={isNight ? 18 : isSunset ? 11 : 7}
+            distance={24}
+          />
         </group>
       )}
 
       {/* ============================================================
-          ROOFTOP — HELIPAD, PADEL COURT & ARCHITECTURAL CROWN (Y=11.6)
+          ROOFTOP — HELIPAD, PADEL COURT & SKY LOUNGE (Y=11.6)
           ============================================================ */}
       {showRoof && (
         <group>
-          {/* Grand Cantilevered Roof Deck */}
           <mesh
             position={[0, 11.58, -2.5]}
             castShadow
@@ -732,7 +860,6 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Architectural Dark Crown Fascia + Brand Nameplate */}
           <mesh position={[0, 11.78, 5.56]} castShadow>
             <boxGeometry args={[29.5, 0.56, 0.18]} />
             <meshStandardMaterial color="#1f2530" metalness={0.65} roughness={0.34} />
@@ -748,18 +875,17 @@ export function OfficeArchitecture({
             FAJREZZZ AI OFFICE
           </Text>
 
-          {/* Rooftop Perimeter Glass Balustrade */}
           <mesh position={[0, 12.34, 5.38]}>
             <boxGeometry args={[28.8, 1.05, 0.06]} />
             <meshPhysicalMaterial
               color="#d6eaf8"
               transparent
-              opacity={0.28}
+              opacity={0.26}
               roughness={0.08}
             />
           </mesh>
 
-          {/* WEST ROOF: Architectural Helipad */}
+          {/* WEST ROOF: Architectural Helipad + Corner Beacon Lights */}
           <group position={[-7.5, 11.81, -2.6]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
               <circleGeometry args={[4.4, 32]} />
@@ -770,10 +896,9 @@ export function OfficeArchitecture({
               <meshStandardMaterial
                 color="#facc15"
                 emissive="#facc15"
-                emissiveIntensity={isNight ? 1.5 : 0.2}
+                emissiveIntensity={isNight ? 1.6 : 0.25}
               />
             </mesh>
-            {/* H marking */}
             <mesh position={[-0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[0.45, 2.6]} />
               <meshStandardMaterial color="#f8fafc" roughness={0.5} />
@@ -786,15 +911,30 @@ export function OfficeArchitecture({
               <planeGeometry args={[1.9, 0.45]} />
               <meshStandardMaterial color="#f8fafc" roughness={0.5} />
             </mesh>
+            {/* 4 Helipad Beacon Lights */}
+            {[
+              [-4.2, 0.12, -4.2],
+              [4.2, 0.12, -4.2],
+              [-4.2, 0.12, 4.2],
+              [4.2, 0.12, 4.2],
+            ].map((bp, bi) => (
+              <mesh key={bi} position={bp as [number, number, number]}>
+                <cylinderGeometry args={[0.14, 0.16, 0.22, 10]} />
+                <meshStandardMaterial
+                  color="#34d399"
+                  emissive="#10b981"
+                  emissiveIntensity={isNight ? 2.8 : 0.9}
+                />
+              </mesh>
+            ))}
           </group>
 
-          {/* EAST ROOF: Executive Sky Padel Court & Solar Pergola */}
+          {/* EAST ROOF: Executive Sky Padel Court with Glass Side Walls */}
           <group position={[6.5, 11.81, -2.6]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
               <planeGeometry args={[11.2, 7.2]} />
               <meshStandardMaterial color="#1d5f8f" roughness={0.78} />
             </mesh>
-            {/* Court white boundary lines */}
             <mesh position={[0, 0.015, -3.3]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[10.4, 0.12]} />
               <meshStandardMaterial color="#f8fafc" />
@@ -811,10 +951,21 @@ export function OfficeArchitecture({
               <planeGeometry args={[0.12, 6.72]} />
               <meshStandardMaterial color="#f8fafc" />
             </mesh>
-            {/* Center court net */}
             <mesh position={[0, 0.48, 0]}>
               <boxGeometry args={[0.05, 0.92, 6.6]} />
               <meshStandardMaterial color="#e2e8f0" transparent opacity={0.62} />
+            </mesh>
+          </group>
+
+          {/* Rooftop Sky Lounge Sofa Terrace (Front Center) */}
+          <group position={[0, 11.8, 3.4]}>
+            <mesh position={[0, 0.28, 0]} castShadow>
+              <boxGeometry args={[3.6, 0.44, 0.95]} />
+              <meshStandardMaterial color="#f4efe6" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 0.62, -0.38]} castShadow>
+              <boxGeometry args={[3.6, 0.44, 0.22]} />
+              <meshStandardMaterial color="#e6dfd2" roughness={0.86} />
             </mesh>
           </group>
         </group>

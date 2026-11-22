@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, Sky } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { BossPlayer } from "@/components/office3d/BossPlayer";
 import { CyberOutdoorCampus } from "@/components/office3d/CyberOutdoorCampus";
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
@@ -16,14 +17,13 @@ const CAMERA_PRESETS: Record<
   CameraPreset,
   { pos: Vector3Tuple; target: Vector3Tuple }
 > = {
-  // Hero front-quarter framing: Grand 28m HQ + Pool + Supercar fills screen cleanly
   front: { pos: [14, 12.2, 28.5], target: [0, 4.6, 1.8] },
   isometric: { pos: [-26, 20, 26], target: [0, 4.5, 1.5] },
   interior: { pos: [0, 12.8, 13.8], target: [0, 4.4, -3.2] },
   executive: { pos: [11, 13.5, 13.5], target: [0, 8.6, -3.2] },
   rooftop: { pos: [18, 22.5, 16.5], target: [0, 11.8, -2.5] },
   pool: { pos: [12.5, 5.2, 22.0], target: [-1.5, 1.5, 10.5] },
-  supercar: { pos: [14.8, 3.6, 17.6], target: [9.2, 0.9, 11.2] },
+  supercar: { pos: [14.8, 3.6, 17.6], target: [9.4, 0.9, 11.3] },
 };
 
 function FreeRoamCameraRig() {
@@ -33,6 +33,10 @@ function FreeRoamCameraRig() {
     cameraFocusCommand,
     cameraNudgeRef,
     autoRotate,
+    isBossMode,
+    bossFollowCamera,
+    bossPositionRef,
+    bossTeleportCommand,
   } = useOffice();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const { camera } = useThree();
@@ -43,10 +47,13 @@ function FreeRoamCameraRig() {
   );
   const isTransitioningRef = useRef(false);
   const keysPressedRef = useRef<Set<string>>(new Set());
+  const prevBossTargetRef = useRef(new THREE.Vector3(2.8, 1.5, 6.2));
+  const bossInitializedRef = useRef(false);
 
   const forwardVec = useMemo(() => new THREE.Vector3(), []);
   const rightVec = useMemo(() => new THREE.Vector3(), []);
   const moveDelta = useMemo(() => new THREE.Vector3(), []);
+  const bossTargetVec = useMemo(() => new THREE.Vector3(), []);
 
   // Preset trigger
   useEffect(() => {
@@ -56,7 +63,21 @@ function FreeRoamCameraRig() {
     isTransitioningRef.current = true;
   }, [cameraPreset, cameraResetTick]);
 
-  // Free-roam point focus trigger (double-click anywhere in 3D or tap Focus on staff)
+  // Snap smoothly behind BOS FAJREZ when Boss Mode is activated or Boss teleports
+  useEffect(() => {
+    if (!isBossMode || !bossFollowCamera) {
+      bossInitializedRef.current = false;
+      return;
+    }
+    const [bx, by, bz] = bossPositionRef.current;
+    desiredTargetRef.current.set(bx, by + 1.35, bz);
+    desiredPosRef.current.set(bx + 4.8, by + 4.6, bz + 7.8);
+    prevBossTargetRef.current.set(bx, by + 1.35, bz);
+    isTransitioningRef.current = true;
+    bossInitializedRef.current = true;
+  }, [isBossMode, bossFollowCamera, bossTeleportCommand, bossPositionRef]);
+
+  // Free-roam point focus trigger
   useEffect(() => {
     if (!cameraFocusCommand) return;
     const [tx, ty, tz] = cameraFocusCommand.target;
@@ -68,7 +89,6 @@ function FreeRoamCameraRig() {
       const [ox, oy, oz] = cameraFocusCommand.offset;
       desiredPosRef.current.set(tx + ox, ty + oy, tz + oz);
     } else if (ctrl) {
-      // Keep current viewing angle, glide comfortably close to the clicked 3D point
       const dir = camera.position.clone().sub(ctrl.target);
       const currentDist = dir.length();
       const targetDist = Math.min(Math.max(currentDist * 0.6, 5.2), 12.5);
@@ -85,7 +105,7 @@ function FreeRoamCameraRig() {
     isTransitioningRef.current = true;
   }, [cameraFocusCommand, camera]);
 
-  // PC Keyboard WASD / Arrow Keys / Q-E Free-Roam navigation
+  // PC Keyboard WASD / Arrows / Q-E Free-Roam camera (disabled while Boss Mode owns WASD)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
@@ -106,7 +126,9 @@ function FreeRoamCameraRig() {
         ].includes(key)
       ) {
         keysPressedRef.current.add(key);
-        isTransitioningRef.current = false;
+        if (!isBossMode) {
+          isTransitioningRef.current = false;
+        }
       }
     };
 
@@ -126,7 +148,7 @@ function FreeRoamCameraRig() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, []);
+  }, [isBossMode]);
 
   useFrame((_, delta) => {
     const ctrl = controlsRef.current;
@@ -134,23 +156,53 @@ function FreeRoamCameraRig() {
 
     const dt = Math.min(delta, 0.05);
 
-    // 1) Combine PC keyboard + Mobile on-screen Free-Roam D-Pad inputs
+    // 1) Third-person Game Follow Camera when playing as BOS FAJREZ
+    if (isBossMode && bossFollowCamera) {
+      const [bx, by, bz] = bossPositionRef.current;
+      bossTargetVec.set(bx, by + 1.35, bz);
+
+      if (isTransitioningRef.current) {
+        const lerpFactor = Math.min(1, dt * 6.5);
+        camera.position.lerp(desiredPosRef.current, lerpFactor);
+        ctrl.target.lerp(bossTargetVec, lerpFactor);
+        prevBossTargetRef.current.copy(bossTargetVec);
+
+        if (
+          camera.position.distanceTo(desiredPosRef.current) < 0.12 &&
+          ctrl.target.distanceTo(bossTargetVec) < 0.12
+        ) {
+          isTransitioningRef.current = false;
+        }
+      } else {
+        // Shift camera & target together by BOS FAJREZ's movement delta so user can freely orbit/zoom around him!
+        moveDelta.copy(bossTargetVec).sub(prevBossTargetRef.current);
+        camera.position.add(moveDelta);
+        ctrl.target.lerp(bossTargetVec, Math.min(1, dt * 10));
+        prevBossTargetRef.current.copy(bossTargetVec);
+      }
+
+      ctrl.update();
+      return;
+    }
+
+    // 2) Free-Roam Camera movement (PC WASD/Arrows + Mobile Free-Roam Pad)
     const keys = keysPressedRef.current;
     let moveF = cameraNudgeRef.current.forward;
     let moveR = cameraNudgeRef.current.right;
     let moveU = cameraNudgeRef.current.up;
 
-    if (keys.has("w") || keys.has("arrowup")) moveF += 1;
-    if (keys.has("s") || keys.has("arrowdown")) moveF -= 1;
-    if (keys.has("d") || keys.has("arrowright")) moveR += 1;
-    if (keys.has("a") || keys.has("arrowleft")) moveR -= 1;
-    if (keys.has("e")) moveU += 1;
-    if (keys.has("q")) moveU -= 1;
+    if (!isBossMode) {
+      if (keys.has("w") || keys.has("arrowup")) moveF += 1;
+      if (keys.has("s") || keys.has("arrowdown")) moveF -= 1;
+      if (keys.has("d") || keys.has("arrowright")) moveR += 1;
+      if (keys.has("a") || keys.has("arrowleft")) moveR -= 1;
+      if (keys.has("e")) moveU += 1;
+      if (keys.has("q")) moveU -= 1;
+    }
 
     if (moveF !== 0 || moveR !== 0 || moveU !== 0) {
       isTransitioningRef.current = false;
 
-      // Project camera look direction onto horizontal ground plane
       camera.getWorldDirection(forwardVec);
       forwardVec.y = 0;
       if (forwardVec.lengthSq() < 0.0001) {
@@ -166,7 +218,6 @@ function FreeRoamCameraRig() {
       moveDelta.addScaledVector(rightVec, moveR * speed);
       moveDelta.y += moveU * (speed * 0.75);
 
-      // Keep above ground cleanly
       const nextTargetY = ctrl.target.y + moveDelta.y;
       if (nextTargetY < 0.35) {
         moveDelta.y = 0.35 - ctrl.target.y;
@@ -176,7 +227,7 @@ function FreeRoamCameraRig() {
       ctrl.target.add(moveDelta);
     }
 
-    // 2) Smooth one-shot transition to preset or double-clicked 3D point
+    // 3) Smooth one-shot preset or double-click focus transition
     if (isTransitioningRef.current) {
       const lerpFactor = Math.min(1, dt * 6.2);
       camera.position.lerp(desiredPosRef.current, lerpFactor);
@@ -209,10 +260,9 @@ function FreeRoamCameraRig() {
       minDistance={1.4}
       maxDistance={85}
       maxPolarAngle={Math.PI * 0.492}
-      autoRotate={autoRotate}
+      autoRotate={autoRotate && !isBossMode}
       autoRotateSpeed={0.55}
       onStart={() => {
-        // User always wins control immediately
         isTransitioningRef.current = false;
       }}
     />
@@ -247,10 +297,9 @@ export function OfficeScene() {
     : [26, 36, 24];
 
   const sunColor = isNight ? "#8bb4e8" : isSunset ? "#ffb074" : "#fff7ea";
-  const sunIntensity = isNight ? 0.52 : isSunset ? 2.15 : 2.75;
+  const sunIntensity = isNight ? 0.55 : isSunset ? 2.15 : 2.75;
   const shadowSize = performanceMode === "eco" ? 1024 : 2048;
 
-  // Filter agents by cutaway floor visibility so hidden floors don't leave floating people
   const visibleAgents = useMemo(() => {
     return agents.filter((a) => {
       if (activeFloor === "l1") return a.floor === 1;
@@ -264,9 +313,8 @@ export function OfficeScene() {
   return (
     <>
       <color attach="background" args={[bgColor]} />
-      <fog attach="fog" args={[fogColor, 58, 155]} />
+      <fog attach="fog" args={[fogColor, 62, 165]} />
 
-      {/* Realistic Daylight / Golden Hour Sky */}
       {!isNight && (
         <Sky
           distance={4500}
@@ -278,7 +326,6 @@ export function OfficeScene() {
         />
       )}
 
-      {/* Zero-network Studio/Architectural IBL Reflections for razor-sharp glass, metal & clearcoat */}
       <Environment resolution={256} frames={1}>
         <Lightformer
           form="ring"
@@ -306,12 +353,11 @@ export function OfficeScene() {
         />
       </Environment>
 
-      {/* Architectural 3-Point Daylight & Hemisphere Fill */}
       <hemisphereLight
         args={[
           isNight ? "#243b5e" : isSunset ? "#ffd1a8" : "#dceeff",
           isNight ? "#121a29" : "#5e6a54",
-          isNight ? 0.58 : isSunset ? 0.95 : 1.05,
+          isNight ? 0.6 : isSunset ? 0.98 : 1.08,
         ]}
       />
       <directionalLight
@@ -329,21 +375,20 @@ export function OfficeScene() {
         shadow-bias={-0.0004}
         shadow-normalBias={0.035}
       />
-      {/* Cool architectural sky bounce light from opposite angle */}
       <directionalLight
         position={[-20, 14, -18]}
         intensity={isNight ? 0.32 : 0.55}
         color={isNight ? "#4f74a8" : "#c5e1ff"}
       />
 
-      {/* Grand Outdoor Luxury Campus */}
+      {/* Grand Outdoor Luxury Campus with REAL Recessed Swimming Pool & Curved GT Supercar */}
       <CyberOutdoorCampus
         performanceMode={performanceMode}
         lightingPreset={lightingPreset}
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
-      {/* Grand 28m 3-Story Luxury Modern HQ */}
+      {/* Grand 28m 3-Story Luxury Architectural HQ */}
       <OfficeArchitecture
         activeFloor={activeFloor}
         performanceMode={performanceMode}
@@ -380,7 +425,10 @@ export function OfficeScene() {
         />
       ))}
 
-      {/* Unrestricted Free-Roam Camera Rig */}
+      {/* Playable Character #11: BOS FAJREZ */}
+      <BossPlayer />
+
+      {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
     </>
   );
