@@ -56,7 +56,7 @@ const CAMERA_OPTIONS: { id: CameraPreset; label: string }[] = [
   { id: "interior", label: "Ops L2" },
   { id: "executive", label: "Exec L3" },
   { id: "pool", label: "Kolam" },
-  { id: "supercar", label: "Mobil" },
+  { id: "supercar", label: "Porsche 22" },
   { id: "rooftop", label: "Atap" },
 ];
 
@@ -515,12 +515,12 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                 <button
                   type="button"
                   onClick={() =>
-                    teleportBoss([6.6, FLOOR_1_Y, 11.2], 1, "Supercar Bay", Math.PI / 2)
+                    teleportBoss([6.6, FLOOR_1_Y, 11.2], 1, "Porsche 22 Bay", Math.PI / 2)
                   }
                   className="flex items-center gap-1 rounded-xl border border-rose-400/50 bg-rose-500/20 px-2.5 py-1.5 text-[10px] font-bold text-rose-100 backdrop-blur-md transition active:scale-95"
                 >
                   <Car className="h-3.5 w-3.5 text-rose-300" />
-                  <span>Mobil</span>
+                  <span>Porsche 22</span>
                 </button>
                 <button
                   type="button"
@@ -623,7 +623,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               <button
                 type="button"
                 onClick={() => focusCameraOn([9.4, 0.9, 11.3], [5.4, 2.8, 6.2])}
-                title="Zoom ke Supercar"
+                title="Zoom ke Porsche 22"
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-rose-300 transition hover:border-rose-300/60"
               >
                 <Car className="h-3.5 w-3.5" />
@@ -631,7 +631,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               <button
                 type="button"
                 onClick={() => setCameraPreset("rooftop")}
-                title="Atap Helipad & Padel Court"
+                title="Atap Helikopter & Bulu Tangkis"
                 className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                   cameraPreset === "rooftop"
                     ? "border-amber-300 bg-amber-400 text-slate-950"
