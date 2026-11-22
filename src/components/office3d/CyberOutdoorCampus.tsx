@@ -5,6 +5,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
+import { CyberpunkSkyline } from "@/components/office3d/CyberpunkSkyline";
 import type {
   LightingPreset,
   PerformanceMode,
@@ -654,22 +655,6 @@ export function CyberOutdoorCampus({
     }
   };
 
-  // Architectural distant skyline with varied heights & crown spires (far back in atmosphere)
-  const skylineBuildings = useMemo(
-    () => [
-      { pos: [-58, 22, -56] as [number, number, number], size: [9, 44, 8.5] as [number, number, number], spire: true },
-      { pos: [-40, 29, -64] as [number, number, number], size: [10.5, 58, 9.5] as [number, number, number], spire: false },
-      { pos: [-21, 20, -66] as [number, number, number], size: [9, 40, 8.5] as [number, number, number], spire: false },
-      { pos: [-2, 34, -72] as [number, number, number], size: [11, 68, 10] as [number, number, number], spire: true },
-      { pos: [18, 25, -68] as [number, number, number], size: [9.5, 50, 9] as [number, number, number], spire: false },
-      { pos: [38, 31, -62] as [number, number, number], size: [10, 62, 9.5] as [number, number, number], spire: true },
-      { pos: [57, 21, -54] as [number, number, number], size: [8.5, 42, 8] as [number, number, number], spire: false },
-      { pos: [-64, 17, -26] as [number, number, number], size: [8.5, 34, 8] as [number, number, number], spire: false },
-      { pos: [64, 18, -24] as [number, number, number], size: [8.5, 36, 8] as [number, number, number], spire: false },
-    ],
-    []
-  );
-
   const palmPositions: { pos: [number, number, number]; scale: number; rot: number }[] = [
     { pos: [-16.6, 0, 5.4], scale: 1.15, rot: 0.4 },
     { pos: [-17.4, 0, 11.8], scale: 1.05, rot: 1.3 },
@@ -1064,79 +1049,11 @@ export function CyberOutdoorCampus({
         <RealisticSkyClouds isSunset={isSunset} />
       )}
 
-      {/* Distant Metropolitan Skyline — Crisp Blue Glass by Day, Glowing Lit Office Towers by Night! */}
-      <group>
-        {skylineBuildings.map((b, i) => {
-          const crownAccent =
-            i % 3 === 0 ? "#38bdf8" : i % 3 === 1 ? "#fbbf24" : "#f8fafc";
-          return (
-            <group key={i} position={b.pos}>
-              <mesh>
-                <boxGeometry args={b.size} />
-                <meshStandardMaterial
-                  map={isNight ? textures.skylineNight : textures.skylineDay}
-                  color={
-                    isNight ? "#475569" : isSunset ? "#e2bfa8" : "#d8e7f5"
-                  }
-                  roughness={0.32}
-                  metalness={0.48}
-                  emissiveMap={isNight ? textures.skylineNightEmissive : undefined}
-                  emissive={isNight ? "#ffffff" : "#000000"}
-                  emissiveIntensity={isNight ? 2.15 : 0}
-                  fog={false}
-                />
-              </mesh>
-              {/* Architectural crown ledge */}
-              <mesh position={[0, b.size[1] / 2 + 0.6, 0]}>
-                <boxGeometry args={[b.size[0] * 0.76, 1.2, b.size[2] * 0.76]} />
-                <meshStandardMaterial
-                  color={isNight ? "#162238" : "#5a7b99"}
-                  roughness={0.38}
-                  metalness={0.55}
-                  fog={false}
-                />
-              </mesh>
-              {/* Glowing Night Architectural Crown Neon Band */}
-              {isNight && (
-                <mesh position={[0, b.size[1] / 2 + 0.12, 0]}>
-                  <boxGeometry args={[b.size[0] + 0.16, 0.38, b.size[2] + 0.16]} />
-                  <meshStandardMaterial
-                    color={crownAccent}
-                    emissive={crownAccent}
-                    emissiveIntensity={2.6}
-                    fog={false}
-                  />
-                </mesh>
-              )}
-              {b.spire && (
-                <group position={[0, b.size[1] / 2 + 4.5, 0]}>
-                  <mesh>
-                    <cylinderGeometry args={[0.08, 0.26, 7, 8]} />
-                    <meshStandardMaterial
-                      color="#cbd5e1"
-                      metalness={0.75}
-                      roughness={0.3}
-                      fog={false}
-                    />
-                  </mesh>
-                  {/* Red Aviation Warning Beacon at Spire Tip */}
-                  {isNight && (
-                    <mesh position={[0, 3.65, 0]}>
-                      <sphereGeometry args={[0.26, 8, 8]} />
-                      <meshStandardMaterial
-                        color="#ef4444"
-                        emissive="#ef4444"
-                        emissiveIntensity={3.5}
-                        fog={false}
-                      />
-                    </mesh>
-                  )}
-                </group>
-              )}
-            </group>
-          );
-        })}
-      </group>
+      {/* Varied Instanced Cyberpunk Metropolis: Setbacks, GLSL Procedural Windows, Hologram Billboards & Flying Traffic */}
+      <CyberpunkSkyline
+        lightingPreset={lightingPreset}
+        performanceMode={performanceMode}
+      />
     </group>
   );
 }
