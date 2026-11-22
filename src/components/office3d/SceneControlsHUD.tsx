@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ArrowUp,
   Building2,
+  Camera,
   Car,
   ChevronDown,
   ChevronUp,
@@ -15,6 +16,7 @@ import {
   Crown,
   Eye,
   Gamepad2,
+  Layers,
   Monitor,
   Moon,
   Move,
@@ -22,6 +24,7 @@ import {
   Pause,
   Play,
   RefreshCw,
+  SlidersHorizontal,
   Sun,
   Sunrise,
   Tag,
@@ -203,6 +206,49 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
 
   const [clockText, setClockText] = useState("11:45");
   const [showMovePad, setShowMovePad] = useState(false);
+  const [isBarExpanded, setIsBarExpanded] = useState(false);
+
+  const cycleLighting = () => {
+    const order: LightingPreset[] = ["day", "sunset", "night"];
+    const next = order[(order.indexOf(lightingPreset) + 1) % order.length];
+    setLightingPreset(next);
+  };
+
+  const cycleFloor = () => {
+    const order: FloorView[] = ["all", "l1", "l2", "l3", "roof"];
+    const next = order[(order.indexOf(activeFloor) + 1) % order.length];
+    setActiveFloor(next);
+  };
+
+  const cycleCamera = () => {
+    const order: CameraPreset[] = [
+      "front",
+      "interior",
+      "executive",
+      "pool",
+      "supercar",
+      "rooftop",
+    ];
+    const next = order[(order.indexOf(cameraPreset) + 1) % order.length];
+    setCameraPreset(next);
+  };
+
+  const cyclePerformance = () => {
+    const order: PerformanceMode[] = ["eco", "balanced", "high"];
+    const next = order[(order.indexOf(performanceMode) + 1) % order.length];
+    setPerformanceMode(next);
+  };
+
+  const ActiveLightingIcon =
+    LIGHTING_OPTIONS.find((o) => o.id === lightingPreset)?.icon ?? Sun;
+  const activeLightingShort =
+    LIGHTING_OPTIONS.find((o) => o.id === lightingPreset)?.label ?? "Siang";
+  const activeFloorShort =
+    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full";
+  const activeCameraShort =
+    CAMERA_OPTIONS.find((o) => o.id === cameraPreset)?.label ?? "Depan";
+  const activePerfShort =
+    PERF_OPTIONS.find((o) => o.id === performanceMode)?.label ?? "Eco";
 
   useEffect(() => {
     const update = () => {
@@ -263,120 +309,232 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 sm:p-3">
-      {/* ================= TOP HUD BAR ================= */}
-      <div className="flex flex-wrap items-start justify-between gap-1.5 sm:gap-2">
-        {/* Top-Left Lighting + BOS FAJREZ Game Mode Button */}
-        <div className="pointer-events-auto flex flex-col gap-1.5">
-          <div className="hidden rounded-xl border border-white/15 bg-slate-950/80 px-3 py-1.5 backdrop-blur-md sm:block">
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-sm font-black tracking-wider text-white">
-                {clockText}
-              </span>
-              <span className="text-[10px] font-semibold text-amber-300">
-                FAJREZZZ HQ · 10 STAFF + BOS
-              </span>
-            </div>
-            <div className="text-[10px] text-slate-300">
-              {lightingLabel} • Simulasi 3D Interaktif
-            </div>
+      {/* ================= SINGLE COMPACT COLLAPSIBLE GLASSMORPHISM NEON ICON BAR ================= */}
+      <div className="pointer-events-auto flex w-full flex-col items-start gap-2">
+        <div className="flex w-full items-center justify-between gap-1.5 rounded-2xl border border-cyan-400/35 bg-slate-950/68 px-1.5 py-1 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:w-auto sm:gap-2 sm:px-2">
+          {/* Desktop Compact Brand + Clock Pill (inline, zero extra rows!) */}
+          <div className="hidden items-center gap-2 border-r border-cyan-400/20 pr-2.5 pl-1.5 md:flex">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <span className="font-mono text-xs font-black tracking-wider text-white">
+              {clockText}
+            </span>
+            <span className="text-[10px] font-bold tracking-wide text-cyan-300">
+              FAJREZZZ HQ
+            </span>
+            <span className="text-[10px] text-slate-400">· {lightingLabel}</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Playable BOS FAJREZ Mode Toggle */}
+          {/* Primary Single-Row Icon Controls — Every Touch Target >= 44x44px */}
+          <div className="flex flex-1 items-center justify-between gap-1 overflow-x-auto sm:flex-none sm:justify-start sm:gap-1.5">
+            {/* 1. Playable BOS FAJREZ Mode Toggle */}
             <button
               type="button"
               onClick={() => setIsBossMode(!isBossMode)}
-              className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-black tracking-wide shadow-lg backdrop-blur-md transition ${
+              title={isBossMode ? "BOS FAJREZ Aktif" : "Main Bos FAJREZ"}
+              aria-label="Toggle Mode Bos FAJREZ"
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-black tracking-wide transition ${
                 isBossMode
-                  ? "border-amber-200 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 ring-2 ring-amber-300/60"
-                  : "border-amber-400/70 bg-slate-950/88 text-amber-300 hover:bg-amber-500/20"
+                  ? "border-amber-300 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shadow-[0_0_16px_rgba(251,191,36,0.55)]"
+                  : "border-amber-400/45 bg-slate-900/75 text-amber-300 hover:border-amber-300 hover:bg-amber-500/20"
               }`}
             >
-              <Gamepad2 className="h-3.5 w-3.5" />
-              <span>{isBossMode ? "BOS FAJREZ AKTIF" : "Main Bos FAJREZ"}</span>
+              <Gamepad2 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">
+                {isBossMode ? "BOS AKTIF" : "BOS"}
+              </span>
             </button>
 
-            {/* Lighting Switcher (Siang / Sore / Malam) */}
-            <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-slate-950/82 p-1 backdrop-blur-md">
-              {LIGHTING_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const active = lightingPreset === opt.id;
-                return (
+            {/* 2. Lighting Quick Cycle (Siang / Sore / Malam) */}
+            <button
+              type="button"
+              onClick={cycleLighting}
+              title={`Waktu: ${activeLightingShort} (Ketuk untuk ganti)`}
+              aria-label={`Waktu pencahayaan ${activeLightingShort}`}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-cyan-400/30 bg-slate-900/70 px-2.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/15"
+            >
+              <ActiveLightingIcon className="h-4 w-4 shrink-0 text-amber-300" />
+              <span className="hidden xs:inline sm:inline">
+                {activeLightingShort}
+              </span>
+            </button>
+
+            {/* 3. Floor Quick Cycle (Full / L1 / L2 / L3 / Atap) */}
+            <button
+              type="button"
+              onClick={cycleFloor}
+              title={`Lantai: ${activeFloorShort} (Ketuk untuk ganti)`}
+              aria-label={`Lantai ${activeFloorShort}`}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-fuchsia-400/30 bg-slate-900/70 px-2.5 text-[11px] font-semibold text-fuchsia-100 transition hover:border-fuchsia-300/70 hover:bg-fuchsia-500/15"
+            >
+              <Layers className="h-4 w-4 shrink-0 text-fuchsia-300" />
+              <span className="hidden sm:inline">{activeFloorShort}</span>
+            </button>
+
+            {/* 4. Camera Quick Cycle (Hidden in Boss Mode) */}
+            {!isBossMode && (
+              <button
+                type="button"
+                onClick={cycleCamera}
+                title={`Kamera: ${activeCameraShort} (Ketuk untuk ganti)`}
+                aria-label={`Kamera ${activeCameraShort}`}
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-sky-400/30 bg-slate-900/70 px-2.5 text-[11px] font-semibold text-sky-100 transition hover:border-sky-300/70 hover:bg-sky-500/15"
+              >
+                <Camera className="h-4 w-4 shrink-0 text-sky-300" />
+                <span className="hidden sm:inline">{activeCameraShort}</span>
+              </button>
+            )}
+
+            {/* 5. Graphics Quality Quick Cycle (Eco / Bal / High) */}
+            <button
+              type="button"
+              onClick={cyclePerformance}
+              title={`Grafis: ${activePerfShort} (Ketuk untuk ganti)`}
+              aria-label={`Kualitas grafis ${activePerfShort}`}
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1 rounded-xl border px-2.5 text-[11px] font-bold transition ${
+                performanceMode === "high"
+                  ? "border-fuchsia-400/60 bg-fuchsia-500/20 text-fuchsia-100"
+                  : performanceMode === "balanced"
+                  ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-100"
+                  : "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
+              }`}
+            >
+              <Zap className="h-4 w-4 shrink-0" />
+              <span>{activePerfShort}</span>
+            </button>
+
+            {/* 6. Collapse / Expand Full Control Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsBarExpanded((v) => !v)}
+              aria-expanded={isBarExpanded}
+              aria-label={
+                isBarExpanded ? "Tutup panel kontrol" : "Buka semua kontrol"
+              }
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border transition ${
+                isBarExpanded
+                  ? "border-cyan-300 bg-cyan-400/25 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.4)]"
+                  : "border-white/15 bg-slate-900/75 text-slate-200 hover:border-cyan-300/60 hover:text-cyan-200"
+              }`}
+            >
+              {isBarExpanded ? (
+                <ChevronUp className="h-5 w-5" />
+              ) : (
+                <SlidersHorizontal className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Glassmorphism Neon Control Drawer (All Direct Pickers, >=44px Touch Targets) */}
+        {isBarExpanded && (
+          <div className="w-full max-w-xl space-y-2.5 rounded-2xl border border-cyan-400/35 bg-slate-950/82 p-3 shadow-[0_8px_36px_rgba(14,165,233,0.22)] backdrop-blur-xl">
+            {/* Waktu / Lighting */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold tracking-wider text-cyan-300 uppercase">
+                Waktu & Suasana
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {LIGHTING_OPTIONS.map((opt) => {
+                  const Icon = opt.icon;
+                  const active = lightingPreset === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setLightingPreset(opt.id)}
+                      className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${
+                        active
+                          ? "border-amber-300 bg-amber-400 text-slate-950 shadow-[0_0_14px_rgba(251,191,36,0.45)]"
+                          : "border-white/10 bg-slate-900/75 text-slate-200 hover:border-cyan-400/50"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Lantai / Floor */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold tracking-wider text-fuchsia-300 uppercase">
+                Lantai Gedung
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FLOOR_OPTIONS.map((fl) => (
                   <button
-                    key={opt.id}
+                    key={fl.id}
                     type="button"
-                    onClick={() => setLightingPreset(opt.id)}
-                    className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold transition ${
-                      active
-                        ? "bg-amber-400 text-slate-950 shadow-md"
-                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    onClick={() => setActiveFloor(fl.id)}
+                    className={`min-h-[44px] min-w-[44px] flex-1 rounded-xl border px-2.5 text-xs font-bold transition ${
+                      activeFloor === fl.id
+                        ? "border-fuchsia-300 bg-fuchsia-500/30 text-white shadow-[0_0_12px_rgba(232,121,249,0.4)]"
+                        : "border-white/10 bg-slate-900/75 text-slate-300 hover:border-fuchsia-400/50"
                     }`}
                   >
-                    <Icon className="h-3 w-3" />
-                    <span>{opt.label}</span>
+                    {fl.label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+            </div>
+
+            {/* Kamera / Camera Presets */}
+            {!isBossMode && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-bold tracking-wider text-sky-300 uppercase">
+                  Sudut Kamera
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                  {CAMERA_OPTIONS.map((cam) => (
+                    <button
+                      key={cam.id}
+                      type="button"
+                      onClick={() => setCameraPreset(cam.id)}
+                      className={`min-h-[44px] rounded-xl border px-2 text-xs font-semibold transition ${
+                        cameraPreset === cam.id
+                          ? "border-cyan-300 bg-cyan-500/30 text-white shadow-[0_0_12px_rgba(34,211,238,0.4)]"
+                          : "border-white/10 bg-slate-900/75 text-slate-300 hover:border-cyan-400/50"
+                      }`}
+                    >
+                      {cam.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Kualitas Grafis / Performance Mode */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold tracking-wider text-emerald-300 uppercase">
+                Performa Grafis (Android Friendly)
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {PERF_OPTIONS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPerformanceMode(p.id)}
+                    className={`min-h-[44px] rounded-xl border px-3 text-xs font-bold transition ${
+                      performanceMode === p.id
+                        ? "border-emerald-300 bg-emerald-500/30 text-white shadow-[0_0_12px_rgba(52,211,153,0.4)]"
+                        : "border-white/10 bg-slate-900/75 text-slate-300 hover:border-emerald-400/50"
+                    }`}
+                  >
+                    {p.label}
+                    <span className="ml-1 text-[10px] font-normal opacity-80">
+                      {p.id === "eco"
+                        ? "≥30fps"
+                        : p.id === "balanced"
+                        ? "Bloom"
+                        : "Full"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Top-Right Floor Switcher + Quality + Camera Presets */}
-        <div className="pointer-events-auto flex max-w-full flex-col items-end gap-1.5">
-          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/84 p-1 backdrop-blur-md">
-            {FLOOR_OPTIONS.map((fl) => (
-              <button
-                key={fl.id}
-                type="button"
-                onClick={() => setActiveFloor(fl.id)}
-                className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
-                  activeFloor === fl.id
-                    ? "bg-amber-400 text-slate-950 shadow-md"
-                    : "bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white"
-                }`}
-              >
-                {fl.label}
-              </button>
-            ))}
-
-            <span className="mx-0.5 h-3.5 w-px shrink-0 bg-slate-700" />
-
-            <Zap className="h-3 w-3 shrink-0 text-amber-300" />
-            {PERF_OPTIONS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPerformanceMode(p.id)}
-                className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition ${
-                  performanceMode === p.id
-                    ? "bg-sky-500/35 text-sky-100 ring-1 ring-sky-400/60"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {!isBossMode && (
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/80 p-1 backdrop-blur-md">
-              {CAMERA_OPTIONS.map((cam) => (
-                <button
-                  key={cam.id}
-                  type="button"
-                  onClick={() => setCameraPreset(cam.id)}
-                  className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-semibold transition ${
-                    cameraPreset === cam.id
-                      ? "bg-sky-500/35 text-white ring-1 ring-sky-300/70"
-                      : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                  }`}
-                >
-                  {cam.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* ================= FREE-ROAM TOUCH MOVE PAD (when not in Boss Mode) ================= */}

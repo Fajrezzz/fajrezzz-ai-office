@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, OrbitControls, Sky } from "@react-three/drei";
+import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
+import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { BossPlayer } from "@/components/office3d/BossPlayer";
@@ -297,6 +298,43 @@ function ClearDaySkyDome() {
   );
 }
 
+/** Golden Hour Sunset Sky Dome — Dramatic deep magenta-violet zenith to fiery coral-orange & gold horizon + low sun orb */
+function SunsetGoldenHourSkyDome() {
+  const sunsetTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 16;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d")!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0.0, "#24113d"); // deep twilight violet zenith
+    grad.addColorStop(0.24, "#5d1d5e"); // rich magenta-purple
+    grad.addColorStop(0.4, "#b8336a"); // vivid rose-magenta
+    grad.addColorStop(0.49, "#ee6838"); // fiery sunset coral-orange
+    grad.addColorStop(0.55, "#fb9b3c"); // warm golden hour amber
+    grad.addColorStop(0.64, "#f4b961"); // low golden horizon glow
+    grad.addColorStop(1.0, "#3b1d38");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 256);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  return (
+    <group>
+      <mesh scale={[-1, 1, 1]}>
+        <sphereGeometry args={[280, 20, 14]} />
+        <meshBasicMaterial map={sunsetTex} side={THREE.BackSide} fog={false} />
+      </mesh>
+      {/* Low Glowing Golden Hour Sun Disc */}
+      <mesh position={[-88, 16, -98]}>
+        <sphereGeometry args={[6.2, 20, 16]} />
+        <meshBasicMaterial color="#ffe49e" fog={false} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function OfficeScene() {
   const {
     agents,
@@ -315,18 +353,28 @@ export function OfficeScene() {
 
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
+  const isEco = performanceMode === "eco";
+  const isHigh = performanceMode === "high";
 
-  const bgColor = isNight ? "#071022" : isSunset ? "#d48b63" : "#4ea8ea";
-  const fogColor = isNight ? "#091326" : isSunset ? "#d99d7a" : "#7cc0f0";
+  const bgColor = isNight ? "#071022" : isSunset ? "#5c2052" : "#4ea8ea";
+  const fogColor = isNight ? "#0c1630" : isSunset ? "#a84461" : "#7cc0f0";
+  const fogRange: [number, number] = isNight
+    ? [74, 210]
+    : isSunset
+    ? [85, 225]
+    : [185, 360];
+
+  // Low, wide sun angle at Sunset casts dramatic long golden-hour shadows across the campus
   const sunPosition: [number, number, number] = isNight
     ? [-22, 18, -16]
     : isSunset
-    ? [-34, 9, 20]
+    ? [-52, 8.2, 22]
     : [32, 48, 28];
 
-  const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ffb074" : "#fff9ef";
-  const sunIntensity = isNight ? 0.88 : isSunset ? 2.05 : 2.15;
-  const shadowSize = performanceMode === "eco" ? 1024 : 2048;
+  const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ff984c" : "#fff9ef";
+  const sunIntensity = isNight ? 0.82 : isSunset ? 2.45 : 2.15;
+  // Performance Tiers: Eco = NO shadows, Bal = low-res 512 shadow, High = sharp 2048 shadow
+  const shadowSize = isHigh ? 2048 : 512;
 
   const visibleAgents = useMemo(() => {
     return agents.filter((a) => {
@@ -341,41 +389,32 @@ export function OfficeScene() {
   return (
     <>
       <color attach="background" args={[bgColor]} />
-      <fog attach="fog" args={[fogColor, 175, 360]} />
+      <fog attach="fog" args={[fogColor, fogRange[0], fogRange[1]]} />
 
-      {isSunset && (
-        <Sky
-          distance={4500}
-          sunPosition={sunPosition}
-          turbidity={6.5}
-          rayleigh={2.2}
-          mieCoefficient={0.003}
-          mieDirectionalG={0.72}
-        />
-      )}
+      {isSunset && <SunsetGoldenHourSkyDome />}
       {!isNight && !isSunset && <ClearDaySkyDome />}
 
-      <Environment resolution={256} frames={1}>
+      <Environment resolution={isEco ? 64 : 128} frames={1}>
         <Lightformer
           form="ring"
-          intensity={isNight ? 0.65 : isSunset ? 1.8 : 2.4}
-          color={isNight ? "#60a5fa" : isSunset ? "#ffc896" : "#ffffff"}
+          intensity={isNight ? 0.72 : isSunset ? 1.9 : 2.3}
+          color={isNight ? "#38bdf8" : isSunset ? "#ff8fb1" : "#ffffff"}
           scale={18}
           position={[0, 18, 0]}
           rotation={[Math.PI / 2, 0, 0]}
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.45 : isSunset ? 2.2 : 1.7}
-          color={isSunset ? "#ff9e5e" : "#e0f2fe"}
+          intensity={isNight ? 0.55 : isSunset ? 2.4 : 1.7}
+          color={isNight ? "#e879f9" : isSunset ? "#ff8c42" : "#e0f2fe"}
           scale={[24, 10, 1]}
           position={[18, 8, 16]}
           target={[0, 4, 0]}
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.35 : 0.9}
-          color="#cbd5e1"
+          intensity={isNight ? 0.45 : isSunset ? 1.3 : 0.9}
+          color={isNight ? "#22d3ee" : isSunset ? "#c084fc" : "#cbd5e1"}
           scale={[24, 10, 1]}
           position={[-18, 7, -14]}
           target={[0, 4, 0]}
@@ -384,30 +423,30 @@ export function OfficeScene() {
 
       <hemisphereLight
         args={[
-          isNight ? "#335280" : isSunset ? "#ffd1a8" : "#dceeff",
-          isNight ? "#1a2438" : "#5e6a54",
-          isNight ? 0.92 : isSunset ? 0.98 : 1.08,
+          isNight ? "#2f4e82" : isSunset ? "#f472b6" : "#dceeff",
+          isNight ? "#141d30" : isSunset ? "#5c3330" : "#5e6a54",
+          isNight ? 0.85 : isSunset ? 1.05 : 1.08,
         ]}
       />
       <directionalLight
         position={sunPosition}
         intensity={sunIntensity}
         color={sunColor}
-        castShadow
+        castShadow={!isEco}
         shadow-mapSize={[shadowSize, shadowSize]}
-        shadow-camera-left={-28}
-        shadow-camera-right={28}
-        shadow-camera-top={28}
-        shadow-camera-bottom={-24}
+        shadow-camera-left={-34}
+        shadow-camera-right={34}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-26}
         shadow-camera-near={2}
-        shadow-camera-far={95}
+        shadow-camera-far={125}
         shadow-bias={-0.0004}
         shadow-normalBias={0.035}
       />
       <directionalLight
-        position={[-20, 14, -18]}
-        intensity={isNight ? 0.32 : 0.55}
-        color={isNight ? "#4f74a8" : "#c5e1ff"}
+        position={[24, 14, -18]}
+        intensity={isNight ? 0.35 : isSunset ? 0.85 : 0.52}
+        color={isNight ? "#38bdf8" : isSunset ? "#e879f9" : "#c5e1ff"}
       />
 
       {/* Grand Outdoor Luxury Campus with REAL Recessed Swimming Pool & Curved GT Supercar */}
@@ -467,6 +506,29 @@ export function OfficeScene() {
 
       {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
+
+      {/* Selective Emissive Bloom — OFF in Eco, Light in Bal, Full in High */}
+      {!isEco && (
+        <EffectComposer multisampling={0}>
+          <Bloom
+            mipmapBlur
+            luminanceThreshold={isHigh ? 1.08 : 1.15}
+            luminanceSmoothing={0.22}
+            levels={isHigh ? 6 : 4}
+            intensity={
+              isNight
+                ? isHigh
+                  ? 1.15
+                  : 0.65
+                : isSunset
+                ? isHigh
+                  ? 0.48
+                  : 0.3
+                : 0.14
+            }
+          />
+        </EffectComposer>
+      )}
     </>
   );
 }

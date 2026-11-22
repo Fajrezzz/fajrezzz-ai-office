@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -191,7 +191,26 @@ function StaffFigure({
   const leftArmRef = useRef<THREE.Mesh>(null);
   const rightArmRef = useRef<THREE.Mesh>(null);
 
-  useFrame((state) => {
+  const [labelTier, setLabelTier] = useState<"near" | "mid" | "far">("far");
+  const labelTierRef = useRef<"near" | "mid" | "far">("far");
+  const distAccumRef = useRef(0);
+  const worldPos = useMemo(
+    () => new THREE.Vector3(person.position[0], person.position[1] + 1.2, person.position[2]),
+    [person.position]
+  );
+
+  useFrame((state, delta) => {
+    distAccumRef.current += Math.min(delta, 0.06);
+    if (distAccumRef.current > 0.22) {
+      distAccumRef.current = 0;
+      const camDist = state.camera.position.distanceTo(worldPos);
+      const nextTier: "near" | "mid" | "far" =
+        camDist < 14.5 ? "near" : camDist < 28 ? "mid" : "far";
+      if (nextTier !== labelTierRef.current) {
+        labelTierRef.current = nextTier;
+        setLabelTier(nextTier);
+      }
+    }
     if (!isSimulationRunning) return;
     const t = state.clock.elapsedTime + index * 1.3;
     if (headRef.current) {
@@ -312,16 +331,32 @@ function StaffFigure({
         </mesh>
       </group>
 
-      {/* Clean Floating Name & Executive Title Pill */}
-      {showLabels && (
-        <Html position={[0, headY + 0.42, 0]} center distanceFactor={22}>
-          <div className="pointer-events-none select-none whitespace-nowrap rounded-full border border-slate-700/80 bg-slate-950/85 px-2 py-0.5 text-[9px] font-bold text-slate-100 shadow-lg backdrop-blur-sm">
-            <span
-              className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
+      {/* Subtle Role-Colored Ground Presence Ring */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.3, 0.36, 20]} />
+        <meshBasicMaterial color={person.badgeColor} transparent opacity={0.36} />
+      </mesh>
+
+      {/* Clean Distance-Scaled Floating Name & Executive Title Pill (No Overlap!) */}
+      {showLabels && labelTier !== "far" && (
+        <Html position={[0, headY + 0.42 + (index % 2) * 0.08, 0]} center distanceFactor={13}>
+          {labelTier === "near" ? (
+            <div
+              className="pointer-events-none select-none whitespace-nowrap rounded-full border bg-slate-950/86 px-2 py-0.5 text-[9px] font-bold text-slate-100 shadow-lg backdrop-blur-sm"
+              style={{ borderColor: person.badgeColor }}
+            >
+              <span
+                className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                style={{ backgroundColor: person.badgeColor }}
+              />
+              {person.name} · <span className="text-slate-300">{person.title}</span>
+            </div>
+          ) : (
+            <div
+              className="pointer-events-none h-2.5 w-2.5 rounded-full border border-white/60 shadow-md"
               style={{ backgroundColor: person.badgeColor }}
             />
-            {person.title}
-          </div>
+          )}
         </Html>
       )}
     </group>

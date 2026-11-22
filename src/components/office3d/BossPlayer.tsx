@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -38,6 +38,9 @@ export function BossPlayer() {
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
+  const [bossLabelNear, setBossLabelNear] = useState(true);
+  const bossLabelNearRef = useRef(true);
+  const bossDistAccumRef = useRef(0);
   const rightLegRef = useRef<THREE.Group>(null);
   const rippleRef = useRef<THREE.Mesh>(null);
 
@@ -97,6 +100,16 @@ export function BossPlayer() {
 
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
+
+    bossDistAccumRef.current += dt;
+    if (bossDistAccumRef.current > 0.2) {
+      bossDistAccumRef.current = 0;
+      const isNear = camera.position.distanceTo(posRef.current) < 22;
+      if (isNear !== bossLabelNearRef.current) {
+        bossLabelNearRef.current = isNear;
+        setBossLabelNear(isNear);
+      }
+    }
 
     // 1. Gather Analog Joystick + PC Keyboard inputs (active in Boss Mode)
     let inputX = 0;
@@ -482,28 +495,42 @@ export function BossPlayer() {
         </group>
       </group>
 
-      {/* Gold Crown Nameplate above BOS FAJREZ */}
+      {/* Distance-Scaled Gold Crown Nameplate above BOS FAJREZ */}
       {showLabelsIn3D && (
         <Html
           position={[0, 2.15, 0]}
           center
-          distanceFactor={16}
-          zIndexRange={[20, 0]}
+          distanceFactor={13}
+          zIndexRange={[25, 10]}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsBossMode(true);
-            }}
-            className={`pointer-events-auto flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-black tracking-wide shadow-xl backdrop-blur-md transition ${
-              isBossMode
-                ? "border-amber-300 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 ring-2 ring-amber-300/60"
-                : "border-amber-400/70 bg-slate-950/90 text-amber-300 hover:bg-amber-500/20"
-            }`}
-          >
-            <span>★ BOS FAJREZ</span>
-          </button>
+          {isBossMode || bossLabelNear ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsBossMode(true);
+              }}
+              className={`pointer-events-auto flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-black tracking-wide shadow-xl backdrop-blur-md transition ${
+                isBossMode
+                  ? "border-amber-300 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 ring-2 ring-amber-300/60"
+                  : "border-amber-400/70 bg-slate-950/90 text-amber-300 hover:bg-amber-500/20"
+              }`}
+            >
+              <span>★ BOS FAJREZ</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              title="BOS FAJREZ"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsBossMode(true);
+              }}
+              className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-slate-950/90 text-[9px] font-black text-amber-300 shadow-lg"
+            >
+              ★
+            </button>
+          )}
         </Html>
       )}
     </group>
