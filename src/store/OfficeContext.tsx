@@ -10,6 +10,9 @@ import React, {
   useState,
 } from "react";
 import {
+  FLOOR_1_Y,
+  FLOOR_2_Y,
+  FLOOR_3_Y,
   INITIAL_ACTIVITIES,
   INITIAL_AGENTS,
   INITIAL_TASKS,
@@ -20,6 +23,9 @@ import type { CreateTaskInput } from "@/lib/services/data-adapter";
 import type {
   ActivityEvent,
   ActivitySeverity,
+  BossActionState,
+  BossFloor,
+  BossTeleportCommand,
   CameraPreset,
   FloorView,
   LightingPreset,
@@ -32,6 +38,15 @@ import type {
   Vector3Tuple,
   Workstation,
 } from "@/types/office";
+
+export const ROOF_Y = 11.8;
+
+export const BOSS_FLOOR_ELEVATIONS: Record<BossFloor, number> = {
+  1: FLOOR_1_Y,
+  2: FLOOR_2_Y,
+  3: FLOOR_3_Y,
+  4: ROOF_Y,
+};
 
 function formatClock(date = new Date()): string {
   return date.toLocaleTimeString("id-ID", {
@@ -52,6 +67,11 @@ export interface CameraNudgeState {
   forward: number;
   right: number;
   up: number;
+}
+
+export interface BossJoystickState {
+  x: number; // -1 (left) to +1 (right)
+  y: number; // -1 (backward) to +1 (forward)
 }
 
 interface OfficeContextValue {
@@ -83,6 +103,26 @@ interface OfficeContextValue {
   setIsSimulationRunning: (running: boolean) => void;
   showLabelsIn3D: boolean;
   setShowLabelsIn3D: (show: boolean) => void;
+  // BOS FAJREZ Playable Character State
+  isBossMode: boolean;
+  setIsBossMode: (enabled: boolean) => void;
+  bossFollowCamera: boolean;
+  setBossFollowCamera: (follow: boolean) => void;
+  bossFloor: BossFloor;
+  setBossFloor: (floor: BossFloor) => void;
+  bossActionState: BossActionState;
+  setBossActionState: (state: BossActionState) => void;
+  bossPositionRef: React.MutableRefObject<Vector3Tuple>;
+  bossJoystickRef: React.MutableRefObject<BossJoystickState>;
+  bossTeleportCommand: BossTeleportCommand | null;
+  teleportBoss: (
+    position: Vector3Tuple,
+    floor: BossFloor,
+    label?: string,
+    yaw?: number
+  ) => void;
+  moveBossToFloor: (floor: BossFloor) => void;
+  // Agent & Task actions
   setAgentStatus: (agentId: string, status: RobotAnimationState) => void;
   sendAgentToWaypoint: (agentId: string, waypointId: string) => void;
   assignAgentWorkstation: (agentId: string, workstationId: string) => void;
@@ -125,12 +165,51 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     up: 0,
   });
 
+  // BOS FAJREZ Playable Character Refs & State
+  const [isBossMode, setIsBossModeState] = useState<boolean>(false);
+  const [bossFollowCamera, setBossFollowCamera] = useState<boolean>(true);
+  const [bossFloor, setBossFloor] = useState<BossFloor>(1);
+  const [bossActionState, setBossActionState] =
+    useState<BossActionState>("idle");
+  const bossPositionRef = useRef<Vector3Tuple>([2.8, FLOOR_1_Y, 6.2]);
+  const bossJoystickRef = useRef<BossJoystickState>({ x: 0, y: 0 });
+  const [bossTeleportCommand, setBossTeleportCommand] =
+    useState<BossTeleportCommand | null>(null);
+
   const [activeFloor, setActiveFloorState] = useState<FloorView>("all");
   const [lightingPreset, setLightingPreset] =
     useState<LightingPreset>("day");
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
+  const syncFloorCutawayForBoss = useCallback((floor: BossFloor) => {
+    if (floor === 1) {
+      setActiveFloorState("all");
+    } else if (floor === 2) {
+      setActiveFloorState("l2");
+    } else if (floor === 3) {
+      setActiveFloorState("l3");
+    } else {
+      setActiveFloorState("roof");
+    }
+  }, []);
+
+  const setIsBossMode = useCallback(
+    (enabled: boolean) => {
+      setIsBossModeState(enabled);
+      if (enabled) {
+        setAutoRotate(false);
+        setBossFollowCamera(true);
+        syncFloorCutawayForBoss(bossFloor);
+      } else {
+        bossJoystickRef.current.x = 0;
+        bossJoystickRef.current.y = 0;
+      }
+    },
+    [bossFloor, syncFloorCutawayForBoss]
+  );
+
   const setCameraPreset = useCallback((preset: CameraPreset) => {
+    setBossFollowCamera(false);
     setCameraFocusCommand(null);
     setCameraPresetState(preset);
     setCameraResetTick((tick) => tick + 1);
@@ -146,6 +225,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setActiveFloor = useCallback((floor: FloorView) => {
+    setBossFollowCamera(false);
     setCameraFocusCommand(null);
     setActiveFloorState(floor);
     if (floor === "l2") {
@@ -164,6 +244,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
 
   const focusCameraOn = useCallback(
     (target: Vector3Tuple, offset?: Vector3Tuple) => {
+      setBossFollowCamera(false);
       setAutoRotate(false);
       setCameraFocusCommand({
         target,
@@ -290,6 +371,60 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setActivities((prev) => [event, ...prev].slice(0, 60));
     },
     []
+  );
+
+  const teleportBoss = useCallback(
+    (
+      position: Vector3Tuple,
+      floor: BossFloor,
+      label?: string,
+      yaw?: number
+    ) => {
+      setBossFloor(floor);
+      bossPositionRef.current = [...position];
+      setBossTeleportCommand({
+        position,
+        floor,
+        yaw,
+        tick: Date.now() + Math.random(),
+      });
+      syncFloorCutawayForBoss(floor);
+      setBossFollowCamera(true);
+      if (label) {
+        addActivity(
+          "BOS FAJREZ",
+          "user",
+          `Berpindah ke ${label} (Lantai ${floor === 4 ? "Atap" : floor}).`,
+          "success",
+          label
+        );
+      }
+    },
+    [addActivity, syncFloorCutawayForBoss]
+  );
+
+  const moveBossToFloor = useCallback(
+    (floor: BossFloor) => {
+      const cur = bossPositionRef.current;
+      // Keep X/Z inside building interior when going up to L2/L3/Roof
+      const clampedX = Math.max(-12.2, Math.min(12.2, cur[0]));
+      const clampedZ =
+        floor === 1
+          ? Math.max(-8.5, Math.min(16.8, cur[2]))
+          : Math.max(-8.5, Math.min(4.2, cur[2]));
+      const nextY = BOSS_FLOOR_ELEVATIONS[floor];
+      const floorName =
+        floor === 1
+          ? "Lantai 1 & Area Kolam"
+          : floor === 2
+          ? "Lantai 2 Operations Hall"
+          : floor === 3
+          ? "Lantai 3 Executive Suite"
+          : "Atap Helipad & Padel";
+
+      teleportBoss([clampedX, nextY, clampedZ], floor, floorName);
+    },
+    [teleportBoss]
   );
 
   const clearActivities = useCallback(() => {
@@ -516,7 +651,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     [addActivity, agents, workstations]
   );
 
-  // Lively autonomous patrol loop across all 10 staff
   useEffect(() => {
     if (!isSimulationRunning) return;
 
@@ -706,6 +840,19 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setIsSimulationRunning,
       showLabelsIn3D,
       setShowLabelsIn3D,
+      isBossMode,
+      setIsBossMode,
+      bossFollowCamera,
+      setBossFollowCamera,
+      bossFloor,
+      setBossFloor,
+      bossActionState,
+      setBossActionState,
+      bossPositionRef,
+      bossJoystickRef,
+      bossTeleportCommand,
+      teleportBoss,
+      moveBossToFloor,
       setAgentStatus,
       sendAgentToWaypoint,
       assignAgentWorkstation,
@@ -739,6 +886,14 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setPerformanceMode,
       isSimulationRunning,
       showLabelsIn3D,
+      isBossMode,
+      setIsBossMode,
+      bossFollowCamera,
+      bossFloor,
+      bossActionState,
+      bossTeleportCommand,
+      teleportBoss,
+      moveBossToFloor,
       setAgentStatus,
       sendAgentToWaypoint,
       assignAgentWorkstation,

@@ -128,8 +128,8 @@ export function DashboardOverview() {
                 Virtual Office 3D — Grand 28m 3-Floor Architectural HQ
               </h2>
               <p className="text-xs text-slate-400">
-                10 staff 3D, Free-Roam zoom bebas (HP & PC), 8 workstation L2,
-                boardroom L3, infinity pool, supercar & helipad
+                10 staff + Bos FAJREZ (mode analog game), kolam renang recessed,
+                supercar sculpted, 8 workstation L2, boardroom & ruang CEO L3
               </p>
             </div>
             <button

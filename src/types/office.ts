@@ -8,6 +8,17 @@ export type LightingPreset = "day" | "sunset" | "night";
 
 export type FloorView = "all" | "l1" | "l2" | "l3" | "roof";
 
+export type BossFloor = 1 | 2 | 3 | 4;
+
+export type BossActionState = "idle" | "walking" | "running" | "swimming";
+
+export interface BossTeleportCommand {
+  position: Vector3Tuple;
+  floor: BossFloor;
+  yaw?: number;
+  tick: number;
+}
+
 export type CameraPreset =
   | "front"
   | "isometric"

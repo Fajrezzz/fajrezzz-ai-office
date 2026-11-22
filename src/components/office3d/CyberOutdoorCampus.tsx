@@ -4,7 +4,11 @@ import React, { useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
-import type { LightingPreset, PerformanceMode, Vector3Tuple } from "@/types/office";
+import type {
+  LightingPreset,
+  PerformanceMode,
+  Vector3Tuple,
+} from "@/types/office";
 
 interface CyberOutdoorCampusProps {
   performanceMode: PerformanceMode;
@@ -12,6 +16,7 @@ interface CyberOutdoorCampusProps {
   onFocusPoint?: (point: Vector3Tuple) => void;
 }
 
+/** Realistic arched palm tree with segmented curved trunk and 10 multi-segment cascading fronds */
 function PalmTree({
   position,
   scale = 1,
@@ -21,60 +26,93 @@ function PalmTree({
   scale?: number;
   rotation?: number;
 }) {
-  const fronds = [0, 1, 2, 3, 4, 5, 6, 7];
+  const fronds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   return (
     <group position={position} scale={scale} rotation={[0, rotation, 0]}>
-      {/* Segmented gently curved palm trunk */}
-      <mesh position={[0, 1.05, 0]} castShadow>
-        <cylinderGeometry args={[0.17, 0.27, 2.1, 10]} />
-        <meshStandardMaterial color="#7d644c" roughness={0.92} />
+      {/* Decorative stone planter ring */}
+      <mesh position={[0, 0.1, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[0.46, 0.5, 0.2, 16]} />
+        <meshStandardMaterial color="#d8d2c7" roughness={0.8} />
       </mesh>
-      <mesh position={[0.07, 2.85, 0.04]} rotation={[0.04, 0, -0.05]} castShadow>
-        <cylinderGeometry args={[0.13, 0.17, 1.85, 10]} />
-        <meshStandardMaterial color="#876d53" roughness={0.9} />
-      </mesh>
-      <mesh position={[0.15, 4.35, 0.08]} rotation={[0.06, 0, -0.06]} castShadow>
-        <cylinderGeometry args={[0.1, 0.13, 1.45, 10]} />
-        <meshStandardMaterial color="#6e5742" roughness={0.88} />
+      <mesh position={[0, 0.18, 0]}>
+        <cylinderGeometry args={[0.38, 0.38, 0.06, 14]} />
+        <meshStandardMaterial color="#4a392a" roughness={0.95} />
       </mesh>
 
-      {/* Lush cascading fronds */}
-      <group position={[0.19, 5.05, 0.1]}>
+      {/* Curved tapered palm trunk */}
+      <mesh position={[0, 0.9, 0]} castShadow>
+        <cylinderGeometry args={[0.17, 0.24, 1.6, 12]} />
+        <meshStandardMaterial color="#7d644c" roughness={0.92} />
+      </mesh>
+      <mesh position={[0.07, 2.35, 0.04]} rotation={[0.04, 0, -0.06]} castShadow>
+        <cylinderGeometry args={[0.14, 0.17, 1.5, 12]} />
+        <meshStandardMaterial color="#876d53" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.17, 3.65, 0.08]} rotation={[0.06, 0, -0.08]} castShadow>
+        <cylinderGeometry args={[0.11, 0.14, 1.35, 12]} />
+        <meshStandardMaterial color="#745c44" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.25, 4.6, 0.11]} rotation={[0.04, 0, -0.05]} castShadow>
+        <cylinderGeometry args={[0.09, 0.11, 0.85, 10]} />
+        <meshStandardMaterial color="#5c6e3b" roughness={0.82} />
+      </mesh>
+
+      {/* Natural cascading palm crown */}
+      <group position={[0.28, 4.95, 0.12]}>
         {fronds.map((idx) => {
-          const angle = (idx / fronds.length) * Math.PI * 2;
-          const droop = idx % 2 === 0 ? 0.42 : 0.62;
+          const angle = (idx / fronds.length) * Math.PI * 2 + (idx % 2) * 0.14;
+          const elevation = idx % 2 === 0 ? 0.28 : 0.06;
           return (
             <group key={idx} rotation={[0, angle, 0]}>
+              {/* Arching inner frond stem + leaflets */}
               <mesh
-                position={[0.85, 0.12, 0]}
-                rotation={[0, 0, -droop * 0.45]}
+                position={[0.62, 0.2 + elevation, 0]}
+                rotation={[0, 0, 0.22 - elevation * 0.4]}
                 castShadow
               >
-                <boxGeometry args={[1.65, 0.045, 0.46]} />
+                <boxGeometry args={[1.25, 0.04, 0.34]} />
                 <meshStandardMaterial
-                  color={idx % 2 === 0 ? "#3c7c32" : "#2f6b28"}
-                  roughness={0.78}
+                  color={idx % 2 === 0 ? "#387a2f" : "#2d6926"}
+                  roughness={0.76}
                 />
               </mesh>
+              {/* Mid drooping frond arch */}
               <mesh
-                position={[1.9, -0.22, 0]}
-                rotation={[0, 0, -droop * 1.15]}
+                position={[1.65, 0.06 + elevation * 0.4, 0]}
+                rotation={[0, 0, -0.34]}
                 castShadow
               >
-                <boxGeometry args={[1.05, 0.035, 0.32]} />
-                <meshStandardMaterial color="#4a8d3c" roughness={0.76} />
+                <boxGeometry args={[1.05, 0.035, 0.42]} />
+                <meshStandardMaterial
+                  color={idx % 2 === 0 ? "#478f3a" : "#3a7c30"}
+                  roughness={0.74}
+                />
+              </mesh>
+              {/* Tapered frond tip */}
+              <mesh
+                position={[2.4, -0.42 + elevation * 0.2, 0]}
+                rotation={[0, 0, -0.82]}
+                castShadow
+              >
+                <boxGeometry args={[0.78, 0.025, 0.24]} />
+                <meshStandardMaterial color="#549e44" roughness={0.72} />
               </mesh>
             </group>
           );
         })}
-        {/* Coconuts cluster */}
+
+        {/* Coconut cluster */}
         <mesh position={[0.1, -0.18, 0.1]}>
-          <sphereGeometry args={[0.11, 8, 8]} />
-          <meshStandardMaterial color="#6b4a26" roughness={0.85} />
+          <sphereGeometry args={[0.1, 10, 10]} />
+          <meshStandardMaterial color="#6e4a24" roughness={0.85} />
         </mesh>
         <mesh position={[-0.1, -0.2, 0.08]}>
-          <sphereGeometry args={[0.1, 8, 8]} />
-          <meshStandardMaterial color="#5d3f1f" roughness={0.85} />
+          <sphereGeometry args={[0.095, 10, 10]} />
+          <meshStandardMaterial color="#5f3e1d" roughness={0.85} />
+        </mesh>
+        <mesh position={[0.02, -0.22, -0.1]}>
+          <sphereGeometry args={[0.095, 10, 10]} />
+          <meshStandardMaterial color="#684522" roughness={0.85} />
         </mesh>
       </group>
     </group>
@@ -90,29 +128,25 @@ function PoolUmbrella({
 }) {
   return (
     <group position={position}>
-      {/* Granite base */}
-      <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+      <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.38, 0.42, 0.14, 16]} />
-        <meshStandardMaterial color="#424952" roughness={0.65} metalness={0.25} />
+        <meshStandardMaterial color="#424952" roughness={0.62} metalness={0.25} />
       </mesh>
-      {/* Brushed aluminum pole */}
       <mesh position={[0, 1.38, 0]} castShadow>
-        <cylinderGeometry args={[0.042, 0.048, 2.55, 12]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.78} roughness={0.25} />
+        <cylinderGeometry args={[0.04, 0.046, 2.58, 12]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.22} />
       </mesh>
-      {/* Architectural sun canopy */}
       <mesh position={[0, 2.58, 0]} castShadow receiveShadow>
-        <coneGeometry args={[1.62, 0.52, 8]} />
-        <meshStandardMaterial color="#f5f0e6" roughness={0.86} />
+        <coneGeometry args={[1.64, 0.52, 8]} />
+        <meshStandardMaterial color="#f6f1e7" roughness={0.86} />
       </mesh>
       <mesh position={[0, 2.6, 0]} rotation={[0, Math.PI / 8, 0]}>
-        <coneGeometry args={[1.63, 0.46, 4]} />
+        <coneGeometry args={[1.65, 0.46, 4]} />
         <meshStandardMaterial color={accentColor} roughness={0.84} />
       </mesh>
-      {/* Finial cap */}
       <mesh position={[0, 2.86, 0]}>
-        <sphereGeometry args={[0.07, 10, 10]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.2} />
+        <sphereGeometry args={[0.068, 10, 10]} />
+        <meshStandardMaterial color="#d4af37" metalness={0.86} roughness={0.18} />
       </mesh>
     </group>
   );
@@ -127,12 +161,10 @@ function SunLounger({
 }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Teak frame */}
       <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.82, 0.09, 2.05]} />
         <meshStandardMaterial color="#875d38" roughness={0.72} />
       </mesh>
-      {/* Legs */}
       {[
         [-0.34, 0.11, -0.82],
         [0.34, 0.11, -0.82],
@@ -144,182 +176,253 @@ function SunLounger({
           <meshStandardMaterial color="#6c4727" roughness={0.76} />
         </mesh>
       ))}
-      {/* Plush ivory cushion */}
       <mesh position={[0, 0.34, 0.16]} castShadow receiveShadow>
         <boxGeometry args={[0.74, 0.11, 1.38]} />
-        <meshStandardMaterial color="#f6f2ea" roughness={0.9} />
+        <meshStandardMaterial color="#f8f5ef" roughness={0.9} />
       </mesh>
-      {/* Reclined backrest */}
       <mesh position={[0, 0.56, -0.68]} rotation={[0.52, 0, 0]} castShadow>
         <boxGeometry args={[0.74, 0.11, 0.72]} />
-        <meshStandardMaterial color="#f6f2ea" roughness={0.9} />
+        <meshStandardMaterial color="#f8f5ef" roughness={0.9} />
       </mesh>
-      {/* Accent pillow */}
       <mesh position={[0, 0.74, -0.79]} rotation={[0.52, 0, 0]}>
         <boxGeometry args={[0.46, 0.09, 0.22]} />
-        <meshStandardMaterial color="#1d5f82" roughness={0.85} />
+        <meshStandardMaterial color="#0284c7" roughness={0.85} />
       </mesh>
     </group>
   );
 }
 
+/** Authentic curved-profile Italian GT Supercar sculpted via ExtrudeGeometry with real wheels, brake calipers & glass cockpit */
 function LuxurySupercar({
   position,
-  rotationY = -0.32,
+  rotationY = -0.34,
   isNight,
 }: {
   position: [number, number, number];
   rotationY?: number;
   isNight: boolean;
 }) {
+  // Smooth aerodynamic coupe side silhouette extruded across car width
+  const { bodyGeo, cabinGeo } = useMemo(() => {
+    // Side silhouette in (X = forward length, Y = height) — later rotated so +Z is front
+    const bodyShape = new THREE.Shape();
+    bodyShape.moveTo(-2.22, 0.24); // rear lower diffuser
+    bodyShape.lineTo(2.26, 0.21); // front carbon splitter tip
+    bodyShape.quadraticCurveTo(2.34, 0.42, 2.08, 0.56); // aerodynamic nose
+    bodyShape.quadraticCurveTo(1.52, 0.68, 0.92, 0.75); // sculpted hood
+    bodyShape.quadraticCurveTo(0.28, 1.18, -0.22, 1.18); // raked windshield to roof apex
+    bodyShape.quadraticCurveTo(-1.05, 1.14, -1.78, 0.84); // fastback slope
+    bodyShape.quadraticCurveTo(-2.2, 0.78, -2.26, 0.62); // kammback tail
+    bodyShape.lineTo(-2.22, 0.24);
+
+    const extrudedBody = new THREE.ExtrudeGeometry(bodyShape, {
+      depth: 1.78,
+      bevelEnabled: true,
+      bevelThickness: 0.15,
+      bevelSize: 0.11,
+      bevelSegments: 5,
+      curveSegments: 18,
+    });
+    extrudedBody.center();
+    // Orient so car length runs along Z (+Z = front) and height along Y
+    extrudedBody.rotateY(-Math.PI / 2);
+
+    // Smoked glass aerodynamic cockpit greenhouse
+    const cabinShape = new THREE.Shape();
+    cabinShape.moveTo(-1.42, 0.78);
+    cabinShape.lineTo(0.84, 0.74);
+    cabinShape.quadraticCurveTo(0.26, 1.16, -0.22, 1.16);
+    cabinShape.quadraticCurveTo(-0.88, 1.12, -1.42, 0.78);
+
+    const extrudedCabin = new THREE.ExtrudeGeometry(cabinShape, {
+      depth: 1.38,
+      bevelEnabled: true,
+      bevelThickness: 0.08,
+      bevelSize: 0.05,
+      bevelSegments: 4,
+      curveSegments: 14,
+    });
+    extrudedCabin.center();
+    extrudedCabin.rotateY(-Math.PI / 2);
+
+    return { bodyGeo: extrudedBody, cabinGeo: extrudedCabin };
+  }, []);
+
   const wheelCoords: [number, number, number][] = [
-    [-0.95, 0.36, 1.34],
-    [0.95, 0.36, 1.34],
-    [-0.95, 0.36, -1.3],
-    [0.95, 0.36, -1.3],
+    [-0.98, 0.36, 1.34],
+    [0.98, 0.36, 1.34],
+    [-0.98, 0.36, -1.32],
+    [0.98, 0.36, -1.32],
   ];
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Carbon-fiber front splitter & lower skirt */}
-      <mesh position={[0, 0.22, 0.06]} castShadow receiveShadow>
-        <boxGeometry args={[2.06, 0.12, 4.46]} />
-        <meshStandardMaterial color="#141820" roughness={0.38} metalness={0.55} />
-      </mesh>
-
-      {/* Main sculpted metallic champagne-gold body */}
-      <mesh position={[0, 0.52, 0]} castShadow receiveShadow>
-        <boxGeometry args={[2.02, 0.5, 4.32]} />
+      {/* Sculpted Glossy Pearl Rosso Corsa Supercar Body */}
+      <mesh geometry={bodyGeo} position={[0, 0.68, 0]} castShadow receiveShadow>
         <meshPhysicalMaterial
-          color="#d4a74a"
-          metalness={0.86}
+          color="#c81e2b"
+          metalness={0.68}
           roughness={0.14}
-          clearcoat={1}
-          clearcoatRoughness={0.05}
-        />
-      </mesh>
-
-      {/* Aerodynamic front hood slope */}
-      <mesh position={[0, 0.64, 1.35]} rotation={[0.16, 0, 0]} castShadow>
-        <boxGeometry args={[1.88, 0.24, 1.48]} />
-        <meshPhysicalMaterial
-          color="#d4a74a"
-          metalness={0.86}
-          roughness={0.14}
-          clearcoat={1}
-          clearcoatRoughness={0.05}
-        />
-      </mesh>
-
-      {/* Sculpted rear deck / engine cover */}
-      <mesh position={[0, 0.78, -1.22]} rotation={[-0.12, 0, 0]} castShadow>
-        <boxGeometry args={[1.84, 0.28, 1.44]} />
-        <meshPhysicalMaterial
-          color="#c89a3d"
-          metalness={0.86}
-          roughness={0.15}
-          clearcoat={1}
-        />
-      </mesh>
-
-      {/* Smoked glass engine louvers */}
-      <mesh position={[0, 0.93, -1.12]} rotation={[-0.12, 0, 0]}>
-        <boxGeometry args={[1.02, 0.06, 1.05]} />
-        <meshPhysicalMaterial
-          color="#0f172a"
-          metalness={0.4}
-          roughness={0.08}
-          clearcoat={1}
-        />
-      </mesh>
-
-      {/* Tinted aerodynamic cockpit cabin */}
-      <mesh position={[0, 0.95, -0.04]} castShadow>
-        <boxGeometry args={[1.56, 0.44, 1.92]} />
-        <meshPhysicalMaterial
-          color="#0c1524"
-          metalness={0.25}
-          roughness={0.06}
           clearcoat={1}
           clearcoatRoughness={0.04}
         />
       </mesh>
 
-      {/* Sloped front windshield */}
-      <mesh position={[0, 0.92, 0.88]} rotation={[-0.58, 0, 0]}>
-        <boxGeometry args={[1.48, 0.07, 0.92]} />
+      {/* Glossy Tinted Glass Panoramic Cockpit */}
+      <mesh geometry={cabinGeo} position={[0, 0.94, -0.18]} castShadow>
         <meshPhysicalMaterial
-          color="#132338"
-          metalness={0.3}
+          color="#0a1322"
+          metalness={0.28}
           roughness={0.05}
+          clearcoat={1}
+          clearcoatRoughness={0.02}
+        />
+      </mesh>
+
+      {/* Carbon-fiber lower side skirts & aerodynamic undertray */}
+      <mesh position={[0, 0.2, 0.02]} castShadow>
+        <boxGeometry args={[2.08, 0.1, 4.42]} />
+        <meshStandardMaterial color="#13171f" roughness={0.35} metalness={0.5} />
+      </mesh>
+
+      {/* Front Carbon Splitter & Wide Honeycomb Intake Grille */}
+      <mesh position={[0, 0.22, 2.22]} castShadow>
+        <boxGeometry args={[1.96, 0.08, 0.36]} />
+        <meshStandardMaterial color="#11151d" roughness={0.32} metalness={0.55} />
+      </mesh>
+      <mesh position={[0, 0.36, 2.26]}>
+        <boxGeometry args={[1.42, 0.16, 0.08]} />
+        <meshStandardMaterial color="#0b0e14" roughness={0.6} metalness={0.4} />
+      </mesh>
+
+      {/* Sculpted Side Aero Air Intakes */}
+      {[-1.03, 1.03].map((sx, idx) => (
+        <mesh key={idx} position={[sx, 0.52, -0.45]}>
+          <boxGeometry args={[0.08, 0.26, 0.95]} />
+          <meshStandardMaterial color="#12161e" roughness={0.4} metalness={0.5} />
+        </mesh>
+      ))}
+
+      {/* Sleek Wing Mirrors on Stalks */}
+      {[-1.12, 1.12].map((mx, idx) => (
+        <group key={idx} position={[mx, 0.84, 0.56]}>
+          <mesh>
+            <boxGeometry args={[0.24, 0.09, 0.15]} />
+            <meshPhysicalMaterial
+              color="#c81e2b"
+              metalness={0.7}
+              roughness={0.14}
+              clearcoat={1}
+            />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Smoked Rear Engine Bay Louver Glass */}
+      <mesh position={[0, 0.98, -1.24]} rotation={[-0.24, 0, 0]}>
+        <boxGeometry args={[1.08, 0.05, 1.02]} />
+        <meshPhysicalMaterial
+          color="#101a2c"
+          metalness={0.35}
+          roughness={0.08}
           clearcoat={1}
         />
       </mesh>
 
-      {/* Side air intakes */}
-      {[-1.02, 1.02].map((x, idx) => (
-        <mesh key={idx} position={[x, 0.54, -0.58]}>
-          <boxGeometry args={[0.06, 0.32, 0.92]} />
-          <meshStandardMaterial color="#12161e" roughness={0.42} metalness={0.5} />
-        </mesh>
-      ))}
-
-      {/* Wing mirrors */}
-      {[-1.12, 1.12].map((x, idx) => (
-        <mesh key={idx} position={[x, 0.88, 0.55]}>
-          <boxGeometry args={[0.24, 0.09, 0.14]} />
-          <meshPhysicalMaterial color="#d4a74a" metalness={0.86} roughness={0.16} clearcoat={1} />
-        </mesh>
-      ))}
-
-      {/* Carbon fiber rear GT wing */}
-      <mesh position={[0, 1.04, -2.02]} castShadow>
-        <boxGeometry args={[1.92, 0.06, 0.36]} />
-        <meshStandardMaterial color="#181d26" roughness={0.28} metalness={0.65} />
+      {/* Carbon GT Rear Wing */}
+      <mesh position={[0, 1.08, -2.08]} castShadow>
+        <boxGeometry args={[1.96, 0.055, 0.34]} />
+        <meshStandardMaterial color="#141922" roughness={0.28} metalness={0.65} />
       </mesh>
-      {[-0.62, 0.62].map((sx, idx) => (
-        <mesh key={idx} position={[sx, 0.88, -1.94]}>
-          <boxGeometry args={[0.07, 0.28, 0.16]} />
-          <meshStandardMaterial color="#181d26" roughness={0.3} metalness={0.65} />
+      {[-0.62, 0.62].map((px, i) => (
+        <mesh key={i} position={[px, 0.92, -2.02]}>
+          <boxGeometry args={[0.06, 0.28, 0.18]} />
+          <meshStandardMaterial color="#141922" roughness={0.3} metalness={0.65} />
         </mesh>
       ))}
 
-      {/* Sharp LED headlights */}
-      {[-0.68, 0.68].map((hx, idx) => (
-        <mesh key={idx} position={[hx, 0.56, 2.17]}>
-          <boxGeometry args={[0.42, 0.09, 0.06]} />
+      {/* Rear Carbon Diffuser + Quad Chrome Exhaust Pipes */}
+      <mesh position={[0, 0.28, -2.26]}>
+        <boxGeometry args={[1.72, 0.2, 0.14]} />
+        <meshStandardMaterial color="#11151d" roughness={0.42} metalness={0.5} />
+      </mesh>
+      {[-0.52, -0.36, 0.36, 0.52].map((ex, i) => (
+        <mesh key={i} position={[ex, 0.28, -2.33]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.048, 0.048, 0.14, 12]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
+        </mesh>
+      ))}
+
+      {/* Sharp Angular LED DRL Headlights */}
+      {[-0.68, 0.68].map((hx, i) => (
+        <mesh
+          key={i}
+          position={[hx, 0.55, 2.18]}
+          rotation={[0, i === 0 ? -0.22 : 0.22, 0]}
+        >
+          <boxGeometry args={[0.42, 0.08, 0.12]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive="#f0f9ff"
-            emissiveIntensity={isNight ? 3.2 : 1.1}
+            emissiveIntensity={isNight ? 3.5 : 1.4}
           />
         </mesh>
       ))}
 
-      {/* Full-width LED taillight bar */}
-      <mesh position={[0, 0.64, -2.17]}>
-        <boxGeometry args={[1.76, 0.075, 0.05]} />
+      {/* Full-Width Glowing Ruby LED Taillight Blade */}
+      <mesh position={[0, 0.66, -2.27]}>
+        <boxGeometry args={[1.76, 0.075, 0.06]} />
         <meshStandardMaterial
-          color="#ef4444"
-          emissive="#ef4444"
-          emissiveIntensity={isNight ? 2.8 : 0.9}
+          color="#ff2a3c"
+          emissive="#ff1e32"
+          emissiveIntensity={isNight ? 3.2 : 1.3}
         />
       </mesh>
 
-      {/* Alloy wheels + red brake calipers */}
+      {/* Gold Badge Emblem on Hood */}
+      <mesh position={[0, 0.66, 1.98]} rotation={[0.25, 0, 0]}>
+        <cylinderGeometry args={[0.045, 0.045, 0.02, 12]} />
+        <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.15} />
+      </mesh>
+
+      {/* 4 Multi-Spoke Forged Alloy Wheels + Disc Rotors + Red Brembo Brake Calipers */}
       {wheelCoords.map((pos, idx) => (
         <group key={idx} position={pos}>
-          <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.36, 0.36, 0.28, 20]} />
-            <meshStandardMaterial color="#14171c" roughness={0.82} />
-          </mesh>
+          {/* Recessed dark wheel arch inner housing */}
           <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.25, 0.25, 0.3, 14]} />
-            <meshStandardMaterial color="#d8dee8" metalness={0.9} roughness={0.18} />
+            <cylinderGeometry args={[0.4, 0.4, 0.24, 18]} />
+            <meshStandardMaterial color="#0b0d12" roughness={0.95} />
           </mesh>
-          <mesh position={[0, 0.05, 0.1]}>
-            <boxGeometry args={[0.26, 0.12, 0.09]} />
-            <meshStandardMaterial color="#dc2626" metalness={0.45} roughness={0.35} />
+          {/* Low-profile rubber tire */}
+          <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.36, 0.36, 0.3, 24]} />
+            <meshStandardMaterial color="#181b21" roughness={0.84} />
+          </mesh>
+          {/* Forged silver alloy rim barrel */}
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.255, 0.255, 0.315, 18]} />
+            <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.16} />
+          </mesh>
+          {/* 5-Spoke Star Alloy Center */}
+          {[0, 1, 2, 3, 4].map((spoke) => (
+            <mesh
+              key={spoke}
+              position={[idx % 2 === 0 ? -0.155 : 0.155, 0, 0]}
+              rotation={[(spoke / 5) * Math.PI * 2, 0, 0]}
+            >
+              <boxGeometry args={[0.025, 0.45, 0.045]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
+            </mesh>
+          ))}
+          {/* Center Lug Cap */}
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.06, 0.06, 0.33, 12]} />
+            <meshStandardMaterial color="#eab308" metalness={0.88} roughness={0.2} />
+          </mesh>
+          {/* Red Brake Caliper */}
+          <mesh position={[idx % 2 === 0 ? -0.09 : 0.09, 0.05, 0.12]}>
+            <boxGeometry args={[0.14, 0.15, 0.1]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.4} roughness={0.3} />
           </mesh>
         </group>
       ))}
@@ -372,12 +475,12 @@ export function CyberOutdoorCampus({
   useFrame((state, delta) => {
     if (waterRef.current) {
       waterRef.current.position.y =
-        0.13 + Math.sin(state.clock.elapsedTime * 1.4) * 0.012;
+        0.165 + Math.sin(state.clock.elapsedTime * 1.6) * 0.012;
     }
     textures.poolWaterBump.offset.x =
-      (textures.poolWaterBump.offset.x + delta * 0.045) % 1;
+      (textures.poolWaterBump.offset.x + delta * 0.05) % 1;
     textures.poolWaterBump.offset.y =
-      (textures.poolWaterBump.offset.y + delta * 0.025) % 1;
+      (textures.poolWaterBump.offset.y + delta * 0.03) % 1;
   });
 
   const handleGroundDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -387,19 +490,18 @@ export function CyberOutdoorCampus({
     }
   };
 
-  // Distant atmospheric metropolitan skyline pushed far back so it enhances realism
-  // without ever photobombing or feeling blocky behind our 28m HQ!
+  // Architectural distant skyline with varied heights & crown spires (far back in atmosphere)
   const skylineBuildings = useMemo(
     () => [
-      { pos: [-56, 20, -48] as [number, number, number], size: [9, 40, 8] as [number, number, number] },
-      { pos: [-40, 27, -56] as [number, number, number], size: [10, 54, 9] as [number, number, number] },
-      { pos: [-22, 18, -58] as [number, number, number], size: [8.5, 36, 8] as [number, number, number] },
-      { pos: [-4, 30, -64] as [number, number, number], size: [11, 60, 10] as [number, number, number] },
-      { pos: [16, 23, -60] as [number, number, number], size: [9.5, 46, 9] as [number, number, number] },
-      { pos: [35, 29, -54] as [number, number, number], size: [10, 58, 9.5] as [number, number, number] },
-      { pos: [54, 19, -46] as [number, number, number], size: [8.5, 38, 8] as [number, number, number] },
-      { pos: [-60, 16, -24] as [number, number, number], size: [8, 32, 8] as [number, number, number] },
-      { pos: [60, 17, -22] as [number, number, number], size: [8, 34, 8] as [number, number, number] },
+      { pos: [-58, 22, -56] as [number, number, number], size: [9, 44, 8.5] as [number, number, number], spire: true },
+      { pos: [-40, 29, -64] as [number, number, number], size: [10.5, 58, 9.5] as [number, number, number], spire: false },
+      { pos: [-21, 20, -66] as [number, number, number], size: [9, 40, 8.5] as [number, number, number], spire: false },
+      { pos: [-2, 34, -72] as [number, number, number], size: [11, 68, 10] as [number, number, number], spire: true },
+      { pos: [18, 25, -68] as [number, number, number], size: [9.5, 50, 9] as [number, number, number], spire: false },
+      { pos: [38, 31, -62] as [number, number, number], size: [10, 62, 9.5] as [number, number, number], spire: true },
+      { pos: [57, 21, -54] as [number, number, number], size: [8.5, 42, 8] as [number, number, number], spire: false },
+      { pos: [-64, 17, -26] as [number, number, number], size: [8.5, 34, 8] as [number, number, number], spire: false },
+      { pos: [64, 18, -24] as [number, number, number], size: [8.5, 36, 8] as [number, number, number], spire: false },
     ],
     []
   );
@@ -408,8 +510,8 @@ export function CyberOutdoorCampus({
     { pos: [-16.6, 0, 5.4], scale: 1.15, rot: 0.4 },
     { pos: [-17.4, 0, 11.8], scale: 1.05, rot: 1.3 },
     { pos: [-15.2, 0, 17.6], scale: 1.2, rot: 2.1 },
-    { pos: [-7.5, 0, 18.8], scale: 1.0, rot: 0.8 },
-    { pos: [2.2, 0, 18.9], scale: 1.08, rot: 2.9 },
+    { pos: [-7.5, 0, 19.1], scale: 1.0, rot: 0.8 },
+    { pos: [2.2, 0, 19.1], scale: 1.08, rot: 2.9 },
     { pos: [15.4, 0, 17.4], scale: 1.18, rot: 1.7 },
     { pos: [17.4, 0, 10.6], scale: 1.1, rot: 3.5 },
     { pos: [16.5, 0, 4.6], scale: 1.22, rot: 0.2 },
@@ -431,14 +533,14 @@ export function CyberOutdoorCampus({
 
   return (
     <group>
-      {/* Expansive manicured tropical lawn */}
+      {/* Expansive manicured tropical lawn (slightly below Y=0 so recessed pool bottom never clips!) */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.02, 4]}
+        position={[0, -0.04, 4]}
         receiveShadow
         onDoubleClick={handleGroundDoubleClick}
       >
-        <planeGeometry args={[170, 170]} />
+        <planeGeometry args={[180, 180]} />
         <meshStandardMaterial
           map={textures.grassLawn}
           bumpMap={textures.grassBump}
@@ -450,24 +552,23 @@ export function CyberOutdoorCampus({
       {/* Architectural dark asphalt avenue in front of campus */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.0, 24.5]}
+        position={[0, -0.01, 24.5]}
         receiveShadow
         onDoubleClick={handleGroundDoubleClick}
       >
-        <planeGeometry args={[130, 8.2]} />
+        <planeGeometry args={[140, 8.2]} />
         <meshStandardMaterial map={textures.asphalt} roughness={0.86} />
       </mesh>
-      {/* Road lane dashes */}
       {[-30, -20, -10, 0, 10, 20, 30].map((x) => (
-        <mesh key={x} position={[x, 0.015, 24.5]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh key={x} position={[x, 0.005, 24.5]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[4.2, 0.22]} />
           <meshStandardMaterial color="#e2e8f0" roughness={0.75} />
         </mesh>
       ))}
 
-      {/* Grand travertine arrival driveway & motor court to supercar */}
+      {/* Grand travertine arrival motor court leading to supercar */}
       <mesh
-        position={[8.8, 0.06, 17.8]}
+        position={[9.2, 0.06, 17.8]}
         receiveShadow
         onDoubleClick={handleGroundDoubleClick}
       >
@@ -476,111 +577,177 @@ export function CyberOutdoorCampus({
           map={textures.marbleTile}
           bumpMap={textures.marbleBump}
           bumpScale={0.025}
-          roughness={0.55}
+          roughness={0.5}
         />
       </mesh>
 
-      {/* GRAND 32m × 14.6m Architectural Teak Outdoor Resort Deck */}
-      <mesh
-        position={[0, 0.09, 11.3]}
-        receiveShadow
-        onDoubleClick={handleGroundDoubleClick}
-      >
-        <boxGeometry args={[32.0, 0.18, 14.6]} />
-        <meshStandardMaterial
-          map={textures.woodDeck}
-          bumpMap={textures.woodDeckBump}
-          bumpScale={0.045}
-          roughness={0.68}
-          metalness={0.05}
-        />
-      </mesh>
+      {/* =========================================================================
+          GRAND 32m × 14.6m TEAK RESORT DECK — BUILT IN 4 FRAMING SLABS AROUND THE
+          REAL OPEN SWIMMING POOL CUTOUT (X ∈ [-10.8, 2.4], Z ∈ [8.3, 14.5])
+          ========================================================================= */}
+      <group onDoubleClick={handleGroundDoubleClick}>
+        {/* North teak deck (between HQ entrance Z=4.0 and pool north edge Z=8.3) */}
+        <mesh position={[0, 0.09, 6.15]} receiveShadow>
+          <boxGeometry args={[32.0, 0.18, 4.3]} />
+          <meshStandardMaterial
+            map={textures.woodDeck}
+            bumpMap={textures.woodDeckBump}
+            bumpScale={0.045}
+            roughness={0.68}
+            metalness={0.05}
+          />
+        </mesh>
+        {/* South teak deck (between pool south edge Z=14.5 and front deck rim Z=18.6) */}
+        <mesh position={[0, 0.09, 16.55]} receiveShadow>
+          <boxGeometry args={[32.0, 0.18, 4.1]} />
+          <meshStandardMaterial
+            map={textures.woodDeck}
+            bumpMap={textures.woodDeckBump}
+            bumpScale={0.045}
+            roughness={0.68}
+            metalness={0.05}
+          />
+        </mesh>
+        {/* West teak deck (west of pool X ∈ [-16.0, -10.8], Z ∈ [8.3, 14.5]) */}
+        <mesh position={[-13.4, 0.09, 11.4]} receiveShadow>
+          <boxGeometry args={[5.2, 0.18, 6.2]} />
+          <meshStandardMaterial
+            map={textures.woodDeck}
+            bumpMap={textures.woodDeckBump}
+            bumpScale={0.045}
+            roughness={0.68}
+            metalness={0.05}
+          />
+        </mesh>
+        {/* East teak deck (east of pool X ∈ [2.4, 16.0], Z ∈ [8.3, 14.5] — supercar bay!) */}
+        <mesh position={[9.2, 0.09, 11.4]} receiveShadow>
+          <boxGeometry args={[13.6, 0.18, 6.2]} />
+          <meshStandardMaterial
+            map={textures.woodDeck}
+            bumpMap={textures.woodDeckBump}
+            bumpScale={0.045}
+            roughness={0.68}
+            metalness={0.05}
+          />
+        </mesh>
+      </group>
 
-      {/* Crisp white limestone perimeter deck trim */}
+      {/* Crisp white limestone perimeter deck border */}
       <mesh position={[0, 0.1, 18.68]} receiveShadow>
         <boxGeometry args={[32.4, 0.22, 0.34]} />
-        <meshStandardMaterial color="#e8e3da" roughness={0.65} />
+        <meshStandardMaterial color="#e8e3da" roughness={0.62} />
       </mesh>
 
-      {/* GRAND 13.2m × 6.2m Luxury Infinity Swimming Pool */}
+      {/* =========================================================================
+          GRAND 13.2m × 6.2m RECESSED LUXURY INFINITY SWIMMING POOL (100% VISIBLE!)
+          ========================================================================= */}
       <group position={[-4.2, 0, 11.4]} onDoubleClick={handleGroundDoubleClick}>
-        {/* Limestone pool coping surround */}
-        <mesh position={[0, 0.2, -3.28]} receiveShadow castShadow>
-          <boxGeometry args={[14.0, 0.12, 0.42]} />
-          <meshStandardMaterial color="#ede8df" roughness={0.58} />
+        {/* White limestone pool coping surround */}
+        <mesh position={[0, 0.21, -3.28]} receiveShadow castShadow>
+          <boxGeometry args={[14.0, 0.1, 0.42]} />
+          <meshStandardMaterial color="#f1ece3" roughness={0.52} />
         </mesh>
-        <mesh position={[0, 0.2, 3.28]} receiveShadow castShadow>
-          <boxGeometry args={[14.0, 0.12, 0.42]} />
-          <meshStandardMaterial color="#ede8df" roughness={0.58} />
+        <mesh position={[0, 0.21, 3.28]} receiveShadow castShadow>
+          <boxGeometry args={[14.0, 0.1, 0.42]} />
+          <meshStandardMaterial color="#f1ece3" roughness={0.52} />
         </mesh>
-        <mesh position={[-6.8, 0.2, 0]} receiveShadow castShadow>
-          <boxGeometry args={[0.42, 0.12, 6.98]} />
-          <meshStandardMaterial color="#ede8df" roughness={0.58} />
+        <mesh position={[-6.8, 0.21, 0]} receiveShadow castShadow>
+          <boxGeometry args={[0.42, 0.1, 6.98]} />
+          <meshStandardMaterial color="#f1ece3" roughness={0.52} />
         </mesh>
-        <mesh position={[6.8, 0.2, 0]} receiveShadow castShadow>
-          <boxGeometry args={[0.42, 0.12, 6.98]} />
-          <meshStandardMaterial color="#ede8df" roughness={0.58} />
+        <mesh position={[6.8, 0.21, 0]} receiveShadow castShadow>
+          <boxGeometry args={[0.42, 0.1, 6.98]} />
+          <meshStandardMaterial color="#f1ece3" roughness={0.52} />
         </mesh>
 
-        {/* Mosaic tile pool basin */}
-        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        {/* Deep Turquoise Ceramic Mosaic Pool Floor (Y = 0.01, clear of grass & deck!) */}
+        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[13.2, 6.2]} />
           <meshStandardMaterial
             map={textures.poolTiles}
-            roughness={0.28}
+            roughness={0.22}
             emissive={isNight ? "#0ea5e9" : "#0284c7"}
-            emissiveIntensity={isNight ? 0.52 : 0.12}
+            emissiveIntensity={isNight ? 0.65 : 0.22}
           />
         </mesh>
 
-        {/* Underwater lounge steps on right side */}
-        <mesh position={[5.8, 0.07, 0]}>
-          <boxGeometry args={[1.2, 0.08, 4.4]} />
-          <meshStandardMaterial color="#7dd3fc" roughness={0.3} />
+        {/* 4 Ceramic Mosaic Pool Interior Walls */}
+        <mesh position={[0, 0.1, -3.09]}>
+          <boxGeometry args={[13.2, 0.2, 0.04]} />
+          <meshStandardMaterial color="#0e86ab" roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0.1, 3.09]}>
+          <boxGeometry args={[13.2, 0.2, 0.04]} />
+          <meshStandardMaterial color="#0e86ab" roughness={0.3} />
+        </mesh>
+        <mesh position={[-6.59, 0.1, 0]}>
+          <boxGeometry args={[0.04, 0.2, 6.2]} />
+          <meshStandardMaterial color="#0e86ab" roughness={0.3} />
+        </mesh>
+        <mesh position={[6.59, 0.1, 0]}>
+          <boxGeometry args={[0.04, 0.2, 6.2]} />
+          <meshStandardMaterial color="#0e86ab" roughness={0.3} />
         </mesh>
 
-        {/* Chrome stainless pool handrail */}
-        <mesh position={[6.4, 0.56, 1.4]} castShadow>
-          <cylinderGeometry args={[0.028, 0.028, 0.85, 10]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
+        {/* Terraced Underwater Entry Steps on East side */}
+        <mesh position={[5.95, 0.04, 0]}>
+          <boxGeometry args={[1.25, 0.06, 4.6]} />
+          <meshStandardMaterial color="#58c7e8" roughness={0.28} />
         </mesh>
-        <mesh position={[6.4, 0.56, 0.6]} castShadow>
-          <cylinderGeometry args={[0.028, 0.028, 0.85, 10]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
-        </mesh>
-        <mesh position={[6.4, 0.96, 1.0]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.028, 0.028, 0.82, 10]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
+        <mesh position={[6.25, 0.09, 0]}>
+          <boxGeometry args={[0.65, 0.06, 4.6]} />
+          <meshStandardMaterial color="#7dd3fc" roughness={0.26} />
         </mesh>
 
-        {/* Animated crystal reflective water surface with ripple bump */}
+        {/* Chrome Stainless Pool Ladder Handrails */}
+        <mesh position={[6.42, 0.52, 1.35]} castShadow>
+          <cylinderGeometry args={[0.032, 0.032, 0.86, 12]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.1} />
+        </mesh>
+        <mesh position={[6.42, 0.52, 0.55]} castShadow>
+          <cylinderGeometry args={[0.032, 0.032, 0.86, 12]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.1} />
+        </mesh>
+        <mesh position={[6.42, 0.94, 0.95]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.032, 0.032, 0.84, 12]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.1} />
+        </mesh>
+
+        {/* Floating Pool Inflatable Ring for Resort Realism */}
+        <mesh position={[-3.4, 0.19, -0.8]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[0.52, 0.16, 14, 24]} />
+          <meshStandardMaterial color="#fb7185" roughness={0.24} />
+        </mesh>
+
+        {/* Crystal Reflective Animated Swimming Pool Water Surface */}
         <mesh
           ref={waterRef}
-          position={[0, 0.14, 0]}
+          position={[0, 0.165, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <planeGeometry args={[13.16, 6.16]} />
           <meshPhysicalMaterial
-            color="#32c5e9"
-            roughness={0.07}
-            metalness={0.08}
-            transmission={performanceMode === "high" ? 0.62 : 0}
+            color="#22c7eb"
+            roughness={0.06}
+            metalness={0.12}
             transparent
-            opacity={performanceMode === "high" ? 0.82 : 0.72}
+            opacity={performanceMode === "high" ? 0.72 : 0.78}
             bumpMap={textures.poolWaterBump}
-            bumpScale={0.045}
+            bumpScale={0.06}
             clearcoat={1}
-            clearcoatRoughness={0.05}
+            clearcoatRoughness={0.04}
+            emissive="#0891b2"
+            emissiveIntensity={isNight ? 0.48 : 0.16}
           />
         </mesh>
 
-        {/* Warm underwater night glow */}
-        {isNight && (
+        {/* Underwater pool lighting */}
+        {(isNight || isSunset) && (
           <pointLight
-            position={[0, 0.6, 0]}
+            position={[0, 0.7, 0]}
             color="#38bdf8"
-            intensity={8}
-            distance={14}
+            intensity={isNight ? 12 : 5}
+            distance={16}
           />
         )}
       </group>
@@ -599,30 +766,30 @@ export function CyberOutdoorCampus({
       <SunLounger position={[-4.2, 0.18, 16.3]} rotationY={0} />
       <SunLounger position={[2.6, 0.18, 16.3]} rotationY={0} />
 
-      {/* Luxury Outdoor Lounge Pergola Seating beside Pool */}
-      <group position={[4.2, 0.18, 7.6]}>
+      {/* Luxury Outdoor Lounge Seating beside Pool */}
+      <group position={[4.2, 0.18, 7.0]}>
         <mesh position={[0, 0.28, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.8, 0.42, 0.95]} />
-          <meshStandardMaterial color="#f1ede5" roughness={0.88} />
+          <meshStandardMaterial color="#f5f1e9" roughness={0.88} />
         </mesh>
         <mesh position={[0, 0.62, -0.38]} castShadow>
           <boxGeometry args={[2.8, 0.45, 0.22]} />
-          <meshStandardMaterial color="#e5dfd3" roughness={0.88} />
+          <meshStandardMaterial color="#e8e2d6" roughness={0.88} />
         </mesh>
         <mesh position={[0, 0.22, 1.15]} castShadow receiveShadow>
           <boxGeometry args={[1.55, 0.34, 0.78]} />
-          <meshStandardMaterial color="#7d5837" roughness={0.68} />
+          <meshStandardMaterial color="#7d5837" roughness={0.62} />
         </mesh>
       </group>
 
-      {/* Sculpted Metallic-Gold GT Supercar in Arrival Bay */}
+      {/* Authentic Curved Italian GT Supercar in Arrival Bay */}
       <LuxurySupercar
-        position={[9.2, 0.18, 11.2]}
+        position={[9.4, 0.18, 11.3]}
         rotationY={-0.36}
         isNight={isNight}
       />
 
-      {/* Landscaped Low Tropical Hedges around Campus Perimeter */}
+      {/* Landscaped Tropical Perimeter Hedges */}
       {[-15.8, 15.8].map((hx, idx) => (
         <mesh key={idx} position={[hx, 0.42, 11.3]} castShadow receiveShadow>
           <boxGeometry args={[0.85, 0.84, 14.4]} />
@@ -640,7 +807,7 @@ export function CyberOutdoorCampus({
         />
       ))}
 
-      {/* 10 Lush Palm Trees */}
+      {/* 10 Lush Arched Palm Trees */}
       {palmPositions.map((p, i) => (
         <PalmTree
           key={i}
@@ -650,22 +817,43 @@ export function CyberOutdoorCampus({
         />
       ))}
 
-      {/* Refined Distant Atmospheric Metropolitan Skyline (far back, sleek glass) */}
+      {/* Distant Atmospheric Metropolitan Skyline with Crown Spires */}
       <group>
         {skylineBuildings.map((b, i) => (
-          <mesh key={i} position={b.pos}>
-            <boxGeometry args={b.size} />
-            <meshStandardMaterial
-              map={isNight ? textures.skylineNight : textures.skylineDay}
-              color={
-                isNight ? "#94a3b8" : isSunset ? "#d9c2b2" : "#cfdce8"
-              }
-              roughness={0.35}
-              metalness={0.48}
-              emissive={isNight ? "#1e293b" : "#000000"}
-              emissiveIntensity={isNight ? 0.32 : 0}
-            />
-          </mesh>
+          <group key={i} position={b.pos}>
+            <mesh>
+              <boxGeometry args={b.size} />
+              <meshStandardMaterial
+                map={isNight ? textures.skylineNight : textures.skylineDay}
+                color={
+                  isNight ? "#94a3b8" : isSunset ? "#d9c2b2" : "#cfdce8"
+                }
+                roughness={0.35}
+                metalness={0.48}
+                emissive={isNight ? "#1e293b" : "#000000"}
+                emissiveIntensity={isNight ? 0.32 : 0}
+              />
+            </mesh>
+            {/* Architectural crown ledge */}
+            <mesh position={[0, b.size[1] / 2 + 0.6, 0]}>
+              <boxGeometry args={[b.size[0] * 0.72, 1.2, b.size[2] * 0.72]} />
+              <meshStandardMaterial
+                color={isNight ? "#1e293b" : "#8aa3b8"}
+                roughness={0.4}
+                metalness={0.5}
+              />
+            </mesh>
+            {b.spire && (
+              <mesh position={[0, b.size[1] / 2 + 4.5, 0]}>
+                <cylinderGeometry args={[0.08, 0.26, 7, 8]} />
+                <meshStandardMaterial
+                  color="#cbd5e1"
+                  metalness={0.75}
+                  roughness={0.3}
+                />
+              </mesh>
+            )}
+          </group>
         ))}
       </group>
     </group>
