@@ -11,23 +11,27 @@ const SECTION_META: Record<
 > = {
   dashboard: {
     title: "Command Dashboard",
-    subtitle: "Ringkasan kantor virtual 3D, unit placeholder, task, & telemetri",
+    subtitle: "Markas 3D 28m, 10 karyawan + Bos FAJREZ, Studio Cuan Rp 0 & telemetri",
   },
   office: {
     title: "Virtual Office 3D",
-    subtitle: "Lingkungan kantor isometrik interaktif • Cyberpunk Glass Deck",
+    subtitle: "Gedung HQ 3 lantai, Mode Analog Bos FAJREZ, kolam renang & supercar",
+  },
+  studio: {
+    title: "Studio Kerja & Cuan (Rp 0)",
+    subtitle: "10 karyawan produksi Website HTML, 7 Naskah Viral, Script WA & Invoice 100% Gratis",
   },
   agents: {
     title: "Agent Management",
-    subtitle: "Kontrol 3 karakter robot placeholder (animasi idle & berjalan)",
+    subtitle: "Kontrol 10 karyawan 3D placeholder & jadwal workstation",
   },
   tasks: {
     title: "Task Manager",
-    subtitle: "Kelola daftar tugas proyek & penugasan unit simulasi",
+    subtitle: "Kelola daftar tugas proyek & penugasan tim",
   },
   activity: {
     title: "Live Activity",
-    subtitle: "Aliran log event kantor simulasi secara real-time",
+    subtitle: "Aliran log event kantor & produksi paket kerja real-time",
   },
 };
 

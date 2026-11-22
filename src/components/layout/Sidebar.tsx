@@ -5,6 +5,7 @@ import {
   Activity,
   Bot,
   Box,
+  Briefcase,
   ChevronLeft,
   ChevronRight,
   Cpu,
@@ -43,6 +44,12 @@ const NAV_ITEMS: {
     icon: Box,
   },
   {
+    id: "studio",
+    label: "Studio Kerja & Cuan",
+    shortLabel: "Cuan Rp0",
+    icon: Briefcase,
+  },
+  {
     id: "agents",
     label: "Agent Management",
     shortLabel: "Agents",
@@ -68,10 +75,11 @@ export function Sidebar({
   mobileOpen,
   onCloseMobile,
 }: SidebarProps) {
-  const { activeSection, setActiveSection, agents, tasks, activities } =
+  const { activeSection, setActiveSection, agents, tasks, activities, workOrders } =
     useOffice();
 
   const getBadge = (id: NavSection): string | null => {
+    if (id === "studio") return workOrders.length > 0 ? `${workOrders.length}` : "FREE";
     if (id === "agents") return `${agents.length}`;
     if (id === "tasks") {
       const open = tasks.filter((t) => t.status !== "done").length;
@@ -256,7 +264,7 @@ export function Sidebar({
       )}
 
       {/* Mobile / Android Sticky Bottom Navigation Bar */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-cyan-500/20 bg-[#050b1d]/95 px-1 py-1.5 backdrop-blur-lg lg:hidden">
+      <nav className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-cyan-500/20 bg-[#050b1d]/95 px-0.5 py-1.5 backdrop-blur-lg lg:hidden">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = activeSection === item.id;
@@ -265,14 +273,18 @@ export function Sidebar({
               key={item.id}
               type="button"
               onClick={() => setActiveSection(item.id)}
-              className={`flex min-w-[58px] flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-medium transition ${
+              className={`flex min-w-[50px] flex-col items-center gap-0.5 rounded-lg px-1.5 py-1 text-[9px] font-semibold transition ${
                 active
-                  ? "bg-cyan-500/15 text-cyan-300"
+                  ? item.id === "studio"
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : "bg-cyan-500/15 text-cyan-300"
+                  : item.id === "studio"
+                  ? "text-emerald-300/80 hover:text-emerald-200"
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
               <Icon className="h-4 w-4" />
-              <span>{item.shortLabel}</span>
+              <span className="truncate">{item.shortLabel}</span>
             </button>
           );
         })}

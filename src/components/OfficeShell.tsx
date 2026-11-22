@@ -7,6 +7,7 @@ import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { AgentManagementPanel } from "@/components/dashboard/AgentManagementPanel";
 import { TaskManagerPanel } from "@/components/dashboard/TaskManagerPanel";
 import { LiveActivityPanel } from "@/components/dashboard/LiveActivityPanel";
+import { WorkStudioPanel } from "@/components/dashboard/WorkStudioPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
 import { OfficeProvider, useOffice } from "@/store/OfficeContext";
 
@@ -35,6 +36,8 @@ function OfficeWorkspace() {
               <DynamicVirtualOffice className="h-[calc(100vh-140px)] min-h-[540px] lg:h-[calc(100vh-110px)]" />
             </div>
           )}
+
+          {activeSection === "studio" && <WorkStudioPanel />}
 
           {activeSection === "agents" && (
             <div className="space-y-5">

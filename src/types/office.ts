@@ -1,4 +1,10 @@
-export type NavSection = "dashboard" | "office" | "agents" | "tasks" | "activity";
+export type NavSection =
+  | "dashboard"
+  | "office"
+  | "studio"
+  | "agents"
+  | "tasks"
+  | "activity";
 
 export type RobotAnimationState = "idle" | "working" | "walking" | "standby";
 
@@ -120,4 +126,61 @@ export interface IntegrationStatus {
   supabaseConfigured: boolean;
   aiApiConfigured: boolean;
   aiDisclaimer: string;
+}
+
+export type WorkOrderMode =
+  | "full_bundle"
+  | "agency_umkm"
+  | "content_affiliate";
+
+export type WorkDealStatus = "draft" | "sent" | "paid";
+
+export interface WorkOrderInput {
+  mode: WorkOrderMode;
+  businessName: string;
+  niche: string;
+  city: string;
+  offerSummary: string;
+  priceRange: string;
+  whatsappNumber: string;
+  targetAudience: string;
+  brandColor: string;
+}
+
+export interface ContentScriptItem {
+  day: number;
+  format: string;
+  title: string;
+  hook3s: string;
+  body: string;
+  cta: string;
+  hashtags: string;
+}
+
+export interface OutreachScriptItem {
+  channel: "WhatsApp" | "Instagram DM" | "Follow-Up";
+  label: string;
+  message: string;
+}
+
+export interface AssignedStaffContribution {
+  staffName: string;
+  role: string;
+  floor: 1 | 2 | 3;
+  outputLabel: string;
+}
+
+export interface WorkOrderDeliverable {
+  id: string;
+  createdAt: string;
+  engineMode: "builtin-free" | "gemini-free" | "groq-free";
+  input: WorkOrderInput;
+  dealStatus: WorkDealStatus;
+  dealValueIdr: number;
+  assignedStaff: AssignedStaffContribution[];
+  landingPageHtml: string;
+  contentScripts: ContentScriptItem[];
+  outreachScripts: OutreachScriptItem[];
+  invoiceHtml: string;
+  monetizationPlaybook: string[];
 }

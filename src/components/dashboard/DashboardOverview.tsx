@@ -4,10 +4,12 @@ import React, { useState } from "react";
 import {
   Activity,
   Bot,
+  Briefcase,
   CheckCircle2,
   Cpu,
   Maximize2,
   Monitor,
+  Rocket,
   ShieldAlert,
 } from "lucide-react";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
@@ -19,7 +21,7 @@ import { useOffice } from "@/store/OfficeContext";
 type InspectorTab = "agents" | "tasks" | "activity";
 
 export function DashboardOverview() {
-  const { agents, workstations, tasks, setActiveSection } = useOffice();
+  const { agents, workstations, tasks, workOrders, setActiveSection } = useOffice();
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("agents");
 
   const doneTasks = tasks.filter((t) => t.status === "done").length;
@@ -27,9 +29,44 @@ export function DashboardOverview() {
   const occupiedWorkstations = workstations.filter(
     (w) => w.assignedAgentId !== null
   ).length;
+  const totalRevenueIdr = workOrders
+    .filter((o) => o.dealStatus === "paid")
+    .reduce((sum, o) => sum + o.dealValueIdr, 0);
 
   return (
     <div className="space-y-5">
+      {/* Studio Kerja & Cuan Quick-Launch Banner (100% Gratis Rp 0) */}
+      <section className="flex flex-col justify-between gap-3 rounded-2xl border border-emerald-500/35 bg-gradient-to-r from-[#071f1a] via-[#091529] to-[#121029] p-4 sm:flex-row sm:items-center">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/50 bg-emerald-500/20 text-emerald-300">
+            <Briefcase className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-black text-white">
+                Studio Kerja &amp; Cuan — 100% Gratis Tanpa Bayar API (Rp 0)
+              </h2>
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                Omzet: Rp {totalRevenueIdr.toLocaleString("id-ID")}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-300">
+              Perintahkan 10 karyawan bikin Website UMKM siap jual (.html), 7
+              Naskah Video Viral TikTok/Reels, Script WA/DM Klien &amp; Invoice
+              langsung jadi.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActiveSection("studio")}
+          className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2.5 text-xs font-black text-slate-950 shadow-lg transition hover:brightness-110"
+        >
+          <Rocket className="h-4 w-4" />
+          Buka Studio Kerja ({workOrders.length})
+        </button>
+      </section>
+
       {/* KPI Stat Strip */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-[#081229] to-[#050b1a] p-4 shadow-[0_0_24px_rgba(0,229,255,0.06)]">
