@@ -136,22 +136,23 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* Simple Free Note */}
+      {/* Honest Free-Tier API & Quota Disclosure */}
       <div className="border-t border-slate-800 p-3">
         {!collapsed || isMobile ? (
-          <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-200">
+          <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-100">
             <div className="flex items-center gap-1.5 font-bold">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-              <span>100% Gratis (Rp 0)</span>
+              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+              <span>AI Free-Tier (Kuota Gratis)</span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-              Animasi &amp; musik dibuat langsung di browser tanpa bayar API.
-              Tinggal download &amp; upload ke YouTube.
+              AI berjalan via proxy server (Groq / Gemini / OpenRouter free tier).
+              Di dalam kuota gratis biaya Rp 0; batas rate limit provider berlaku
+              dan upload YouTube dilakukan manual oleh Bos.
             </p>
           </div>
         ) : (
           <div className="flex justify-center">
-            <Sparkles className="h-5 w-5 text-emerald-400" />
+            <Sparkles className="h-5 w-5 text-cyan-400" />
           </div>
         )}
       </div>
