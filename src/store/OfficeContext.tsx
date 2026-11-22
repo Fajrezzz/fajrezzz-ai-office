@@ -21,6 +21,7 @@ import type {
   ActivitySeverity,
   CameraPreset,
   FloorView,
+  LightingPreset,
   NavSection,
   OfficeAgent,
   OfficeTask,
@@ -53,6 +54,8 @@ interface OfficeContextValue {
   setCameraPreset: (preset: CameraPreset) => void;
   activeFloor: FloorView;
   setActiveFloor: (floor: FloorView) => void;
+  lightingPreset: LightingPreset;
+  setLightingPreset: (lighting: LightingPreset) => void;
   autoRotate: boolean;
   setAutoRotate: (rotate: boolean) => void;
   performanceMode: PerformanceMode;
@@ -97,6 +100,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
   const [activeFloor, setActiveFloorState] = useState<FloorView>("all");
+  const [lightingPreset, setLightingPreset] =
+    useState<LightingPreset>("sunset");
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
   const setCameraPreset = useCallback((preset: CameraPreset) => {
@@ -597,6 +602,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setCameraPreset,
       activeFloor,
       setActiveFloor,
+      lightingPreset,
+      setLightingPreset,
       autoRotate,
       setAutoRotate,
       performanceMode,
@@ -629,6 +636,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setCameraPreset,
       activeFloor,
       setActiveFloor,
+      lightingPreset,
       autoRotate,
       performanceMode,
       performanceReady,

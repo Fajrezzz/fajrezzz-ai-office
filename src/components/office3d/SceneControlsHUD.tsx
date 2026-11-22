@@ -6,10 +6,13 @@ import {
   Car,
   Compass,
   Monitor,
+  Moon,
   Navigation,
   Pause,
   Play,
   RefreshCw,
+  Sun,
+  Sunrise,
   Tag,
   Waves,
   Zap,
@@ -19,6 +22,7 @@ import { useOffice } from "@/store/OfficeContext";
 import type {
   CameraPreset,
   FloorView,
+  LightingPreset,
   PerformanceMode,
 } from "@/types/office";
 
@@ -39,6 +43,16 @@ const CAMERA_OPTIONS: { id: CameraPreset; label: string }[] = [
   { id: "isometric", label: "Iso" },
 ];
 
+const LIGHTING_OPTIONS: {
+  id: LightingPreset;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "day", label: "Siang", icon: Sun },
+  { id: "sunset", label: "Sore", icon: Sunrise },
+  { id: "night", label: "Malam", icon: Moon },
+];
+
 const PERF_OPTIONS: { id: PerformanceMode; label: string }[] = [
   { id: "eco", label: "Eco" },
   { id: "balanced", label: "Bal" },
@@ -54,6 +68,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     setCameraPreset,
     activeFloor,
     setActiveFloor,
+    lightingPreset,
+    setLightingPreset,
     autoRotate,
     setAutoRotate,
     performanceMode,
@@ -66,7 +82,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     sendAgentToWaypoint,
   } = useOffice();
 
-  const [clockText, setClockText] = useState("21:00");
+  const [clockText, setClockText] = useState("17:45");
 
   useEffect(() => {
     const update = () => {
@@ -86,30 +102,60 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const selectedAgent =
     agents.find((a) => a.id === selectedAgentId) ?? agents[0];
 
+  const lightingLabel =
+    lightingPreset === "day"
+      ? "Cerah Siang"
+      : lightingPreset === "sunset"
+      ? "Golden Hour"
+      : "Malam & Lampu";
+
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 sm:p-3">
-      {/* ================= TOP HUD BAR (Reference-Inspired Cyberpunk Glass) ================= */}
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        {/* Top-Left Live HQ Telemetry Card (inspired by reference top-left HUD) */}
-        <div className="pointer-events-auto hidden rounded-xl border border-cyan-400/30 bg-[#050b1d]/82 px-3 py-1.5 backdrop-blur-md sm:block">
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono text-sm font-black tracking-wider text-white">
-              {clockText}
-            </span>
-            <span className="text-[10px] font-semibold text-cyan-300">
-              FAJREZZZ HQ
-            </span>
+      {/* ================= TOP HUD BAR ================= */}
+      <div className="flex flex-wrap items-start justify-between gap-1.5 sm:gap-2">
+        {/* Top-Left Live HQ & Lighting Switcher */}
+        <div className="pointer-events-auto flex flex-col gap-1.5">
+          <div className="hidden rounded-xl border border-white/15 bg-slate-950/78 px-3 py-1.5 backdrop-blur-md sm:block">
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-sm font-black tracking-wider text-white">
+                {clockText}
+              </span>
+              <span className="text-[10px] font-semibold text-amber-300">
+                FAJREZZZ HQ
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-300">
+              {lightingLabel} • Visual Sim
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-amber-300">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            <span>Cyber Night • Visual Sim</span>
+
+          {/* Realistic Time-of-Day / Lighting Switcher (Siang / Sore / Malam) */}
+          <div className="flex items-center gap-1 rounded-xl border border-white/15 bg-slate-950/80 p-1 backdrop-blur-md">
+            {LIGHTING_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const active = lightingPreset === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setLightingPreset(opt.id)}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold transition ${
+                    active
+                      ? "bg-amber-400 text-slate-950 shadow-md"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Top-Right Floor Switcher + Camera Angles Deck (inspired by reference top-right panel) */}
+        {/* Top-Right Floor Switcher + Camera Angles Deck */}
         <div className="pointer-events-auto flex max-w-full flex-col items-end gap-1.5">
-          {/* Row 1: Floor selector + Eco/Bal/High */}
-          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-cyan-500/30 bg-[#050b1d]/85 p-1 backdrop-blur-md">
+          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/82 p-1 backdrop-blur-md">
             {FLOOR_OPTIONS.map((fl) => (
               <button
                 key={fl.id}
@@ -117,7 +163,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                 onClick={() => setActiveFloor(fl.id)}
                 className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold transition ${
                   activeFloor === fl.id
-                    ? "bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+                    ? "bg-amber-400 text-slate-950 shadow-md"
                     : "bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`}
               >
@@ -127,7 +173,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
 
             <span className="mx-0.5 h-3.5 w-px shrink-0 bg-slate-700" />
 
-            <Zap className="h-3 w-3 shrink-0 text-cyan-400" />
+            <Zap className="h-3 w-3 shrink-0 text-amber-300" />
             {PERF_OPTIONS.map((p) => (
               <button
                 key={p.id}
@@ -135,7 +181,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                 onClick={() => setPerformanceMode(p.id)}
                 className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition ${
                   performanceMode === p.id
-                    ? "bg-purple-500/35 text-purple-100 ring-1 ring-purple-400/60"
+                    ? "bg-sky-500/35 text-sky-100 ring-1 ring-sky-400/60"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -144,8 +190,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             ))}
           </div>
 
-          {/* Row 2: Named Camera Angles */}
-          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-purple-500/25 bg-[#050b1d]/80 p-1 backdrop-blur-md">
+          <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/78 p-1 backdrop-blur-md">
             {CAMERA_OPTIONS.map((cam) => (
               <button
                 key={cam.id}
@@ -153,7 +198,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                 onClick={() => setCameraPreset(cam.id)}
                 className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-semibold transition ${
                   cameraPreset === cam.id
-                    ? "bg-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/60"
+                    ? "bg-sky-500/35 text-white ring-1 ring-sky-300/70"
                     : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                 }`}
               >
@@ -166,17 +211,16 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
 
       {/* ================= BOTTOM FLOATING ICON DOCK + ROBOT CONTROLS ================= */}
       <div className="space-y-1.5">
-        {/* Reference-style Circular Quick-Jump Icon Dock */}
         <div className="flex justify-center">
-          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-[#050b1d]/88 px-2.5 py-1.5 shadow-[0_0_24px_rgba(0,229,255,0.18)] backdrop-blur-md">
+          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/15 bg-slate-950/84 px-2.5 py-1.5 shadow-xl backdrop-blur-md">
             <button
               type="button"
               onClick={() => setCameraPreset("interior")}
               title="Interior Lantai 2 (Workstations)"
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 cameraPreset === "interior"
-                  ? "border-cyan-300 bg-cyan-400 text-slate-950"
-                  : "border-slate-700 bg-slate-900/90 text-cyan-300 hover:border-cyan-400/60"
+                  ? "border-amber-300 bg-amber-400 text-slate-950"
+                  : "border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-300/60"
               }`}
             >
               <Monitor className="h-3.5 w-3.5" />
@@ -184,11 +228,11 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setCameraPreset("pool")}
-              title="Kolam Renang Neon"
+              title="Kolam Renang"
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 cameraPreset === "pool"
-                  ? "border-cyan-300 bg-cyan-400 text-slate-950"
-                  : "border-slate-700 bg-slate-900/90 text-sky-300 hover:border-cyan-400/60"
+                  ? "border-sky-300 bg-sky-400 text-slate-950"
+                  : "border-slate-700 bg-slate-900/90 text-sky-300 hover:border-sky-300/60"
               }`}
             >
               <Waves className="h-3.5 w-3.5" />
@@ -196,11 +240,11 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setCameraPreset("supercar")}
-              title="Cyber Supercar"
+              title="Supercar"
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 cameraPreset === "supercar"
                   ? "border-amber-300 bg-amber-400 text-slate-950"
-                  : "border-slate-700 bg-slate-900/90 text-amber-300 hover:border-amber-400/60"
+                  : "border-slate-700 bg-slate-900/90 text-amber-300 hover:border-amber-300/60"
               }`}
             >
               <Car className="h-3.5 w-3.5" />
@@ -208,11 +252,11 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setCameraPreset("rooftop")}
-              title="Atap Helipad & Neon Court"
+              title="Atap Helipad & Padel Court"
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 cameraPreset === "rooftop"
-                  ? "border-purple-300 bg-purple-400 text-slate-950"
-                  : "border-slate-700 bg-slate-900/90 text-purple-300 hover:border-purple-400/60"
+                  ? "border-amber-300 bg-amber-400 text-slate-950"
+                  : "border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-300/60"
               }`}
             >
               <Building2 className="h-3.5 w-3.5" />
@@ -220,11 +264,13 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setAutoRotate(!autoRotate)}
-              title={autoRotate ? "Matikan Putar Otomatis" : "Putar Kamera Otomatis"}
+              title={
+                autoRotate ? "Matikan Putar Otomatis" : "Putar Kamera Otomatis"
+              }
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 autoRotate
-                  ? "border-amber-300 bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
-                  : "border-slate-700 bg-slate-900/90 text-slate-300 hover:border-amber-400/60"
+                  ? "border-amber-300 bg-amber-400 text-slate-950"
+                  : "border-slate-700 bg-slate-900/90 text-slate-300 hover:border-amber-300/60"
               }`}
             >
               <RefreshCw
@@ -234,22 +280,24 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setIsSimulationRunning(!isSimulationRunning)}
-              title={isSimulationRunning ? "Jeda Simulasi" : "Lanjutkan Simulasi"}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-purple-300 transition hover:border-purple-400/60"
+              title={
+                isSimulationRunning ? "Jeda Simulasi" : "Lanjutkan Simulasi"
+              }
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-slate-200 transition hover:border-amber-300/60"
             >
               {isSimulationRunning ? (
                 <Pause className="h-3.5 w-3.5" />
               ) : (
-                <Play className="h-3.5 w-3.5 text-cyan-300" />
+                <Play className="h-3.5 w-3.5 text-emerald-300" />
               )}
             </button>
             <button
               type="button"
               onClick={() => setShowLabelsIn3D(!showLabelsIn3D)}
-              title="Tampilkan / Sembunyikan Kartu Hologram 3D"
+              title="Tampilkan / Sembunyikan Kartu Status 3D"
               className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
                 showLabelsIn3D
-                  ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-200"
+                  ? "border-sky-400/60 bg-sky-500/20 text-sky-200"
                   : "border-slate-700 bg-slate-900/90 text-slate-400"
               }`}
             >
@@ -258,7 +306,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
 
-        {/* Robot Selector + Quick Actions Strip */}
+        {/* Robot Selector + Quick Actions */}
         <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
           <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {agents.map((agent) => {
@@ -270,8 +318,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                   onClick={() => setSelectedAgentId(agent.id)}
                   className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-1 text-left backdrop-blur-md transition ${
                     active
-                      ? "border-cyan-400/70 bg-[#071530]/92 text-white shadow-[0_0_16px_rgba(0,229,255,0.22)]"
-                      : "border-slate-700/60 bg-[#050b1d]/78 text-slate-300 hover:border-slate-500/80"
+                      ? "border-amber-400/75 bg-slate-950/92 text-white shadow-lg"
+                      : "border-white/15 bg-slate-950/75 text-slate-200 hover:border-slate-400/60"
                   }`}
                 >
                   <span
@@ -292,8 +340,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
           </div>
 
           {!compact && selectedAgent && (
-            <div className="pointer-events-auto flex items-center gap-1 overflow-x-auto rounded-xl border border-cyan-500/25 bg-[#050b1d]/85 px-2 py-1 backdrop-blur-md">
-              <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-cyan-300">
+            <div className="pointer-events-auto flex items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/82 px-2 py-1 backdrop-blur-md">
+              <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-amber-300">
                 <Navigation className="h-3 w-3" />
                 {selectedAgent.name}:
               </span>
@@ -304,8 +352,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                   onClick={() => setAgentStatus(selectedAgent.id, mode)}
                   className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase transition ${
                     selectedAgent.status === mode
-                      ? "border-purple-400/70 bg-purple-500/30 text-purple-100"
-                      : "border-slate-700/70 bg-slate-900/80 text-slate-300"
+                      ? "border-amber-300/80 bg-amber-400 text-slate-950"
+                      : "border-slate-700/80 bg-slate-900/80 text-slate-300"
                   }`}
                 >
                   {mode === "working"
@@ -321,7 +369,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                   key={dest.id}
                   type="button"
                   onClick={() => sendAgentToWaypoint(selectedAgent.id, dest.id)}
-                  className="shrink-0 rounded-md border border-slate-700/70 bg-slate-900/80 px-1.5 py-0.5 text-[9px] font-medium text-slate-200 transition hover:border-cyan-400/60 hover:bg-cyan-500/20"
+                  className="shrink-0 rounded-md border border-slate-700/80 bg-slate-900/80 px-1.5 py-0.5 text-[9px] font-medium text-slate-200 transition hover:border-sky-400/60 hover:bg-sky-500/20"
                 >
                   {dest.label}
                 </button>
@@ -330,16 +378,15 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
           )}
         </div>
 
-        {/* Touch & Desktop Control Hint */}
-        <div className="pointer-events-none flex items-center justify-between text-[9px] text-slate-400/85 lg:justify-end">
+        <div className="pointer-events-none flex items-center justify-between text-[9px] text-white/80 drop-shadow lg:justify-end">
           <span className="flex items-center gap-1 lg:hidden">
-            <Compass className="h-3 w-3 text-cyan-400" />1 jari: orbit • 2 jari:
-            zoom/pan • Pilih L2 untuk lihat interior
+            <Compass className="h-3 w-3 text-amber-300" />1 jari: orbit • 2
+            jari: zoom/pan • Pilih Siang/Sore/Malam
           </span>
           <span className="hidden items-center gap-1.5 lg:flex">
-            <Compass className="h-3 w-3 text-cyan-400" />
-            Seret = putar • Scroll/Pinch = zoom • Pilih L1–L3 / Atap untuk
-            inspeksi lantai • Mode Visual Placeholder (Non-AI)
+            <Compass className="h-3 w-3 text-amber-300" />
+            Seret = putar • Scroll/Pinch = zoom • Pilih Siang / Sore / Malam &
+            L1–L3 • Visual Placeholder (Non-AI)
           </span>
         </div>
       </div>

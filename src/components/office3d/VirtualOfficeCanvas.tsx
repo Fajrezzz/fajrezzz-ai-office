@@ -2,6 +2,7 @@
 
 import React, { Component, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import * as THREE from "three";
 import { AlertTriangle, Box, RotateCcw } from "lucide-react";
 import { OfficeScene } from "@/components/office3d/OfficeScene";
 import { SceneControlsHUD } from "@/components/office3d/SceneControlsHUD";
@@ -28,7 +29,7 @@ class CanvasErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#050a18] p-6 text-center">
-          <AlertTriangle className="h-9 w-9 text-purple-400" />
+          <AlertTriangle className="h-9 w-9 text-amber-400" />
           <div className="text-sm font-semibold text-slate-100">
             3D WebGL Viewport mengalami kendala pada perangkat ini
           </div>
@@ -76,20 +77,21 @@ export function VirtualOfficeCanvas({
   }, []);
 
   const isEco = performanceMode === "eco";
+  // Keep crisp antialiasing & clean DPR even in Eco Mode so 3D looks realistic on Android
   const dpr: [number, number] = isEco
-    ? [1, 1]
-    : performanceMode === "balanced"
     ? [1, 1.5]
+    : performanceMode === "balanced"
+    ? [1, 1.75]
     : [1, 2];
 
   const readyToRender = mounted && performanceReady;
 
   return (
     <div
-      className={`relative w-full overflow-hidden rounded-2xl border border-cyan-500/25 bg-[#040814] shadow-[0_0_40px_rgba(0,212,255,0.08)] ${className}`}
+      className={`relative w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-[#0b1324] shadow-2xl ${className}`}
     >
       {!readyToRender ? (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-cyan-300">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-amber-300">
           <Box className="h-8 w-8 animate-pulse" />
           <span className="text-xs font-medium tracking-wider uppercase">
             Memuat Virtual Office 3D...
@@ -108,13 +110,13 @@ export function VirtualOfficeCanvas({
         </div>
       ) : contextLost ? (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <AlertTriangle className="h-8 w-8 text-cyan-400" />
+          <AlertTriangle className="h-8 w-8 text-amber-400" />
           <p className="text-sm font-semibold text-slate-100">
             Konteks GPU WebGL dijeda oleh browser
           </p>
           <p className="max-w-sm text-xs text-slate-400">
             Hal ini wajar pada HP Android saat memori sedang padat. Klik tombol
-            di bawah untuk memulihkan tampilan 3D dalam mode Eco.
+            di bawah untuk memulihkan tampilan 3D.
           </p>
           <button
             type="button"
@@ -122,7 +124,7 @@ export function VirtualOfficeCanvas({
               setContextLost(false);
               setCanvasKey((k) => k + 1);
             }}
-            className="flex items-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-4 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/30"
+            className="flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-amber-500/20 px-4 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/30"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Muat Ulang 3D
@@ -133,13 +135,15 @@ export function VirtualOfficeCanvas({
           <Canvas
             key={`${canvasKey}-${isEco ? "eco" : "std"}`}
             className="h-full w-full touch-none"
-            shadows={!isEco}
+            shadows="percentage"
             dpr={dpr}
-            camera={{ position: [2.5, 11.2, 26.5], fov: 38, near: 0.5, far: 120 }}
+            camera={{ position: [2.5, 11.2, 26.5], fov: 38, near: 0.5, far: 140 }}
             gl={{
-              antialias: !isEco,
-              powerPreference: isEco ? "low-power" : "high-performance",
+              antialias: true,
+              powerPreference: isEco ? "default" : "high-performance",
               alpha: false,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 1.08,
             }}
             onCreated={({ gl }) => {
               const dom = gl.domElement;
