@@ -6,6 +6,7 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
+import { useOffice } from "@/store/OfficeContext";
 import {
   FLOOR_1_Y,
   FLOOR_2_Y,
@@ -158,7 +159,7 @@ function ExecutiveLeatherChair({
   );
 }
 
-/** Modern Frameless Sliding Double Glass Door Portal (for L1 Main Entrance & L2/L3 Balcony Doors) */
+/** Automatic Proximity Frameless Sliding Double Glass Door Portal (Auto-Opens When Boss Approaches!) */
 function SlidingGlassDoorPortal({
   position,
   width = 3.2,
@@ -170,8 +171,49 @@ function SlidingGlassDoorPortal({
   height?: number;
   isNight?: boolean;
 }) {
+  const { bossPositionRef } = useOffice();
+  const leftLeafRef = useRef<THREE.Group>(null);
+  const rightLeafRef = useRef<THREE.Group>(null);
+  const sensorLedRef = useRef<THREE.MeshStandardMaterial>(null);
+  const openProgressRef = useRef(0);
+
   const halfW = width / 2;
-  const leafW = width * 0.34;
+  const leafW = width * 0.485;
+  const closedOffset = leafW / 2 + 0.015;
+  const openSlideDist = leafW * 0.92;
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const [bx, by, bz] = bossPositionRef.current;
+    const dx = bx - position[0];
+    const dy = by - position[1];
+    const dz = bz - position[2];
+    const distXZ = Math.hypot(dx, dz);
+    const shouldOpen = Math.abs(dy) < 2.25 && distXZ < 3.85;
+
+    const target = shouldOpen ? 1 : 0;
+    openProgressRef.current += (target - openProgressRef.current) * Math.min(1, dt * 5.2);
+    const p = openProgressRef.current;
+
+    if (leftLeafRef.current) {
+      leftLeafRef.current.position.x = -(closedOffset + p * openSlideDist);
+    }
+    if (rightLeafRef.current) {
+      rightLeafRef.current.position.x = closedOffset + p * openSlideDist;
+    }
+    if (sensorLedRef.current) {
+      if (p > 0.08) {
+        sensorLedRef.current.color.set("#4ade80");
+        sensorLedRef.current.emissive.set("#22c55e");
+        sensorLedRef.current.emissiveIntensity = isNight ? 1.5 : 1.0;
+      } else {
+        sensorLedRef.current.color.set("#38bdf8");
+        sensorLedRef.current.emissive.set("#0ea5e9");
+        sensorLedRef.current.emissiveIntensity = isNight ? 0.85 : 0.45;
+      }
+    }
+  });
+
   return (
     <group position={position}>
       {/* Matte-Black Architectural Steel Portal Frame */}
@@ -183,18 +225,22 @@ function SlidingGlassDoorPortal({
         <boxGeometry args={[0.09, height, 0.14]} />
         <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Top Sliding Rail Track */}
+      {/* Top Sliding Rail Track + Overhead Automatic Motion Sensor Unit */}
       <mesh position={[0, height, 0]} castShadow>
-        <boxGeometry args={[width + 0.12, 0.1, 0.16]} />
+        <boxGeometry args={[width + 0.16, 0.11, 0.16]} />
         <meshStandardMaterial color="#1f2530" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Warm Recessed Doorway Header LED Strip (Anti-Glare Soft Warm Glow) */}
-      <mesh position={[0, height - 0.06, 0.02]}>
-        <boxGeometry args={[width - 0.16, 0.025, 0.04]} />
+      <mesh position={[0, height - 0.01, 0.09]}>
+        <boxGeometry args={[0.38, 0.075, 0.05]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.7} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, height - 0.01, 0.118]}>
+        <boxGeometry args={[0.14, 0.022, 0.012]} />
         <meshStandardMaterial
-          color="#fff7e6"
-          emissive="#ffd48a"
-          emissiveIntensity={isNight ? 0.72 : 0.32}
+          ref={sensorLedRef}
+          color="#38bdf8"
+          emissive="#0ea5e9"
+          emissiveIntensity={isNight ? 0.85 : 0.45}
         />
       </mesh>
       {/* Stainless Bottom Floor Threshold Track */}
@@ -203,35 +249,38 @@ function SlidingGlassDoorPortal({
         <meshStandardMaterial color="#94a3b8" metalness={0.55} roughness={0.38} />
       </mesh>
 
-      {/* Left & Right Tempered Glass Sliding Door Panels (Slid Partially Open with Vertical Steel Handles) */}
-      {[-1, 1].map((side) => {
-        const panelCenterX = side * (halfW - leafW / 2 - 0.06);
-        const handleX = panelCenterX - side * (leafW / 2 - 0.12);
+      {/* Left & Right Automatic Sliding Tempered Glass Door Leaves */}
+      {([-1, 1] as const).map((side) => {
+        const handleLocalX = -side * (leafW / 2 - 0.12);
         return (
-          <group key={side}>
+          <group
+            key={side}
+            ref={side === -1 ? leftLeafRef : rightLeafRef}
+            position={[side * closedOffset, 0, 0.015]}
+          >
             {/* Tempered Anti-Glare Glass Door Leaf */}
-            <mesh position={[panelCenterX, (height - 0.08) / 2, 0.015]}>
+            <mesh position={[0, (height - 0.08) / 2, 0]}>
               <boxGeometry args={[leafW, height - 0.12, 0.035]} />
               <meshPhysicalMaterial
                 color="#dbeafe"
                 transparent
-                opacity={0.26}
+                opacity={0.28}
                 roughness={0.34}
                 metalness={0.04}
               />
             </mesh>
             {/* Slim Black Aluminum Door Edge Frame */}
-            <mesh position={[panelCenterX, height - 0.1, 0.015]}>
+            <mesh position={[0, height - 0.1, 0]}>
               <boxGeometry args={[leafW + 0.02, 0.04, 0.05]} />
               <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
             </mesh>
-            <mesh position={[panelCenterX, 0.04, 0.015]}>
+            <mesh position={[0, 0.04, 0]}>
               <boxGeometry args={[leafW + 0.02, 0.05, 0.05]} />
               <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
             </mesh>
             {/* Vertical Brushed Stainless-Steel Pull Handles (Front & Back) */}
             {[-0.045, 0.045].map((hz, hi) => (
-              <mesh key={hi} position={[handleX, 1.15, 0.015 + hz]}>
+              <mesh key={hi} position={[handleLocalX, 1.15, hz]}>
                 <cylinderGeometry args={[0.014, 0.014, 0.62, 10]} />
                 <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.16} />
               </mesh>

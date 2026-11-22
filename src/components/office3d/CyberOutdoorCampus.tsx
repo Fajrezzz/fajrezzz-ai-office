@@ -2,10 +2,11 @@
 
 import React, { useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
+import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { CyberpunkSkyline } from "@/components/office3d/CyberpunkSkyline";
+import { useOffice } from "@/store/OfficeContext";
 import type {
   LightingPreset,
   PerformanceMode,
@@ -190,6 +191,225 @@ function SunLounger({
         <boxGeometry args={[0.46, 0.09, 0.22]} />
         <meshStandardMaterial color="#0284c7" roughness={0.85} />
       </mesh>
+    </group>
+  );
+}
+
+/** Relaxed Poolside Trading Bot Character reclining on a Sun Lounger with Live Animated Candlestick Chart Laptop */
+function PoolsideTradingBot({
+  position,
+  rotationY = -Math.PI / 2,
+  isNight,
+  showLabel,
+}: {
+  position: [number, number, number];
+  rotationY?: number;
+  isNight: boolean;
+  showLabel: boolean;
+}) {
+  const headRef = useRef<THREE.Group>(null);
+  const leftHandRef = useRef<THREE.Mesh>(null);
+  const rightHandRef = useRef<THREE.Mesh>(null);
+  const holoRef = useRef<THREE.Group>(null);
+  const barRefs = useRef<(THREE.Mesh | null)[]>([]);
+
+  const candleSpecs = useMemo(
+    () => [
+      { x: -0.2, baseH: 0.09, bullish: true, phase: 0.2 },
+      { x: -0.12, baseH: 0.07, bullish: false, phase: 1.1 },
+      { x: -0.04, baseH: 0.13, bullish: true, phase: 2.0 },
+      { x: 0.04, baseH: 0.11, bullish: true, phase: 2.9 },
+      { x: 0.12, baseH: 0.08, bullish: false, phase: 3.7 },
+      { x: 0.2, baseH: 0.15, bullish: true, phase: 4.6 },
+    ],
+    []
+  );
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (headRef.current) {
+      headRef.current.rotation.y = Math.sin(t * 0.85) * 0.14;
+      headRef.current.rotation.x = 0.22 + Math.sin(t * 1.4) * 0.04;
+    }
+    if (leftHandRef.current && rightHandRef.current) {
+      leftHandRef.current.position.y = 0.61 + Math.sin(t * 8.5) * 0.012;
+      rightHandRef.current.position.y = 0.61 + Math.cos(t * 9.2) * 0.012;
+    }
+    if (holoRef.current) {
+      holoRef.current.position.y = 0.94 + Math.sin(t * 2.2) * 0.018;
+    }
+    for (let i = 0; i < candleSpecs.length; i++) {
+      const mesh = barRefs.current[i];
+      if (!mesh) continue;
+      const spec = candleSpecs[i];
+      const pulse = 0.72 + Math.sin(t * 2.4 + spec.phase) * 0.38;
+      mesh.scale.y = Math.max(0.35, pulse);
+    }
+  });
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Reclined Legs Resting Flat on the Sun Lounger Mattress (Facing +Z toward Pool!) */}
+      <mesh position={[-0.12, 0.44, 0.56]} rotation={[Math.PI / 2 - 0.04, 0, 0]} castShadow>
+        <capsuleGeometry args={[0.068, 0.56, 6, 10]} />
+        <meshStandardMaterial color="#d8a986" roughness={0.68} />
+      </mesh>
+      <mesh position={[0.12, 0.44, 0.56]} rotation={[Math.PI / 2 - 0.04, 0, 0]} castShadow>
+        <capsuleGeometry args={[0.068, 0.56, 6, 10]} />
+        <meshStandardMaterial color="#d8a986" roughness={0.68} />
+      </mesh>
+      {/* Relaxed Pool Slides / Sandals */}
+      <mesh position={[-0.12, 0.45, 0.92]} rotation={[0.3, 0, 0]}>
+        <boxGeometry args={[0.11, 0.05, 0.2]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.5} />
+      </mesh>
+      <mesh position={[0.12, 0.45, 0.92]} rotation={[0.3, 0, 0]}>
+        <boxGeometry args={[0.11, 0.05, 0.2]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.5} />
+      </mesh>
+
+      {/* Resort Khaki Swim Shorts */}
+      <mesh position={[0, 0.46, 0.16]} rotation={[Math.PI / 2 - 0.12, 0, 0]} castShadow>
+        <boxGeometry args={[0.38, 0.34, 0.18]} />
+        <meshStandardMaterial color="#334155" roughness={0.78} />
+      </mesh>
+
+      {/* Reclined Torso Leaning Comfortably Against the Tilted Sun Lounger Backrest */}
+      <group position={[0, 0.58, -0.22]} rotation={[0.62, 0, 0]}>
+        <mesh position={[0, 0.16, 0]} castShadow>
+          <boxGeometry args={[0.4, 0.48, 0.2]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.62} />
+        </mesh>
+        {/* Emerald-Cyan Neon Bot Trading Chest Trim */}
+        <mesh position={[0, 0.22, 0.105]}>
+          <boxGeometry args={[0.24, 0.05, 0.02]} />
+          <meshStandardMaterial
+            color="#22c55e"
+            emissive="#10b981"
+            emissiveIntensity={isNight ? 1.5 : 0.75}
+          />
+        </mesh>
+      </group>
+
+      {/* Head Propped Comfortably on the Blue Pillow with Glowing Cyber Trading Visor */}
+      <group ref={headRef} position={[0, 0.88, -0.58]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.155, 16, 14]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.55} roughness={0.32} />
+        </mesh>
+        {/* Sleek Metallic Bot Antenna Ear Fins */}
+        <mesh position={[-0.16, 0.02, 0]}>
+          <boxGeometry args={[0.04, 0.1, 0.08]} />
+          <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.1} />
+        </mesh>
+        <mesh position={[0.16, 0.02, 0]}>
+          <boxGeometry args={[0.04, 0.1, 0.08]} />
+          <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={1.1} />
+        </mesh>
+        {/* Glowing Emerald-Cyan Trading Visor Glasses */}
+        <mesh position={[0, 0.02, 0.138]}>
+          <boxGeometry args={[0.22, 0.072, 0.04]} />
+          <meshStandardMaterial
+            color="#34d399"
+            emissive="#10b981"
+            emissiveIntensity={isNight ? 2.0 : 1.1}
+            roughness={0.2}
+          />
+        </mesh>
+      </group>
+
+      {/* Bent Arms Typing on Trading Laptop */}
+      <mesh position={[-0.22, 0.65, -0.06]} rotation={[0.95, 0, -0.25]} castShadow>
+        <capsuleGeometry args={[0.048, 0.34, 6, 8]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.62} />
+      </mesh>
+      <mesh position={[0.22, 0.65, -0.06]} rotation={[0.95, 0, 0.25]} castShadow>
+        <capsuleGeometry args={[0.048, 0.34, 6, 8]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.62} />
+      </mesh>
+      <mesh ref={leftHandRef} position={[-0.12, 0.61, 0.18]}>
+        <sphereGeometry args={[0.042, 8, 8]} />
+        <meshStandardMaterial color="#38bdf8" metalness={0.5} roughness={0.3} />
+      </mesh>
+      <mesh ref={rightHandRef} position={[0.12, 0.61, 0.18]}>
+        <sphereGeometry args={[0.042, 8, 8]} />
+        <meshStandardMaterial color="#38bdf8" metalness={0.5} roughness={0.3} />
+      </mesh>
+
+      {/* Open Trading Laptop Resting on Lap */}
+      <group position={[0, 0.58, 0.22]}>
+        {/* Laptop Keyboard Base */}
+        <mesh position={[0, 0, 0]} castShadow>
+          <boxGeometry args={[0.46, 0.024, 0.3]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.28} />
+        </mesh>
+        {/* Glowing Keyboard Accent */}
+        <mesh position={[0, 0.015, 0.02]}>
+          <boxGeometry args={[0.38, 0.006, 0.16]} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            emissive="#0ea5e9"
+            emissiveIntensity={0.65}
+          />
+        </mesh>
+        {/* Laptop Screen Angled Toward Bot */}
+        <group position={[0, 0.14, 0.14]} rotation={[-0.35, 0, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.46, 0.29, 0.018]} />
+            <meshStandardMaterial color="#0f172a" metalness={0.78} roughness={0.26} />
+          </mesh>
+          <mesh position={[0, 0, -0.011]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[0.42, 0.24]} />
+            <meshStandardMaterial
+              color="#042f2e"
+              emissive="#10b981"
+              emissiveIntensity={isNight ? 1.25 : 0.75}
+            />
+          </mesh>
+        </group>
+      </group>
+
+      {/* Floating Holographic Live Candlestick Chart Above Laptop */}
+      <group ref={holoRef} position={[0, 0.94, 0.16]}>
+        {/* Semi-transparent Hologram Chart Panel */}
+        <mesh>
+          <boxGeometry args={[0.58, 0.3, 0.014]} />
+          <meshPhysicalMaterial
+            color="#064e3b"
+            emissive="#059669"
+            emissiveIntensity={0.4}
+            transparent
+            opacity={0.42}
+            roughness={0.25}
+          />
+        </mesh>
+        {/* Animated Bullish/Bearish Candlestick Bars */}
+        {candleSpecs.map((c, idx) => (
+          <mesh
+            key={idx}
+            ref={(el) => {
+              barRefs.current[idx] = el;
+            }}
+            position={[c.x, -0.02, 0.018]}
+          >
+            <boxGeometry args={[0.045, c.baseH, 0.02]} />
+            <meshStandardMaterial
+              color={c.bullish ? "#22c55e" : "#ef4444"}
+              emissive={c.bullish ? "#22c55e" : "#ef4444"}
+              emissiveIntensity={isNight ? 1.8 : 1.0}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Clean Floating Pill Label */}
+      {showLabel && (
+        <Html position={[0, 1.48, -0.08]} center distanceFactor={14} zIndexRange={[10, 0]}>
+          <div className="pointer-events-none select-none whitespace-nowrap rounded-full border border-emerald-400/70 bg-slate-950/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-300 shadow-lg">
+            📈 BOT TRADING · AUTO
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -792,6 +1012,7 @@ export function CyberOutdoorCampus({
 }: CyberOutdoorCampusProps) {
   const textures = useMemo(() => getRealisticTextures(), []);
   const waterMatRef = useRef<THREE.ShaderMaterial>(null);
+  const { showLabelsIn3D } = useOffice();
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
 
@@ -1205,13 +1426,21 @@ export function CyberOutdoorCampus({
       <PoolUmbrella position={[-6.8, 0.18, 16.4]} accentColor="#2b5f78" />
       <PoolUmbrella position={[0.4, 0.18, 16.4]} accentColor="#2b5f78" />
 
-      {/* 6 Plush Sun Loungers */}
-      <SunLounger position={[-13.4, 0.18, 7.2]} rotationY={Math.PI / 2} />
-      <SunLounger position={[-13.4, 0.18, 10.7]} rotationY={Math.PI / 2} />
-      <SunLounger position={[-13.4, 0.18, 15.6]} rotationY={Math.PI / 2} />
-      <SunLounger position={[-9.2, 0.18, 16.3]} rotationY={0} />
-      <SunLounger position={[-4.2, 0.18, 16.3]} rotationY={0} />
-      <SunLounger position={[2.6, 0.18, 16.3]} rotationY={0} />
+      {/* 6 Plush Sun Loungers — Properly Oriented Facing the Swimming Pool! */}
+      <SunLounger position={[-13.4, 0.18, 7.2]} rotationY={-Math.PI / 2} />
+      <SunLounger position={[-13.4, 0.18, 10.7]} rotationY={-Math.PI / 2} />
+      <SunLounger position={[-13.4, 0.18, 15.6]} rotationY={-Math.PI / 2} />
+      <SunLounger position={[-9.2, 0.18, 16.3]} rotationY={Math.PI} />
+      <SunLounger position={[-4.2, 0.18, 16.3]} rotationY={Math.PI} />
+      <SunLounger position={[2.6, 0.18, 16.3]} rotationY={Math.PI} />
+
+      {/* Poolside Trading Bot Reclining on the Center Pool Sun Lounger */}
+      <PoolsideTradingBot
+        position={[-13.4, 0.18, 10.7]}
+        rotationY={-Math.PI / 2}
+        isNight={isNight}
+        showLabel={showLabelsIn3D}
+      />
 
       {/* Luxury Outdoor Lounge Seating beside Pool */}
       <group position={[4.2, 0.18, 7.0]}>
@@ -1242,26 +1471,20 @@ export function CyberOutdoorCampus({
       <PoolsideGardenLamp position={[5.4, 0.18, 17.6]} isNight={isNight} isSunset={isSunset} />
       <PoolsideGardenLamp position={[14.8, 0.18, 13.6]} isNight={isNight} isSunset={isSunset} />
 
-      {/* Warm Night Resort Front-Yard, Pool Deck & Porsche Showcase Lighting */}
+      {/* Soft Balanced Night Resort Pool Deck & Porsche Showcase Lighting (Center Balcony Glare Lamp Removed!) */}
       {(isNight || isSunset) && (
         <>
           <pointLight
             position={[-4.2, 4.4, 15.8]}
             color="#ffe4b5"
-            intensity={isNight ? 34 : 12}
-            distance={34}
+            intensity={isNight ? 16 : 8}
+            distance={30}
           />
           <pointLight
             position={[9.4, 4.2, 12.6]}
             color="#fff6e0"
-            intensity={isNight ? 30 : 12}
-            distance={24}
-          />
-          <pointLight
-            position={[0.0, 4.2, 6.6]}
-            color="#ffdfad"
-            intensity={isNight ? 26 : 10}
-            distance={28}
+            intensity={isNight ? 16 : 8}
+            distance={22}
           />
         </>
       )}
