@@ -2,6 +2,7 @@
 
 import React, { useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import type {
@@ -192,8 +193,8 @@ function SunLounger({
   );
 }
 
-/** Authentic curved-profile Italian GT Supercar sculpted via ExtrudeGeometry with real wheels, brake calipers & glass cockpit */
-function LuxurySupercar({
+/** Iconic 2022 Porsche 911 GT3 ("Porsche 22") — Sculpted Fastback Coupe, Oval 4-Point LED Headlights, Swan-Neck Wing & Yellow PCCB Calipers */
+function Porsche22Car({
   position,
   rotationY = -0.34,
   isNight,
@@ -202,37 +203,35 @@ function LuxurySupercar({
   rotationY?: number;
   isNight: boolean;
 }) {
-  // Smooth aerodynamic coupe side silhouette extruded across car width
+  // Iconic Porsche 911 (992 / 2022) side silhouette: low sloping hood, rounded frog-eye fenders, smooth continuous fastback roofline!
   const { bodyGeo, cabinGeo } = useMemo(() => {
-    // Side silhouette in (X = forward length, Y = height) — later rotated so +Z is front
     const bodyShape = new THREE.Shape();
-    bodyShape.moveTo(-2.22, 0.24); // rear lower diffuser
-    bodyShape.lineTo(2.26, 0.21); // front carbon splitter tip
-    bodyShape.quadraticCurveTo(2.34, 0.42, 2.08, 0.56); // aerodynamic nose
-    bodyShape.quadraticCurveTo(1.52, 0.68, 0.92, 0.75); // sculpted hood
-    bodyShape.quadraticCurveTo(0.28, 1.18, -0.22, 1.18); // raked windshield to roof apex
-    bodyShape.quadraticCurveTo(-1.05, 1.14, -1.78, 0.84); // fastback slope
-    bodyShape.quadraticCurveTo(-2.2, 0.78, -2.26, 0.62); // kammback tail
+    bodyShape.moveTo(-2.22, 0.24); // rear diffuser bottom
+    bodyShape.lineTo(2.24, 0.22); // front GT3 splitter
+    bodyShape.quadraticCurveTo(2.36, 0.44, 2.04, 0.62); // signature rounded Porsche front nose
+    bodyShape.quadraticCurveTo(1.56, 0.72, 0.96, 0.78); // low sloping Porsche hood
+    bodyShape.quadraticCurveTo(0.42, 1.24, -0.18, 1.24); // iconic arched Porsche 911 roof dome
+    bodyShape.quadraticCurveTo(-1.18, 1.22, -2.02, 0.84); // unmistakable continuous 911 fastback sweep!
+    bodyShape.quadraticCurveTo(-2.26, 0.74, -2.26, 0.56); // sculpted wide rear bumper
     bodyShape.lineTo(-2.22, 0.24);
 
     const extrudedBody = new THREE.ExtrudeGeometry(bodyShape, {
-      depth: 1.78,
+      depth: 1.82,
       bevelEnabled: true,
-      bevelThickness: 0.15,
-      bevelSize: 0.11,
+      bevelThickness: 0.16,
+      bevelSize: 0.12,
       bevelSegments: 5,
-      curveSegments: 18,
+      curveSegments: 20,
     });
     extrudedBody.center();
-    // Orient so car length runs along Z (+Z = front) and height along Y
     extrudedBody.rotateY(-Math.PI / 2);
 
-    // Smoked glass aerodynamic cockpit greenhouse
+    // Sleek Porsche 911 greenhouse glass profile
     const cabinShape = new THREE.Shape();
-    cabinShape.moveTo(-1.42, 0.78);
-    cabinShape.lineTo(0.84, 0.74);
-    cabinShape.quadraticCurveTo(0.26, 1.16, -0.22, 1.16);
-    cabinShape.quadraticCurveTo(-0.88, 1.12, -1.42, 0.78);
+    cabinShape.moveTo(-1.52, 0.8);
+    cabinShape.lineTo(0.86, 0.78);
+    cabinShape.quadraticCurveTo(0.36, 1.21, -0.18, 1.21);
+    cabinShape.quadraticCurveTo(-0.96, 1.18, -1.52, 0.8);
 
     const extrudedCabin = new THREE.ExtrudeGeometry(cabinShape, {
       depth: 1.38,
@@ -240,7 +239,7 @@ function LuxurySupercar({
       bevelThickness: 0.08,
       bevelSize: 0.05,
       bevelSegments: 4,
-      curveSegments: 14,
+      curveSegments: 16,
     });
     extrudedCabin.center();
     extrudedCabin.rotateY(-Math.PI / 2);
@@ -249,27 +248,33 @@ function LuxurySupercar({
   }, []);
 
   const wheelCoords: [number, number, number][] = [
-    [-0.98, 0.36, 1.34],
-    [0.98, 0.36, 1.34],
-    [-0.98, 0.36, -1.32],
-    [0.98, 0.36, -1.32],
+    [-1.0, 0.36, 1.32],
+    [1.0, 0.36, 1.32],
+    [-1.0, 0.36, -1.3],
+    [1.0, 0.36, -1.3],
   ];
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Sculpted Glossy Pearl Rosso Corsa Supercar Body */}
-      <mesh geometry={bodyGeo} position={[0, 0.68, 0]} castShadow receiveShadow>
+      {/* Sculpted Glossy Porsche Chalk Silver-White (2022 911 GT3) Body */}
+      <mesh geometry={bodyGeo} position={[0, 0.7, 0]} castShadow receiveShadow>
         <meshPhysicalMaterial
-          color="#c81e2b"
-          metalness={0.68}
+          color="#e5ebf1"
+          metalness={0.52}
           roughness={0.14}
           clearcoat={1}
           clearcoatRoughness={0.04}
         />
       </mesh>
 
-      {/* Glossy Tinted Glass Panoramic Cockpit */}
-      <mesh geometry={cabinGeo} position={[0, 0.94, -0.18]} castShadow>
+      {/* Subtle Black Motorsport Racing Stripe along Hood & Roof */}
+      <mesh position={[0, 0.89, 1.38]} rotation={[0.14, 0, 0]}>
+        <boxGeometry args={[0.38, 0.02, 1.1]} />
+        <meshStandardMaterial color="#111827" roughness={0.35} />
+      </mesh>
+
+      {/* Glossy Tinted Glass Porsche 911 Greenhouse */}
+      <mesh geometry={cabinGeo} position={[0, 0.96, -0.16]} castShadow>
         <meshPhysicalMaterial
           color="#0a1322"
           metalness={0.28}
@@ -279,153 +284,207 @@ function LuxurySupercar({
         />
       </mesh>
 
-      {/* Carbon-fiber lower side skirts & aerodynamic undertray */}
+      {/* Carbon-Fiber GT3 Side Skirts & Undertray */}
       <mesh position={[0, 0.2, 0.02]} castShadow>
-        <boxGeometry args={[2.08, 0.1, 4.42]} />
-        <meshStandardMaterial color="#13171f" roughness={0.35} metalness={0.5} />
+        <boxGeometry args={[2.12, 0.1, 4.44]} />
+        <meshStandardMaterial color="#13171f" roughness={0.34} metalness={0.5} />
       </mesh>
 
-      {/* Front Carbon Splitter & Wide Honeycomb Intake Grille */}
+      {/* Front GT3 Aero Splitter & Wide Black Cooling Ducts */}
       <mesh position={[0, 0.22, 2.22]} castShadow>
-        <boxGeometry args={[1.96, 0.08, 0.36]} />
-        <meshStandardMaterial color="#11151d" roughness={0.32} metalness={0.55} />
+        <boxGeometry args={[1.98, 0.08, 0.38]} />
+        <meshStandardMaterial color="#11151d" roughness={0.3} metalness={0.55} />
       </mesh>
-      <mesh position={[0, 0.36, 2.26]}>
-        <boxGeometry args={[1.42, 0.16, 0.08]} />
-        <meshStandardMaterial color="#0b0e14" roughness={0.6} metalness={0.4} />
+      <mesh position={[0, 0.37, 2.28]}>
+        <boxGeometry args={[1.56, 0.2, 0.08]} />
+        <meshStandardMaterial color="#0b0e14" roughness={0.62} metalness={0.38} />
       </mesh>
 
-      {/* Sculpted Side Aero Air Intakes */}
-      {[-1.03, 1.03].map((sx, idx) => (
-        <mesh key={idx} position={[sx, 0.52, -0.45]}>
-          <boxGeometry args={[0.08, 0.26, 0.95]} />
-          <meshStandardMaterial color="#12161e" roughness={0.4} metalness={0.5} />
-        </mesh>
-      ))}
-
-      {/* Sleek Wing Mirrors on Stalks */}
-      {[-1.12, 1.12].map((mx, idx) => (
-        <group key={idx} position={[mx, 0.84, 0.56]}>
-          <mesh>
-            <boxGeometry args={[0.24, 0.09, 0.15]} />
-            <meshPhysicalMaterial
-              color="#c81e2b"
-              metalness={0.7}
-              roughness={0.14}
-              clearcoat={1}
+      {/* Porsche Iconic Round/Oval Frog-Eye LED Headlights + 4-Point DRL Rings */}
+      {[-0.72, 0.72].map((hx, i) => (
+        <group
+          key={i}
+          position={[hx, 0.65, 2.06]}
+          rotation={[0.42, i === 0 ? -0.18 : 0.18, 0]}
+        >
+          <mesh scale={[1, 1.28, 0.55]}>
+            <sphereGeometry args={[0.2, 16, 12]} />
+            <meshStandardMaterial
+              color="#ffffff"
+              emissive="#f0f9ff"
+              emissiveIntensity={isNight ? 3.8 : 1.4}
+            />
+          </mesh>
+          <mesh position={[0, 0, 0.09]} scale={[1, 1.25, 1]}>
+            <torusGeometry args={[0.14, 0.022, 8, 18]} />
+            <meshStandardMaterial
+              color="#ffffff"
+              emissive="#bae6fd"
+              emissiveIntensity={isNight ? 4.2 : 1.6}
             />
           </mesh>
         </group>
       ))}
 
-      {/* Smoked Rear Engine Bay Louver Glass */}
-      <mesh position={[0, 0.98, -1.24]} rotation={[-0.24, 0, 0]}>
-        <boxGeometry args={[1.08, 0.05, 1.02]} />
-        <meshPhysicalMaterial
-          color="#101a2c"
-          metalness={0.35}
-          roughness={0.08}
-          clearcoat={1}
-        />
+      {/* Porsche Crest Emblem on Hood */}
+      <mesh position={[0, 0.72, 2.06]} rotation={[0.3, 0, 0]}>
+        <cylinderGeometry args={[0.052, 0.052, 0.02, 12]} />
+        <meshStandardMaterial color="#eab308" metalness={0.9} roughness={0.18} />
       </mesh>
 
-      {/* Carbon GT Rear Wing */}
-      <mesh position={[0, 1.08, -2.08]} castShadow>
-        <boxGeometry args={[1.96, 0.055, 0.34]} />
-        <meshStandardMaterial color="#141922" roughness={0.28} metalness={0.65} />
-      </mesh>
-      {[-0.62, 0.62].map((px, i) => (
-        <mesh key={i} position={[px, 0.92, -2.02]}>
-          <boxGeometry args={[0.06, 0.28, 0.18]} />
-          <meshStandardMaterial color="#141922" roughness={0.3} metalness={0.65} />
-        </mesh>
-      ))}
-
-      {/* Rear Carbon Diffuser + Quad Chrome Exhaust Pipes */}
-      <mesh position={[0, 0.28, -2.26]}>
-        <boxGeometry args={[1.72, 0.2, 0.14]} />
-        <meshStandardMaterial color="#11151d" roughness={0.42} metalness={0.5} />
-      </mesh>
-      {[-0.52, -0.36, 0.36, 0.52].map((ex, i) => (
-        <mesh key={i} position={[ex, 0.28, -2.33]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.048, 0.048, 0.14, 12]} />
-          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.12} />
-        </mesh>
-      ))}
-
-      {/* Sharp Angular LED DRL Headlights */}
-      {[-0.68, 0.68].map((hx, i) => (
-        <mesh
-          key={i}
-          position={[hx, 0.55, 2.18]}
-          rotation={[0, i === 0 ? -0.22 : 0.22, 0]}
-        >
-          <boxGeometry args={[0.42, 0.08, 0.12]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#f0f9ff"
-            emissiveIntensity={isNight ? 3.5 : 1.4}
+      {/* Sleek Aero Side Mirrors */}
+      {[-1.14, 1.14].map((mx, idx) => (
+        <mesh key={idx} position={[mx, 0.88, 0.58]}>
+          <boxGeometry args={[0.24, 0.09, 0.16]} />
+          <meshPhysicalMaterial
+            color="#e5ebf1"
+            metalness={0.55}
+            roughness={0.14}
+            clearcoat={1}
           />
         </mesh>
       ))}
 
-      {/* Full-Width Glowing Ruby LED Taillight Blade */}
-      <mesh position={[0, 0.66, -2.27]}>
-        <boxGeometry args={[1.76, 0.075, 0.06]} />
+      {/* Rear Vertical Cooling Slats on 911 Engine Deck */}
+      <mesh position={[0, 0.99, -1.55]} rotation={[-0.36, 0, 0]}>
+        <boxGeometry args={[1.18, 0.05, 0.74]} />
+        <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.6} />
+      </mesh>
+
+      {/* Iconic 992 GT3 Swan-Neck Carbon Rear Wing */}
+      <mesh position={[0, 1.16, -2.06]} castShadow>
+        <boxGeometry args={[1.98, 0.055, 0.36]} />
+        <meshStandardMaterial color="#141922" roughness={0.26} metalness={0.68} />
+      </mesh>
+      {/* Wing Endplates */}
+      {[-0.99, 0.99].map((ex, i) => (
+        <mesh key={i} position={[ex, 1.14, -2.06]}>
+          <boxGeometry args={[0.04, 0.24, 0.42]} />
+          <meshStandardMaterial color="#141922" roughness={0.3} metalness={0.65} />
+        </mesh>
+      ))}
+      {/* Swan-Neck Supports */}
+      {[-0.56, 0.56].map((px, i) => (
+        <mesh key={i} position={[px, 0.98, -1.96]} rotation={[0.22, 0, 0]}>
+          <boxGeometry args={[0.055, 0.34, 0.16]} />
+          <meshStandardMaterial color="#141922" roughness={0.3} metalness={0.65} />
+        </mesh>
+      ))}
+
+      {/* Signature 992 Full-Width Glowing Ruby Porsche LED Rear Lightbar */}
+      <mesh position={[0, 0.68, -2.3]}>
+        <boxGeometry args={[1.82, 0.08, 0.06]} />
         <meshStandardMaterial
-          color="#ff2a3c"
-          emissive="#ff1e32"
-          emissiveIntensity={isNight ? 3.2 : 1.3}
+          color="#ff1f34"
+          emissive="#ff1a30"
+          emissiveIntensity={isNight ? 3.8 : 1.5}
         />
       </mesh>
 
-      {/* Gold Badge Emblem on Hood */}
-      <mesh position={[0, 0.66, 1.98]} rotation={[0.25, 0, 0]}>
-        <cylinderGeometry args={[0.045, 0.045, 0.02, 12]} />
-        <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.15} />
+      {/* Crisp Rear License Plate "PORSCHE 22" */}
+      <mesh position={[0, 0.46, -2.31]}>
+        <boxGeometry args={[0.66, 0.17, 0.03]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.3} />
       </mesh>
+      <Text
+        position={[0, 0.46, -2.33]}
+        rotation={[0, Math.PI, 0]}
+        fontSize={0.085}
+        color="#facc15"
+        letterSpacing={0.08}
+        anchorX="center"
+        anchorY="middle"
+      >
+        PORSCHE 22
+      </Text>
 
-      {/* 4 Multi-Spoke Forged Alloy Wheels + Disc Rotors + Red Brembo Brake Calipers */}
+      {/* Rear GT3 Diffuser + Dual Center Chrome Exhausts */}
+      <mesh position={[0, 0.28, -2.28]}>
+        <boxGeometry args={[1.76, 0.2, 0.14]} />
+        <meshStandardMaterial color="#11151d" roughness={0.4} metalness={0.52} />
+      </mesh>
+      {[-0.12, 0.12].map((ex, i) => (
+        <mesh key={i} position={[ex, 0.28, -2.35]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.14, 14]} />
+          <meshStandardMaterial color="#e2e8f0" metalness={0.95} roughness={0.1} />
+        </mesh>
+      ))}
+
+      {/* 4 Porsche Center-Lock Motorsport Wheels (Satin Bronze-Gold + Yellow PCCB Calipers) */}
       {wheelCoords.map((pos, idx) => (
         <group key={idx} position={pos}>
-          {/* Recessed dark wheel arch inner housing */}
           <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.4, 0.4, 0.24, 18]} />
+            <cylinderGeometry args={[0.41, 0.41, 0.24, 18]} />
             <meshStandardMaterial color="#0b0d12" roughness={0.95} />
           </mesh>
-          {/* Low-profile rubber tire */}
           <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-            <cylinderGeometry args={[0.36, 0.36, 0.3, 24]} />
-            <meshStandardMaterial color="#181b21" roughness={0.84} />
+            <cylinderGeometry args={[0.365, 0.365, 0.31, 24]} />
+            <meshStandardMaterial color="#16191f" roughness={0.84} />
           </mesh>
-          {/* Forged silver alloy rim barrel */}
           <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.255, 0.255, 0.315, 18]} />
-            <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.16} />
+            <cylinderGeometry args={[0.26, 0.26, 0.325, 18]} />
+            <meshStandardMaterial color="#c8a86b" metalness={0.88} roughness={0.22} />
           </mesh>
-          {/* 5-Spoke Star Alloy Center */}
           {[0, 1, 2, 3, 4].map((spoke) => (
             <mesh
               key={spoke}
-              position={[idx % 2 === 0 ? -0.155 : 0.155, 0, 0]}
+              position={[idx % 2 === 0 ? -0.16 : 0.16, 0, 0]}
               rotation={[(spoke / 5) * Math.PI * 2, 0, 0]}
             >
-              <boxGeometry args={[0.025, 0.45, 0.045]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.18} />
+              <boxGeometry args={[0.025, 0.46, 0.042]} />
+              <meshStandardMaterial color="#d4b87c" metalness={0.88} roughness={0.22} />
             </mesh>
           ))}
-          {/* Center Lug Cap */}
+          {/* Black Center-Lock Nut */}
           <mesh rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.33, 12]} />
-            <meshStandardMaterial color="#eab308" metalness={0.88} roughness={0.2} />
+            <cylinderGeometry args={[0.062, 0.062, 0.34, 12]} />
+            <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.2} />
           </mesh>
-          {/* Red Brake Caliper */}
-          <mesh position={[idx % 2 === 0 ? -0.09 : 0.09, 0.05, 0.12]}>
-            <boxGeometry args={[0.14, 0.15, 0.1]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.4} roughness={0.3} />
+          {/* Iconic Porsche Yellow PCCB Brake Caliper */}
+          <mesh position={[idx % 2 === 0 ? -0.09 : 0.09, 0.06, 0.12]}>
+            <boxGeometry args={[0.14, 0.16, 0.1]} />
+            <meshStandardMaterial color="#facc15" metalness={0.45} roughness={0.26} />
           </mesh>
         </group>
       ))}
+    </group>
+  );
+}
+
+/** Tall Luxury Resort Garden Lamp Post illuminating the front swimming pool & Porsche bay at night */
+function PoolsideGardenLamp({
+  position,
+  isNight,
+  isSunset,
+}: {
+  position: [number, number, number];
+  isNight: boolean;
+  isSunset: boolean;
+}) {
+  const glow = isNight ? 3.8 : isSunset ? 1.8 : 0.35;
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.16, 0.2, 0.2, 12]} />
+        <meshStandardMaterial color="#27303d" metalness={0.7} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, 1.55, 0]} castShadow>
+        <cylinderGeometry args={[0.055, 0.075, 2.9, 10]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.3} />
+      </mesh>
+      {/* Modern Architectural Glowing Lantern Head */}
+      <mesh position={[0, 3.05, 0]}>
+        <cylinderGeometry args={[0.24, 0.2, 0.34, 14]} />
+        <meshStandardMaterial
+          color="#fff7db"
+          emissive="#ffd584"
+          emissiveIntensity={glow}
+        />
+      </mesh>
+      <mesh position={[0, 3.25, 0]}>
+        <cylinderGeometry args={[0.3, 0.26, 0.07, 14]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
+      </mesh>
     </group>
   );
 }
@@ -741,14 +800,60 @@ export function CyberOutdoorCampus({
           />
         </mesh>
 
-        {/* Underwater pool lighting */}
+        {/* Glowing Underwater LED Pool Perimeter Strip (Vivid at Night!) */}
+        {isNight && (
+          <group>
+            <mesh position={[0, 0.14, -3.05]}>
+              <boxGeometry args={[13.0, 0.06, 0.04]} />
+              <meshStandardMaterial
+                color="#7dd3fc"
+                emissive="#38bdf8"
+                emissiveIntensity={3.2}
+              />
+            </mesh>
+            <mesh position={[0, 0.14, 3.05]}>
+              <boxGeometry args={[13.0, 0.06, 0.04]} />
+              <meshStandardMaterial
+                color="#7dd3fc"
+                emissive="#38bdf8"
+                emissiveIntensity={3.2}
+              />
+            </mesh>
+            <mesh position={[-6.55, 0.14, 0]}>
+              <boxGeometry args={[0.04, 0.06, 6.0]} />
+              <meshStandardMaterial
+                color="#7dd3fc"
+                emissive="#38bdf8"
+                emissiveIntensity={3.2}
+              />
+            </mesh>
+            <mesh position={[6.55, 0.14, 0]}>
+              <boxGeometry args={[0.04, 0.06, 6.0]} />
+              <meshStandardMaterial
+                color="#7dd3fc"
+                emissive="#38bdf8"
+                emissiveIntensity={3.2}
+              />
+            </mesh>
+          </group>
+        )}
+
+        {/* Dual Underwater & Poolside Night Illumination (Bright even in Eco mode!) */}
         {(isNight || isSunset) && (
-          <pointLight
-            position={[0, 0.7, 0]}
-            color="#38bdf8"
-            intensity={isNight ? 12 : 5}
-            distance={16}
-          />
+          <>
+            <pointLight
+              position={[-3.2, 1.4, 0]}
+              color="#7dd3fc"
+              intensity={isNight ? 24 : 8}
+              distance={22}
+            />
+            <pointLight
+              position={[3.4, 1.4, 0]}
+              color="#38bdf8"
+              intensity={isNight ? 24 : 8}
+              distance={22}
+            />
+          </>
         )}
       </group>
 
@@ -782,12 +887,42 @@ export function CyberOutdoorCampus({
         </mesh>
       </group>
 
-      {/* Authentic Curved Italian GT Supercar in Arrival Bay */}
-      <LuxurySupercar
+      {/* Iconic 2022 Porsche 911 GT3 ("Porsche 22") in Arrival Bay */}
+      <Porsche22Car
         position={[9.4, 0.18, 11.3]}
         rotationY={-0.36}
         isNight={isNight}
       />
+
+      {/* 4 Tall Poolside & Front Yard Luxury Garden Lamp Posts */}
+      <PoolsideGardenLamp position={[-14.6, 0.18, 17.2]} isNight={isNight} isSunset={isSunset} />
+      <PoolsideGardenLamp position={[-4.2, 0.18, 17.8]} isNight={isNight} isSunset={isSunset} />
+      <PoolsideGardenLamp position={[5.4, 0.18, 17.6]} isNight={isNight} isSunset={isSunset} />
+      <PoolsideGardenLamp position={[14.8, 0.18, 13.6]} isNight={isNight} isSunset={isSunset} />
+
+      {/* Warm Night Resort Front-Yard, Pool Deck & Porsche Showcase Lighting */}
+      {(isNight || isSunset) && (
+        <>
+          <pointLight
+            position={[-4.2, 4.4, 15.8]}
+            color="#ffe4b5"
+            intensity={isNight ? 34 : 12}
+            distance={34}
+          />
+          <pointLight
+            position={[9.4, 4.2, 12.6]}
+            color="#fff6e0"
+            intensity={isNight ? 30 : 12}
+            distance={24}
+          />
+          <pointLight
+            position={[0.0, 4.2, 6.6]}
+            color="#ffdfad"
+            intensity={isNight ? 26 : 10}
+            distance={28}
+          />
+        </>
+      )}
 
       {/* Landscaped Tropical Perimeter Hedges */}
       {[-15.8, 15.8].map((hx, idx) => (

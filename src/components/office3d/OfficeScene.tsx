@@ -8,6 +8,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { BossPlayer } from "@/components/office3d/BossPlayer";
 import { CyberOutdoorCampus } from "@/components/office3d/CyberOutdoorCampus";
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
+import { OfficeExtrasStaff } from "@/components/office3d/OfficeExtrasStaff";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
@@ -296,8 +297,8 @@ export function OfficeScene() {
     ? [-34, 9, 20]
     : [26, 36, 24];
 
-  const sunColor = isNight ? "#8bb4e8" : isSunset ? "#ffb074" : "#fff7ea";
-  const sunIntensity = isNight ? 0.55 : isSunset ? 2.15 : 2.75;
+  const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ffb074" : "#fff7ea";
+  const sunIntensity = isNight ? 0.88 : isSunset ? 2.15 : 2.75;
   const shadowSize = performanceMode === "eco" ? 1024 : 2048;
 
   const visibleAgents = useMemo(() => {
@@ -355,9 +356,9 @@ export function OfficeScene() {
 
       <hemisphereLight
         args={[
-          isNight ? "#243b5e" : isSunset ? "#ffd1a8" : "#dceeff",
-          isNight ? "#121a29" : "#5e6a54",
-          isNight ? 0.6 : isSunset ? 0.98 : 1.08,
+          isNight ? "#335280" : isSunset ? "#ffd1a8" : "#dceeff",
+          isNight ? "#1a2438" : "#5e6a54",
+          isNight ? 0.92 : isSunset ? 0.98 : 1.08,
         ]}
       />
       <directionalLight
@@ -388,12 +389,20 @@ export function OfficeScene() {
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
-      {/* Grand 28m 3-Story Luxury Architectural HQ */}
+      {/* Grand 28m 3-Story Luxury Architectural HQ + Rooftop Helicopter & Badminton Court */}
       <OfficeArchitecture
         activeFloor={activeFloor}
         performanceMode={performanceMode}
         lightingPreset={lightingPreset}
+        isSimulationRunning={isSimulationRunning}
         onFocusPoint={(pt) => focusCameraOn(pt)}
+      />
+
+      {/* L3 VIP Executives (CEO, Manajer Senior, Sekretaris, CFO) + L1 Reception & Lounge Staff */}
+      <OfficeExtrasStaff
+        activeFloor={activeFloor}
+        showLabels={showLabelsIn3D}
+        isSimulationRunning={isSimulationRunning}
       />
 
       {/* 8 Modern L2 Workstations */}

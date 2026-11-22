@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
+import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
 import {
   FLOOR_1_Y,
   FLOOR_2_Y,
@@ -20,6 +21,7 @@ interface OfficeArchitectureProps {
   activeFloor: FloorView;
   performanceMode: PerformanceMode;
   lightingPreset: LightingPreset;
+  isSimulationRunning?: boolean;
   onFocusPoint?: (point: Vector3Tuple) => void;
 }
 
@@ -86,6 +88,7 @@ export function OfficeArchitecture({
   activeFloor,
   performanceMode,
   lightingPreset,
+  isSimulationRunning = true,
   onFocusPoint,
 }: OfficeArchitectureProps) {
   const textures = useMemo(() => getRealisticTextures(), []);
@@ -929,33 +932,12 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* EAST ROOF: Executive Sky Padel Court with Glass Side Walls */}
-          <group position={[6.5, 11.81, -2.6]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <planeGeometry args={[11.2, 7.2]} />
-              <meshStandardMaterial color="#1d5f8f" roughness={0.78} />
-            </mesh>
-            <mesh position={[0, 0.015, -3.3]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[10.4, 0.12]} />
-              <meshStandardMaterial color="#f8fafc" />
-            </mesh>
-            <mesh position={[0, 0.015, 3.3]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[10.4, 0.12]} />
-              <meshStandardMaterial color="#f8fafc" />
-            </mesh>
-            <mesh position={[-5.2, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.12, 6.72]} />
-              <meshStandardMaterial color="#f8fafc" />
-            </mesh>
-            <mesh position={[5.2, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.12, 6.72]} />
-              <meshStandardMaterial color="#f8fafc" />
-            </mesh>
-            <mesh position={[0, 0.48, 0]}>
-              <boxGeometry args={[0.05, 0.92, 6.6]} />
-              <meshStandardMaterial color="#e2e8f0" transparent opacity={0.62} />
-            </mesh>
-          </group>
+          {/* LUXURY HELICOPTER ON HELIPAD + REAL BADMINTON COURT, FLOODLIGHTS & PLAYERS */}
+          <RooftopAttractions
+            isNight={isNight}
+            isSunset={isSunset}
+            isSimulationRunning={isSimulationRunning}
+          />
 
           {/* Rooftop Sky Lounge Sofa Terrace (Front Center) */}
           <group position={[0, 11.8, 3.4]}>
