@@ -270,6 +270,33 @@ function FreeRoamCameraRig() {
   );
 }
 
+/** Crisp clear tropical blue sky dome for Daytime — zero milky white fog glare! */
+function ClearDaySkyDome() {
+  const skyTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 16;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d")!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0.0, "#1d6ec4"); // deep clear zenith blue
+    grad.addColorStop(0.38, "#3b96e6"); // crisp mid-sky azure
+    grad.addColorStop(0.54, "#74bff2"); // clean bright horizon sky blue (never white fog!)
+    grad.addColorStop(1.0, "#8fd0f8");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 256);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  return (
+    <mesh scale={[-1, 1, 1]}>
+      <sphereGeometry args={[280, 20, 14]} />
+      <meshBasicMaterial map={skyTex} side={THREE.BackSide} fog={false} />
+    </mesh>
+  );
+}
+
 export function OfficeScene() {
   const {
     agents,
@@ -289,16 +316,16 @@ export function OfficeScene() {
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
 
-  const bgColor = isNight ? "#0b1426" : isSunset ? "#d89f78" : "#bdd9f0";
-  const fogColor = isNight ? "#0d172b" : isSunset ? "#dfb08f" : "#c8dff2";
+  const bgColor = isNight ? "#071022" : isSunset ? "#d48b63" : "#4ea8ea";
+  const fogColor = isNight ? "#091326" : isSunset ? "#d99d7a" : "#7cc0f0";
   const sunPosition: [number, number, number] = isNight
     ? [-22, 18, -16]
     : isSunset
     ? [-34, 9, 20]
-    : [26, 36, 24];
+    : [32, 48, 28];
 
-  const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ffb074" : "#fff7ea";
-  const sunIntensity = isNight ? 0.88 : isSunset ? 2.15 : 2.75;
+  const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ffb074" : "#fff9ef";
+  const sunIntensity = isNight ? 0.88 : isSunset ? 2.05 : 2.15;
   const shadowSize = performanceMode === "eco" ? 1024 : 2048;
 
   const visibleAgents = useMemo(() => {
@@ -314,18 +341,19 @@ export function OfficeScene() {
   return (
     <>
       <color attach="background" args={[bgColor]} />
-      <fog attach="fog" args={[fogColor, 62, 165]} />
+      <fog attach="fog" args={[fogColor, 175, 360]} />
 
-      {!isNight && (
+      {isSunset && (
         <Sky
           distance={4500}
           sunPosition={sunPosition}
-          turbidity={isSunset ? 8 : 3.2}
-          rayleigh={isSunset ? 2.4 : 0.9}
-          mieCoefficient={0.004}
-          mieDirectionalG={0.82}
+          turbidity={6.5}
+          rayleigh={2.2}
+          mieCoefficient={0.003}
+          mieDirectionalG={0.72}
         />
       )}
+      {!isNight && !isSunset && <ClearDaySkyDome />}
 
       <Environment resolution={256} frames={1}>
         <Lightformer

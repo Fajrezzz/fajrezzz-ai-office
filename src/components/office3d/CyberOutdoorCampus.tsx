@@ -521,6 +521,111 @@ function BollardLight({
   );
 }
 
+/** Real sculpted 3D fluffy white cumulus clouds gently drifting across the clear blue sky */
+function RealisticSkyClouds({ isSunset }: { isSunset: boolean }) {
+  const cloudsGroupRef = useRef<THREE.Group>(null);
+  const cloudColor = isSunset ? "#ffe1c4" : "#ffffff";
+  const underColor = isSunset ? "#f2b895" : "#e2eef8";
+
+  const cloudDefs = useMemo(
+    () => [
+      { pos: [-48, 38, -58] as [number, number, number], scale: 1.55 },
+      { pos: [-16, 44, -76] as [number, number, number], scale: 1.85 },
+      { pos: [22, 41, -68] as [number, number, number], scale: 1.65 },
+      { pos: [56, 37, -54] as [number, number, number], scale: 1.45 },
+      { pos: [-34, 34, -36] as [number, number, number], scale: 1.15 },
+      { pos: [38, 35, -38] as [number, number, number], scale: 1.25 },
+      { pos: [2, 48, -94] as [number, number, number], scale: 2.1 },
+    ],
+    []
+  );
+
+  useFrame((state) => {
+    if (cloudsGroupRef.current) {
+      cloudsGroupRef.current.position.x =
+        Math.sin(state.clock.elapsedTime * 0.045) * 6.5;
+    }
+  });
+
+  return (
+    <group ref={cloudsGroupRef}>
+      {cloudDefs.map((c, idx) => (
+        <group key={idx} position={c.pos} scale={c.scale}>
+          {/* Flat soft underside cloud base */}
+          <mesh position={[0, -0.45, 0]} scale={[3.4, 0.9, 1.8]}>
+            <sphereGeometry args={[1.2, 12, 10]} />
+            <meshStandardMaterial
+              color={underColor}
+              roughness={0.95}
+              fog={false}
+            />
+          </mesh>
+          {/* Sculpted puffy cumulus cloud domes */}
+          <mesh position={[-1.9, 0.25, 0.2]} scale={[1.4, 1.1, 1.25]}>
+            <sphereGeometry args={[1.35, 12, 10]} />
+            <meshStandardMaterial color={cloudColor} roughness={0.92} fog={false} />
+          </mesh>
+          <mesh position={[-0.2, 0.85, -0.1]} scale={[1.65, 1.35, 1.35]}>
+            <sphereGeometry args={[1.5, 14, 12]} />
+            <meshStandardMaterial color={cloudColor} roughness={0.92} fog={false} />
+          </mesh>
+          <mesh position={[1.7, 0.4, 0.15]} scale={[1.45, 1.15, 1.25]}>
+            <sphereGeometry args={[1.3, 12, 10]} />
+            <meshStandardMaterial color={cloudColor} roughness={0.92} fog={false} />
+          </mesh>
+          <mesh position={[3.0, -0.05, -0.1]} scale={[1.05, 0.85, 1.0]}>
+            <sphereGeometry args={[1.1, 10, 8]} />
+            <meshStandardMaterial color={cloudColor} roughness={0.92} fog={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Crisp starry night sky & glowing full moon */
+function NightSkyStarsAndMoon() {
+  const stars = useMemo(
+    () =>
+      Array.from({ length: 48 }).map((_, i) => ({
+        pos: [
+          (((i * 97) % 160) - 80),
+          28 + ((i * 37) % 42),
+          -72 - ((i * 23) % 38),
+        ] as [number, number, number],
+        size: 0.12 + (i % 3) * 0.06,
+      })),
+    []
+  );
+
+  return (
+    <group>
+      {/* Glowing Full Moon */}
+      <mesh position={[34, 44, -84]}>
+        <sphereGeometry args={[3.1, 18, 16]} />
+        <meshStandardMaterial
+          color="#fffbeb"
+          emissive="#fef3c7"
+          emissiveIntensity={2.2}
+          fog={false}
+        />
+      </mesh>
+      {/* Twinkling Starfield */}
+      {stars.map((s, idx) => (
+        <mesh key={idx} position={s.pos}>
+          <sphereGeometry args={[s.size, 6, 6]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            emissive="#e0f2fe"
+            emissiveIntensity={2.0}
+            fog={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 export function CyberOutdoorCampus({
   performanceMode,
   lightingPreset,
@@ -952,44 +1057,85 @@ export function CyberOutdoorCampus({
         />
       ))}
 
-      {/* Distant Atmospheric Metropolitan Skyline with Crown Spires */}
+      {/* Real Sculpted Fluffy White Clouds (Day & Sunset) OR Moon & Stars (Night) */}
+      {isNight ? (
+        <NightSkyStarsAndMoon />
+      ) : (
+        <RealisticSkyClouds isSunset={isSunset} />
+      )}
+
+      {/* Distant Metropolitan Skyline — Crisp Blue Glass by Day, Glowing Lit Office Towers by Night! */}
       <group>
-        {skylineBuildings.map((b, i) => (
-          <group key={i} position={b.pos}>
-            <mesh>
-              <boxGeometry args={b.size} />
-              <meshStandardMaterial
-                map={isNight ? textures.skylineNight : textures.skylineDay}
-                color={
-                  isNight ? "#94a3b8" : isSunset ? "#d9c2b2" : "#cfdce8"
-                }
-                roughness={0.35}
-                metalness={0.48}
-                emissive={isNight ? "#1e293b" : "#000000"}
-                emissiveIntensity={isNight ? 0.32 : 0}
-              />
-            </mesh>
-            {/* Architectural crown ledge */}
-            <mesh position={[0, b.size[1] / 2 + 0.6, 0]}>
-              <boxGeometry args={[b.size[0] * 0.72, 1.2, b.size[2] * 0.72]} />
-              <meshStandardMaterial
-                color={isNight ? "#1e293b" : "#8aa3b8"}
-                roughness={0.4}
-                metalness={0.5}
-              />
-            </mesh>
-            {b.spire && (
-              <mesh position={[0, b.size[1] / 2 + 4.5, 0]}>
-                <cylinderGeometry args={[0.08, 0.26, 7, 8]} />
+        {skylineBuildings.map((b, i) => {
+          const crownAccent =
+            i % 3 === 0 ? "#38bdf8" : i % 3 === 1 ? "#fbbf24" : "#f8fafc";
+          return (
+            <group key={i} position={b.pos}>
+              <mesh>
+                <boxGeometry args={b.size} />
                 <meshStandardMaterial
-                  color="#cbd5e1"
-                  metalness={0.75}
-                  roughness={0.3}
+                  map={isNight ? textures.skylineNight : textures.skylineDay}
+                  color={
+                    isNight ? "#475569" : isSunset ? "#e2bfa8" : "#d8e7f5"
+                  }
+                  roughness={0.32}
+                  metalness={0.48}
+                  emissiveMap={isNight ? textures.skylineNightEmissive : undefined}
+                  emissive={isNight ? "#ffffff" : "#000000"}
+                  emissiveIntensity={isNight ? 2.15 : 0}
+                  fog={false}
                 />
               </mesh>
-            )}
-          </group>
-        ))}
+              {/* Architectural crown ledge */}
+              <mesh position={[0, b.size[1] / 2 + 0.6, 0]}>
+                <boxGeometry args={[b.size[0] * 0.76, 1.2, b.size[2] * 0.76]} />
+                <meshStandardMaterial
+                  color={isNight ? "#162238" : "#5a7b99"}
+                  roughness={0.38}
+                  metalness={0.55}
+                  fog={false}
+                />
+              </mesh>
+              {/* Glowing Night Architectural Crown Neon Band */}
+              {isNight && (
+                <mesh position={[0, b.size[1] / 2 + 0.12, 0]}>
+                  <boxGeometry args={[b.size[0] + 0.16, 0.38, b.size[2] + 0.16]} />
+                  <meshStandardMaterial
+                    color={crownAccent}
+                    emissive={crownAccent}
+                    emissiveIntensity={2.6}
+                    fog={false}
+                  />
+                </mesh>
+              )}
+              {b.spire && (
+                <group position={[0, b.size[1] / 2 + 4.5, 0]}>
+                  <mesh>
+                    <cylinderGeometry args={[0.08, 0.26, 7, 8]} />
+                    <meshStandardMaterial
+                      color="#cbd5e1"
+                      metalness={0.75}
+                      roughness={0.3}
+                      fog={false}
+                    />
+                  </mesh>
+                  {/* Red Aviation Warning Beacon at Spire Tip */}
+                  {isNight && (
+                    <mesh position={[0, 3.65, 0]}>
+                      <sphereGeometry args={[0.26, 8, 8]} />
+                      <meshStandardMaterial
+                        color="#ef4444"
+                        emissive="#ef4444"
+                        emissiveIntensity={3.5}
+                        fog={false}
+                      />
+                    </mesh>
+                  )}
+                </group>
+              )}
+            </group>
+          );
+        })}
       </group>
     </group>
   );
