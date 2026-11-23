@@ -722,8 +722,13 @@ export function OfficeArchitecture({
     }
   };
 
-  const frontColumnsX = [-18.7, -12.6, -6.5, 0, 6.5, 12.6, 18.7];
-  const timberFins = [-18.2, -17.6, -17.0, -16.4, 16.4, 17.0, 17.6, 18.2];
+  const frontColumnsX = [-18.7, -15.6, -12.6, -9.5, -6.5, -3.2, 3.2, 6.5, 9.5, 12.6, 15.6, 18.7];
+  const timberFins = [
+    -18.3, -17.9, -17.5, -17.1,
+    -6.3, -5.95, -5.6,
+    5.6, 5.95, 6.3,
+    17.1, 17.5, 17.9, 18.3,
+  ];
 
   return (
     <group>
@@ -892,11 +897,38 @@ export function OfficeArchitecture({
           </mesh>
         ))}
 
-        {/* Grand Entrance Canopy Overhang */}
-        <mesh position={[0, 3.56, 4.95]} castShadow receiveShadow>
-          <boxGeometry args={[9.2, 0.16, 1.9]} />
-          <meshStandardMaterial color="#2a303a" metalness={0.62} roughness={0.35} />
-        </mesh>
+        {/* Nanverse-Style Full-Height Vertical Cedar/Teak Wood Louver Fins on L1 Facade */}
+        {timberFins.map((fx, i) => (
+          <mesh key={`l1-fin-${i}`} position={[fx, 2.02, 4.18]} castShadow>
+            <boxGeometry args={[0.13, 3.74, 0.36]} />
+            <meshStandardMaterial color="#9c6434" roughness={0.58} />
+          </mesh>
+        ))}
+
+        {/* Nanverse-Style Grand Wood-Slat Cantilevered Entrance Canopy */}
+        <group position={[0, 3.56, 5.1]}>
+          {/* Dark Matte Charcoal Steel Perimeter Canopy Frame */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[9.6, 0.16, 2.2]} />
+            <meshStandardMaterial color="#1c2026" metalness={0.58} roughness={0.38} />
+          </mesh>
+          {/* Warm Slatted Cedar Wood Underside Louvers */}
+          {[-0.85, -0.55, -0.25, 0.05, 0.35, 0.65, 0.92].map((sz, si) => (
+            <mesh key={`canopy-slat-${si}`} position={[0, -0.06, sz]}>
+              <boxGeometry args={[9.2, 0.06, 0.16]} />
+              <meshStandardMaterial color="#9c6434" roughness={0.56} />
+            </mesh>
+          ))}
+          {/* Subtle Warm Downlight Accent under Canopy */}
+          <mesh position={[0, -0.09, 0]}>
+            <boxGeometry args={[6.4, 0.025, 0.08]} />
+            <meshStandardMaterial
+              color="#fff6e0"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.6 : 0.2}
+            />
+          </mesh>
+        </group>
 
         {/* Luxury Marble Reception Desk with Dual Monitors & Floral Accent */}
         <group position={[0, FLOOR_1_Y, -5.2]}>
@@ -1125,19 +1157,18 @@ export function OfficeArchitecture({
           ============================================================ */}
       {showL2 && (
         <group>
-          {/* Expanded Slab (Z = -10.4 to +6.2) supporting the 2.15m Panoramic View Balcony */}
+          {/* Nanverse-Style Matte Charcoal Steel Slab Band (Z = -10.4 to +6.2) */}
           <mesh
             position={[0, FLOOR_2_Y - 0.14, -2.1]}
             castShadow
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[38.8, 0.28, 16.6]} />
+            <boxGeometry args={[38.8, 0.32, 16.6]} />
             <meshStandardMaterial
-              map={textures.stuccoWall}
-              bumpMap={textures.stuccoBump}
-              bumpScale={0.025}
-              roughness={0.68}
+              color="#1e232a"
+              metalness={0.52}
+              roughness={0.44}
             />
           </mesh>
 
@@ -1493,35 +1524,35 @@ export function OfficeArchitecture({
 
           {timberFins.map((fx, i) => (
             <mesh key={i} position={[fx, FLOOR_2_Y + 1.9, 4.18]} castShadow>
-              <boxGeometry args={[0.12, 3.74, 0.42]} />
-              <meshStandardMaterial color="#8f5d34" roughness={0.62} />
+              <boxGeometry args={[0.13, 3.74, 0.36]} />
+              <meshStandardMaterial color="#9c6434" roughness={0.58} />
             </mesh>
           ))}
 
           {frontColumnsX.map((cx, i) => (
             <mesh key={i} position={[cx, FLOOR_2_Y + 1.9, 4.02]} castShadow>
-              <boxGeometry args={[0.28, 3.82, 0.28]} />
-              <meshStandardMaterial color="#282d35" metalness={0.72} roughness={0.32} />
+              <boxGeometry args={[0.24, 3.82, 0.24]} />
+              <meshStandardMaterial color="#1c2026" metalness={0.62} roughness={0.36} />
             </mesh>
           ))}
 
-          {/* Segmented L2 Front Glass Curtain Wall leaving 2 REAL SLIDING GLASS BALCONY DOORS at X=-5.5 and X=+5.5 */}
+          {/* Segmented L2 Smoked Blue-Teal Architectural Glass Curtain Wall */}
           {activeFloor !== "l2" && (
             <group>
               {/* Far-left glass curtain (-18.7 to -6.9) */}
               <mesh position={[-12.8, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[11.8, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
+                <meshPhysicalMaterial color="#3c6074" transparent opacity={0.26} roughness={0.14} metalness={0.12} />
               </mesh>
               {/* Center panoramic glass curtain (-4.1 to +4.1) */}
               <mesh position={[0, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[8.2, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
+                <meshPhysicalMaterial color="#3c6074" transparent opacity={0.26} roughness={0.14} metalness={0.12} />
               </mesh>
               {/* Far-right glass curtain (+6.9 to +18.7) */}
               <mesh position={[12.8, FLOOR_2_Y + 1.9, 4.0]}>
                 <boxGeometry args={[11.8, 3.62, 0.07]} />
-                <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
+                <meshPhysicalMaterial color="#3c6074" transparent opacity={0.26} roughness={0.14} metalness={0.12} />
               </mesh>
             </group>
           )}
@@ -1603,18 +1634,18 @@ export function OfficeArchitecture({
           ============================================================ */}
       {showL3 && (
         <group>
+          {/* Nanverse-Style Matte Charcoal Steel L3 Slab Band */}
           <mesh
             position={[0, FLOOR_3_Y - 0.14, -3.0]}
             castShadow
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[38.4, 0.28, 14.3]} />
+            <boxGeometry args={[38.6, 0.32, 14.4]} />
             <meshStandardMaterial
-              map={textures.stuccoWall}
-              bumpMap={textures.stuccoBump}
-              bumpScale={0.025}
-              roughness={0.68}
+              color="#1e232a"
+              metalness={0.52}
+              roughness={0.44}
             />
           </mesh>
 
@@ -1705,8 +1736,8 @@ export function OfficeArchitecture({
 
           {timberFins.map((fx, i) => (
             <mesh key={i} position={[fx, FLOOR_3_Y + 1.85, 4.18]} castShadow>
-              <boxGeometry args={[0.12, 3.68, 0.42]} />
-              <meshStandardMaterial color="#8f5d34" roughness={0.62} />
+              <boxGeometry args={[0.13, 3.68, 0.36]} />
+              <meshStandardMaterial color="#9c6434" roughness={0.58} />
             </mesh>
           ))}
 
@@ -1881,22 +1912,22 @@ export function OfficeArchitecture({
             />
           ))}
 
-          {/* Continuous Full-Width Panoramic Glass Curtain Wall on L3 (NO Balcony & NO Door on L3!) */}
+          {/* Continuous Full-Width Nanverse Smoked Glass Curtain Wall on L3 */}
           {frontColumnsX.map((cx, i) => (
             <mesh key={i} position={[cx, FLOOR_3_Y + 1.85, 4.02]} castShadow>
-              <boxGeometry args={[0.28, 3.74, 0.28]} />
-              <meshStandardMaterial color="#282d35" metalness={0.72} roughness={0.32} />
+              <boxGeometry args={[0.24, 3.74, 0.24]} />
+              <meshStandardMaterial color="#1c2026" metalness={0.62} roughness={0.36} />
             </mesh>
           ))}
           {activeFloor !== "l3" && (
             <mesh position={[0, FLOOR_3_Y + 1.85, 4.0]}>
               <boxGeometry args={[37.8, 3.68, 0.07]} />
               <meshPhysicalMaterial
-                color="#d8eef8"
+                color="#3c6074"
                 transparent
-                opacity={0.18}
-                roughness={0.34}
-                metalness={0.04}
+                opacity={0.26}
+                roughness={0.14}
+                metalness={0.12}
               />
             </mesh>
           )}
@@ -1966,6 +1997,7 @@ export function OfficeArchitecture({
             />
           </mesh>
 
+          {/* Nanverse-Style Architectural Concrete Roof Deck + Matte Charcoal Fascia Band */}
           <mesh
             position={[0, 11.58, -2.5]}
             castShadow
@@ -1973,109 +2005,124 @@ export function OfficeArchitecture({
             onDoubleClick={handleSurfaceDoubleClick}
           >
             <boxGeometry args={[39.4, 0.42, 16.0]} />
-            <meshStandardMaterial
-              map={textures.stuccoWall}
-              bumpMap={textures.stuccoBump}
-              bumpScale={0.025}
-              roughness={0.68}
-            />
+            <meshStandardMaterial color="#cfc9be" roughness={0.76} />
           </mesh>
 
+          {/* Dark Matte Charcoal Steel Roof Fascia All Around (Nanverse Exoskeleton) */}
           <mesh position={[0, 11.78, 5.56]} castShadow>
-            <boxGeometry args={[39.5, 0.56, 0.18]} />
-            <meshStandardMaterial color="#161c28" metalness={0.72} roughness={0.3} />
+            <boxGeometry args={[39.6, 0.56, 0.22]} />
+            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
           </mesh>
+          <mesh position={[0, 11.78, -10.5]} castShadow>
+            <boxGeometry args={[39.6, 0.56, 0.22]} />
+            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
+          </mesh>
+          {[-19.7, 19.7].map((rx, ri) => (
+            <mesh key={`roof-side-${ri}`} position={[rx, 11.78, -2.5]} castShadow>
+              <boxGeometry args={[0.22, 0.56, 16.1]} />
+              <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
+            </mesh>
+          ))}
 
-          {/* Rooftop Full-Width Warm Gold & White Architectural Perimeter Trim */}
-          <mesh position={[0, 11.52, 5.64]}>
-            <boxGeometry args={[39.6, 0.065, 0.07]} />
+          {/* Rooftop Full-Width Warm Champagne-Gold Architectural Trim */}
+          <mesh position={[0, 11.52, 5.66]}>
+            <boxGeometry args={[39.6, 0.055, 0.06]} />
             <meshStandardMaterial
               color="#fef3c7"
               emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.25 : isSunset ? 0.55 : 0.12}
-            />
-          </mesh>
-          <mesh position={[0, 12.06, 5.64]}>
-            <boxGeometry args={[39.6, 0.05, 0.07]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              emissive="#fffbeb"
-              emissiveIntensity={isNight ? 1.05 : isSunset ? 0.45 : 0.1}
+              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
             />
           </mesh>
 
-          {/* LARGE GLOWING "FAJREZZZ AI OFFICE" ILLUMINATED CROWN SIGNAGE */}
-          <group position={[0, 12.62, 5.56]}>
+          {/* CLASSY NANVERSE-STYLE ILLUMINATED "FAJREZZZ AI OFFICE" CROWN SIGNAGE */}
+          <group position={[0, 12.6, 5.56]}>
             <mesh castShadow>
-              <boxGeometry args={[13.4, 1.18, 0.24]} />
-              <meshStandardMaterial color="#0b101c" metalness={0.78} roughness={0.22} />
+              <boxGeometry args={[13.2, 1.12, 0.24]} />
+              <meshStandardMaterial color="#161a20" metalness={0.62} roughness={0.3} />
             </mesh>
-            {/* Cyan top neon bar & Magenta bottom neon bar framing the big sign */}
-            <mesh position={[0, 0.61, 0.1]}>
-              <boxGeometry args={[13.45, 0.07, 0.07]} />
+            <mesh position={[0, 0.58, 0.1]}>
+              <boxGeometry args={[13.25, 0.055, 0.06]} />
               <meshStandardMaterial
-                color="#22d3ee"
-                emissive="#22d3ee"
-                emissiveIntensity={isNight ? 2.6 : isSunset ? 1.4 : 0.45}
-                toneMapped={false}
+                color="#fef3c7"
+                emissive="#fde68a"
+                emissiveIntensity={isNight ? 1.55 : isSunset ? 0.85 : 0.2}
               />
             </mesh>
-            <mesh position={[0, -0.61, 0.1]}>
-              <boxGeometry args={[13.45, 0.07, 0.07]} />
+            <mesh position={[0, -0.58, 0.1]}>
+              <boxGeometry args={[13.25, 0.055, 0.06]} />
               <meshStandardMaterial
-                color="#e879f9"
-                emissive="#e879f9"
-                emissiveIntensity={isNight ? 2.4 : isSunset ? 1.3 : 0.4}
-                toneMapped={false}
+                color="#fef3c7"
+                emissive="#fde68a"
+                emissiveIntensity={isNight ? 1.4 : isSunset ? 0.75 : 0.18}
               />
             </mesh>
             <Text
               position={[0, 0, 0.15]}
-              fontSize={0.78}
-              color={isNight ? "#e0f9ff" : "#ffffff"}
+              fontSize={0.76}
+              color="#ffffff"
               letterSpacing={0.14}
               anchorX="center"
               anchorY="middle"
-              outlineWidth={isNight ? 0.035 : 0.015}
-              outlineColor={isNight ? "#22d3ee" : "#0f172a"}
+              outlineWidth={0.015}
+              outlineColor="#141820"
             >
               FAJREZZZ AI OFFICE
               <meshStandardMaterial
                 color="#ffffff"
-                emissive={isNight ? "#67e8f9" : isSunset ? "#fde68a" : "#ffffff"}
-                emissiveIntensity={isNight ? 2.2 : isSunset ? 1.15 : 0.25}
+                emissive={isNight ? "#fffbeb" : isSunset ? "#fde68a" : "#ffffff"}
+                emissiveIntensity={isNight ? 1.85 : isSunset ? 0.95 : 0.2}
                 toneMapped={!(isNight || isSunset)}
               />
             </Text>
           </group>
 
+          {/* Nanverse-Style Rooftop Smoked Glass Balustrade + Corner Greenery Planters */}
           <mesh position={[0, 12.34, 5.38]}>
-            <boxGeometry args={[38.8, 1.05, 0.06]} />
+            <boxGeometry args={[38.8, 1.0, 0.06]} />
             <meshPhysicalMaterial
-              color="#d6eaf8"
+              color="#3c6074"
               transparent
-              opacity={0.26}
-              roughness={0.08}
+              opacity={0.28}
+              roughness={0.1}
             />
           </mesh>
+          {[
+            [-18.6, 4.6],
+            [-15.8, 4.6],
+            [15.8, 4.6],
+            [18.6, 4.6],
+            [-18.6, -9.4],
+            [18.6, -9.4],
+          ].map(([gx, gz], gi) => (
+            <group key={`roof-bush-${gi}`} position={[gx, 11.84, gz]}>
+              <mesh position={[0, 0.22, 0]} castShadow>
+                <boxGeometry args={[1.1, 0.44, 0.9]} />
+                <meshStandardMaterial color="#2c3138" roughness={0.65} />
+              </mesh>
+              <mesh position={[0, 0.62, 0]} castShadow>
+                <sphereGeometry args={[0.52, 10, 8]} />
+                <meshStandardMaterial color="#48683a" roughness={0.88} />
+              </mesh>
+            </group>
+          ))}
 
-          {/* WEST ROOF: Architectural Helipad + Corner Beacon Lights */}
-          <group position={[-7.5, 11.81, -2.6]}>
+          {/* WEST ROOF: Clean Nanverse Architectural Concrete Circular Helipad ("H") */}
+          <group position={[-7.5, 11.82, -2.6]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <circleGeometry args={[4.4, 32]} />
-              <meshStandardMaterial color="#374151" roughness={0.78} />
+              <circleGeometry args={[4.4, 36]} />
+              <meshStandardMaterial color="#d8d3c8" roughness={0.78} />
             </mesh>
             <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[3.65, 4.0, 32]} />
+              <ringGeometry args={[3.72, 4.02, 36]} />
               <meshStandardMaterial
-                color="#facc15"
-                emissive="#facc15"
-                emissiveIntensity={isNight ? 1.6 : 0.25}
+                color="#ffffff"
+                emissive="#fef3c7"
+                emissiveIntensity={isNight ? 1.15 : 0.15}
               />
             </mesh>
             <mesh position={[-0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[0.45, 2.6]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.5} />
+              <meshStandardMaterial color="#ffffff" roughness={0.45} />
             </mesh>
             <mesh position={[0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[0.45, 2.6]} />

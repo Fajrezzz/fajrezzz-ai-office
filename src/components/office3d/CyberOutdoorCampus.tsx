@@ -6,7 +6,6 @@ import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { CyberpunkSkyline } from "@/components/office3d/CyberpunkSkyline";
-import { CYBERPUNK_THEME } from "@/lib/config/cyberpunk-theme";
 import { useOffice } from "@/store/OfficeContext";
 import type {
   LightingPreset,
@@ -614,78 +613,72 @@ function CyberpunkRGBFountain({
   position: [number, number, number];
   isNight: boolean;
 }) {
-  const ringMatRef = useRef<THREE.MeshStandardMaterial>(null);
-  const jetMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const jetGroupRef = useRef<THREE.Group>(null);
-  const tmpColor = useMemo(() => new THREE.Color(), []);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const hue = (t * 0.08) % 1;
-    tmpColor.setHSL(hue, 0.92, 0.56);
-    if (ringMatRef.current) {
-      ringMatRef.current.color.copy(tmpColor);
-      ringMatRef.current.emissive.copy(tmpColor);
-    }
-    if (jetMatRef.current) {
-      jetMatRef.current.emissive.copy(tmpColor);
-    }
     if (jetGroupRef.current) {
-      jetGroupRef.current.scale.y = 0.88 + Math.sin(t * 4.2) * 0.14;
-      jetGroupRef.current.rotation.y = t * 0.6;
+      jetGroupRef.current.scale.y = 0.9 + Math.sin(t * 3.8) * 0.1;
+      jetGroupRef.current.rotation.y = t * 0.45;
     }
   });
 
-  const emissiveBoost = isNight
-    ? CYBERPUNK_THEME.intensity.fountainNight
-    : CYBERPUNK_THEME.intensity.fountainDay;
-
   return (
     <group position={position}>
-      {/* Circular Limestone Basin Wall */}
+      {/* Nanverse-Style Classic Circular Travertine Stone Basin + Dark Slate Rim */}
       <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.62, 1.72, 0.48, 28]} />
-        <meshStandardMaterial color="#e2ddd4" roughness={0.58} />
+        <cylinderGeometry args={[1.68, 1.78, 0.48, 32]} />
+        <meshStandardMaterial color="#e6dfd2" roughness={0.55} />
       </mesh>
-      {/* Inner Water Surface */}
+      <mesh position={[0, 0.46, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.56, 0.08, 10, 32]} />
+        <meshStandardMaterial color="#252930" roughness={0.45} />
+      </mesh>
+      {/* Crystal Turquoise Water Surface */}
       <mesh position={[0, 0.43, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[1.44, 24]} />
+        <circleGeometry args={[1.48, 28]} />
         <meshPhysicalMaterial
-          color="#0284c7"
-          roughness={0.14}
-          metalness={0.15}
+          color="#38bdf8"
+          roughness={0.12}
+          metalness={0.1}
           transparent
           opacity={0.86}
         />
       </mesh>
-      {/* Animated RGB Neon Ring Around Inner Water Rim */}
-      <mesh position={[0, 0.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.42, 0.045, 10, 32]} />
+      {/* Subtle Warm Architectural Underwater Rim */}
+      <mesh position={[0, 0.44, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.38, 0.032, 8, 32]} />
         <meshStandardMaterial
-          ref={ringMatRef}
-          color={CYBERPUNK_THEME.neon.cyan}
-          emissive={CYBERPUNK_THEME.neon.cyanEmissive}
-          emissiveIntensity={emissiveBoost}
+          color="#fffbeb"
+          emissive="#fde68a"
+          emissiveIntensity={isNight ? 1.3 : 0.12}
         />
       </mesh>
-      {/* Center Sculpted Tiered Pedestal */}
-      <mesh position={[0, 0.56, 0]} castShadow>
-        <cylinderGeometry args={[0.34, 0.48, 0.55, 16]} />
-        <meshStandardMaterial color="#cbd5e1" roughness={0.45} metalness={0.25} />
+      {/* Classic Two-Tier Cream Stone Pedestal */}
+      <mesh position={[0, 0.58, 0]} castShadow>
+        <cylinderGeometry args={[0.32, 0.48, 0.56, 18]} />
+        <meshStandardMaterial color="#ede8de" roughness={0.46} />
       </mesh>
-      <mesh position={[0, 0.84, 0]} castShadow>
-        <cylinderGeometry args={[0.68, 0.28, 0.18, 20]} />
-        <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+      <mesh position={[0, 0.88, 0]} castShadow>
+        <cylinderGeometry args={[0.72, 0.26, 0.18, 22]} />
+        <meshStandardMaterial color="#f3efe6" roughness={0.42} />
       </mesh>
-      {/* Animated Glowing RGB Water Jets */}
-      <group ref={jetGroupRef} position={[0, 0.92, 0]}>
-        <mesh position={[0, 0.42, 0]}>
-          <cylinderGeometry args={[0.045, 0.14, 0.84, 12]} />
+      <mesh position={[0, 1.12, 0]} castShadow>
+        <cylinderGeometry args={[0.16, 0.24, 0.34, 16]} />
+        <meshStandardMaterial color="#ede8de" roughness={0.46} />
+      </mesh>
+      <mesh position={[0, 1.32, 0]} castShadow>
+        <cylinderGeometry args={[0.38, 0.14, 0.12, 18]} />
+        <meshStandardMaterial color="#f3efe6" roughness={0.42} />
+      </mesh>
+      {/* Clean Sparkling White-Blue Animated Water Jets */}
+      <group ref={jetGroupRef} position={[0, 1.35, 0]}>
+        <mesh position={[0, 0.28, 0]}>
+          <cylinderGeometry args={[0.04, 0.12, 0.56, 12]} />
           <meshStandardMaterial
-            ref={jetMatRef}
             color="#e0f2fe"
-            emissive={CYBERPUNK_THEME.neon.cyan}
-            emissiveIntensity={emissiveBoost * 0.72}
+            emissive="#bae6fd"
+            emissiveIntensity={isNight ? 0.85 : 0.18}
             transparent
             opacity={0.78}
           />
@@ -695,14 +688,14 @@ function CyberpunkRGBFountain({
           return (
             <mesh
               key={ji}
-              position={[Math.cos(ang) * 0.46, 0.18, Math.sin(ang) * 0.46]}
-              rotation={[Math.sin(ang) * 0.45, 0, -Math.cos(ang) * 0.45]}
+              position={[Math.cos(ang) * 0.42, -0.25, Math.sin(ang) * 0.42]}
+              rotation={[Math.sin(ang) * 0.42, 0, -Math.cos(ang) * 0.42]}
             >
-              <cylinderGeometry args={[0.022, 0.04, 0.52, 8]} />
+              <cylinderGeometry args={[0.02, 0.036, 0.48, 8]} />
               <meshStandardMaterial
                 color="#e0f2fe"
-                emissive={CYBERPUNK_THEME.neon.magenta}
-                emissiveIntensity={isNight ? 0.95 : 0.3}
+                emissive="#bae6fd"
+                emissiveIntensity={isNight ? 0.7 : 0.15}
                 transparent
                 opacity={0.68}
               />
@@ -1448,7 +1441,7 @@ export function CyberOutdoorCampus({
 
   return (
     <group>
-      {/* Expansive manicured tropical lawn (slightly below Y=0 so recessed pool bottom never clips!) */}
+      {/* Expansive Nanverse-Style Soft Sage-Olive Manicured Tropical Lawn */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.04, 4]}
@@ -1459,10 +1452,39 @@ export function CyberOutdoorCampus({
         <meshStandardMaterial
           map={textures.grassLawn}
           bumpMap={textures.grassBump}
-          bumpScale={0.04}
+          bumpScale={0.035}
+          color="#a8b88a"
           roughness={0.94}
         />
       </mesh>
+
+      {/* Nanverse-Style Cream Stone Estate Gate Pillars & Manicured Front Perimeter Hedges */}
+      {[-19.5, -6.2, 6.2, 19.5].map((gx, gi) => (
+        <group key={`gate-pillar-${gi}`} position={[gx, 0.1, 18.85]}>
+          <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.56, 1.44, 0.56]} />
+            <meshStandardMaterial color="#e8e2d5" roughness={0.62} />
+          </mesh>
+          <mesh position={[0, 1.48, 0]} castShadow>
+            <boxGeometry args={[0.66, 0.1, 0.66]} />
+            <meshStandardMaterial color="#d4cdc0" roughness={0.55} />
+          </mesh>
+          <mesh position={[0, 1.58, 0]}>
+            <boxGeometry args={[0.24, 0.1, 0.24]} />
+            <meshStandardMaterial
+              color="#fffbeb"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.8 : 0.12}
+            />
+          </mesh>
+        </group>
+      ))}
+      {[-12.85, 12.85].map((hx, hi) => (
+        <mesh key={`front-hedge-${hi}`} position={[hx, 0.48, 18.85]} castShadow receiveShadow>
+          <boxGeometry args={[12.5, 0.76, 0.62]} />
+          <meshStandardMaterial color="#3c5e32" roughness={0.92} />
+        </mesh>
+      ))}
 
       {/* Raised Concrete Sidewalks (Trotoar Utara & Selatan) with Stone Curbs */}
       <mesh position={[0, 0.06, 19.65]} receiveShadow onDoubleClick={handleGroundDoubleClick}>
@@ -1505,13 +1527,13 @@ export function CyberOutdoorCampus({
         )}
       </mesh>
 
-      {/* Wet Night Neon Reflection Sheen Puddles on the Asphalt Avenue */}
+      {/* Subtle Warm Architectural Streetlight Reflection on Wet Night Asphalt */}
       {isNight && (
         <group position={[0, 0.008, 24.5]}>
           {[
-            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#22d3ee" },
-            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#38bdf8" },
-            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#e879f9" },
+            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#fde68a" },
+            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#fffbeb" },
+            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#fde68a" },
             { x: -24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
             { x: 24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
           ].map((p, idx) => (
@@ -1520,7 +1542,7 @@ export function CyberOutdoorCampus({
               <meshBasicMaterial
                 color={p.col}
                 transparent
-                opacity={0.14}
+                opacity={0.1}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
               />
@@ -1552,20 +1574,14 @@ export function CyberOutdoorCampus({
         </mesh>
       ))}
 
-      {/* 5 Modern Street Lamps with Volumetric Light Cones along Front Sidewalk */}
-      {[
-        { x: -24, cyan: false },
-        { x: -12, cyan: true },
-        { x: 0, cyan: false },
-        { x: 12, cyan: true },
-        { x: 24, cyan: false },
-      ].map((sl, i) => (
+      {/* 5 Modern Street Lamps with Warm Architectural Light Cones along Front Sidewalk */}
+      {[-24, -12, 0, 12, 24].map((x, i) => (
         <StreetLampWithCone
           key={`streetlamp-${i}`}
-          position={[sl.x, 0.12, 19.65]}
+          position={[x, 0.12, 19.65]}
           isNight={isNight}
           isSunset={isSunset}
-          isCyan={sl.cyan}
+          isCyan={false}
         />
       ))}
 
