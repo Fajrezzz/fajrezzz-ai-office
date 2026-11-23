@@ -85,3 +85,38 @@ setiap istilah teknis diberi analogi sehari-hari, alur "apa itu → kenapa penti
 kesimpulan", larangan mengarang angka. Di sisi render, frame zine kini menambahkan
 **caption penjelas** (kalimat narasi utuh) di bawah headline, jadi penonton yang mematikan
 suara tetap paham konteks adegan.
+
+---
+
+# v9.3 — Lift yang benar-benar bisa dipakai
+
+**Keluhan Bos:** "lift nya bisa dipakai ya".
+
+**Penyebab:** lift panoramik sebelumnya hanya animasi 20 detik yang berulang sendiri
+(`cycle = t % 20`). Tombol panggil di dinding cuma hiasan, tidak ada hubungan ke kamera
+atau ke lantai mana pun.
+
+**Perbaikan:**
+
+1. `src/lib/office3d/elevator-controller.ts` — state machine murni:
+   `idle → doors_opening → dwell → doors_closing → moving → (arrive)`.
+   Berisi antrean lantai (FIFO, duplikat dibuang), ETA, arah, interpolasi posisi kabin
+   (smoothstep), dan mode ambient yang hanya jalan kalau tidak ada permintaan Bos.
+2. `OfficeArchitecture.tsx` → `PanoramicGlassElevator` sekarang:
+   - membaca permintaan dari `liftRequestRef` (tombol HUD / tombol 3D),
+   - menggerakkan kabin & pintu dari state machine (bukan hitungan detik hard-coded),
+   - saat tiba di lantai tujuan: **kamera ikut pindah lantai** (`setActiveFloor`) dan
+     mencatat aktivitas "Lift tiba di L2",
+   - mempublikasikan status ke HUD ~10×/detik (tidak memicu re-render tiap frame).
+3. Tombol panggil lift di dinding 3D (per lantai) sekarang **bisa diketuk**
+   (`onClick` → `requestFloor`), ukuran panel 0.3 × 0.46 m supaya mudah di HP.
+4. `src/components/office3d/LiftRideHUD.tsx` — panel lift di pojok kiri bawah:
+   tombol L1/L2/L3 (44 px, sesuai audit `ui-ux-pro-max`), indikator arah ▲▼, label status
+   ("Naik ke L3 · 2,4 dtk"), dan tombol nonaktif untuk lantai yang disembunyikan cutaway.
+5. Ambient tetap hidup: kalau tidak ada permintaan, lift naik-turun sendiri seperti dulu
+   (hanya di lantai yang tersedia), lalu berhenti saat Bos menekan tombol.
+
+Dijaga `tests/elevator-controller-v9.test.ts` (11 tes): perjalanan 1 lantai = 2,6 dtk,
+antrean berurutan, pintu 0→1→0 tanpa lompatan, kabin tidak pernah keluar batas lantai,
+ETA menurun saat bergerak, ambient tidak menabrak cutaway, dan dt besar (HP nge-lag)
+tidak merusak state.

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -10,6 +10,15 @@ import {
   FloorTwoFill,
 } from "@/components/office3d/InteriorFurnishing";
 import { useOffice } from "@/store/OfficeContext";
+import {
+  LIFT_TIMING,
+  createLiftState,
+  liftCabinY,
+  liftStatusSnapshot,
+  requestLiftFloor,
+  stepLift,
+  type LiftFloor,
+} from "@/lib/office3d/elevator-controller";
 import {
   FLOOR_1_Y,
   FLOOR_2_Y,
@@ -314,60 +323,78 @@ function PanoramicGlassElevator({
   const cabinDoorRightRef = useRef<THREE.Mesh>(null);
   const rider1HeadRef = useRef<THREE.Group>(null);
   const rider2HeadRef = useRef<THREE.Group>(null);
+  const liftStateRef = useRef(createLiftState(1));
+  const lastPhaseRef = useRef(liftStateRef.current.phase);
+  const statusTickRef = useRef(0);
+
+  // LIFT BISA DIPAKAI: tombol HUD / tombol 3D menulis ke liftRequestRef,
+  // komponen ini yang menjalankan state machine-nya.
+  const { setActiveFloor, liftRequestRef, liftStatusRef, addActivity } = useOffice();
   const topY = showL3 ? FLOOR_3_Y + 3.65 : showL2 ? FLOOR_2_Y + 3.7 : 3.75;
 
-  useFrame((state) => {
-    if (!cabinRef.current) return;
-    if (!isSimulationRunning) return;
-    const t = state.clock.elapsedTime;
-    const yL1 = FLOOR_1_Y + 0.04;
-    const yL2 = showL2 ? FLOOR_2_Y + 0.04 : yL1;
-    const yL3 = showL3 ? FLOOR_3_Y + 0.04 : yL2;
+  const availableFloors = useMemo<LiftFloor[]>(
+    () => (showL3 ? [1, 2, 3] : showL2 ? [1, 2] : [1]),
+    [showL2, showL3]
+  );
 
-    // 20-second realistic elevator cycle with smooth easing & 2.2s floor stops at L1, L2, L3, L2!
-    const cycle = t % 20;
-    const smooth = (u: number) => {
-      const c = Math.max(0, Math.min(1, u));
-      return c * c * (3 - 2 * c);
-    };
+  const floorY = useMemo<Record<LiftFloor, number>>(
+    () => ({
+      1: FLOOR_1_Y + 0.04,
+      2: showL2 ? FLOOR_2_Y + 0.04 : FLOOR_1_Y + 0.04,
+      3: showL3 ? FLOOR_3_Y + 0.04 : FLOOR_2_Y + 0.04,
+    }),
+    [showL2, showL3]
+  );
 
-    let targetY = yL1;
-    let doorOpen = 0;
+  const requestFloor = useCallback(
+    (floor: LiftFloor) => {
+      liftRequestRef.current = floor;
+    },
+    [liftRequestRef]
+  );
 
-    if (cycle < 2.2) {
-      // Stopped at L1 (doors open smoothly)
-      targetY = yL1;
-      doorOpen = Math.sin((cycle / 2.2) * Math.PI);
-    } else if (cycle < 5.0) {
-      // Riding UP: L1 -> L2
-      targetY = yL1 + (yL2 - yL1) * smooth((cycle - 2.2) / 2.8);
-    } else if (cycle < 7.2) {
-      // Stopped at L2
-      targetY = yL2;
-      doorOpen = Math.sin(((cycle - 5.0) / 2.2) * Math.PI);
-    } else if (cycle < 10.0) {
-      // Riding UP: L2 -> L3
-      targetY = yL2 + (yL3 - yL2) * smooth((cycle - 7.2) / 2.8);
-    } else if (cycle < 12.2) {
-      // Stopped at L3
-      targetY = yL3;
-      doorOpen = Math.sin(((cycle - 10.0) / 2.2) * Math.PI);
-    } else if (cycle < 15.0) {
-      // Riding DOWN: L3 -> L2
-      targetY = yL3 + (yL2 - yL3) * smooth((cycle - 12.2) / 2.8);
-    } else if (cycle < 17.2) {
-      // Stopped at L2
-      targetY = yL2;
-      doorOpen = Math.sin(((cycle - 15.0) / 2.2) * Math.PI);
-    } else {
-      // Riding DOWN: L2 -> L1
-      targetY = yL2 + (yL1 - yL2) * smooth((cycle - 17.2) / 2.8);
+  useFrame((state, delta) => {
+    // 1. Konsumsi permintaan dari HUD / tombol 3D
+    const requested = liftRequestRef.current;
+    if (requested !== null) {
+      liftRequestRef.current = null;
+      liftStateRef.current = requestLiftFloor(liftStateRef.current, requested, {
+        manual: true,
+      });
     }
 
-    cabinRef.current.position.y = targetY;
+    // 2. Langkah state machine (ambient naik-turun hanya kalau simulasi jalan)
+    let lift = stepLift(liftStateRef.current, delta, {
+      autoCycle: isSimulationRunning,
+      availableFloors,
+    });
+    if (!availableFloors.includes(lift.targetFloor)) {
+      lift = { ...lift, targetFloor: lift.floor };
+    }
 
-    // Slide cabin front glass doors open smoothly at every floor stop
-    const slideOffset = doorOpen * 0.34;
+    // 3. Sampai di lantai tujuan → kamera ikut pindah + catat aktivitas
+    const arrived = lift.phase === "dwell" && lastPhaseRef.current !== "dwell";
+    if (arrived && lift.manualRequest) {
+      const floorView: Record<LiftFloor, FloorView> = { 1: "l1", 2: "l2", 3: "l3" };
+      const arrivedFloor = lift.floor;
+      lift = { ...lift, manualRequest: false };
+      setActiveFloor(floorView[arrivedFloor]);
+      addActivity(
+        "Lift Panoramik",
+        "system",
+        `Lift tiba di L${arrivedFloor} — pintu terbuka, kamera ikut naik.`,
+        "success",
+        "lift"
+      );
+    }
+    lastPhaseRef.current = lift.phase;
+    liftStateRef.current = lift;
+
+    // 4. Terapkan ke scene 3D
+    if (cabinRef.current) {
+      cabinRef.current.position.y = liftCabinY(lift, floorY);
+    }
+    const slideOffset = lift.doorOpen * 0.34;
     if (cabinDoorLeftRef.current) {
       cabinDoorLeftRef.current.position.x = -0.39 - slideOffset;
     }
@@ -375,7 +402,8 @@ function PanoramicGlassElevator({
       cabinDoorRightRef.current.position.x = 0.39 + slideOffset;
     }
 
-    // Subtle natural passenger head/look movement inside the lift
+    // 5. Kepala penumpang hidup (deterministik terhadap waktu)
+    const t = state.clock.elapsedTime;
     if (rider1HeadRef.current) {
       rider1HeadRef.current.rotation.y = Math.sin(t * 0.7) * 0.22;
     }
@@ -383,12 +411,23 @@ function PanoramicGlassElevator({
       rider2HeadRef.current.rotation.y = Math.cos(t * 0.65) * 0.2;
       rider2HeadRef.current.rotation.x = 0.08 + Math.sin(t * 1.1) * 0.04;
     }
+
+    // 6. Publish status untuk HUD (~10 Hz, bukan tiap frame)
+    statusTickRef.current += 1;
+    if (statusTickRef.current % 6 === 0) {
+      liftStatusRef.current = liftStatusSnapshot(lift, LIFT_TIMING, availableFloors);
+    }
   });
 
-  const floorLandings = [
-    { label: "L1", y: FLOOR_1_Y, visible: true },
-    { label: "L2", y: FLOOR_2_Y, visible: showL2 },
-    { label: "L3", y: FLOOR_3_Y, visible: showL3 },
+  const floorLandings: Array<{
+    label: string;
+    number: LiftFloor;
+    y: number;
+    visible: boolean;
+  }> = [
+    { label: "L1", number: 1, y: FLOOR_1_Y, visible: true },
+    { label: "L2", number: 2, y: FLOOR_2_Y, visible: showL2 },
+    { label: "L3", number: 3, y: FLOOR_3_Y, visible: showL3 },
   ];
 
   return (
@@ -480,19 +519,48 @@ function PanoramicGlassElevator({
                 />
               </mesh>
             ))}
-            {/* Illuminated Call Button Panel on Right Jamb */}
-            <mesh position={[0.98, 1.18, 0.07]}>
-              <boxGeometry args={[0.1, 0.24, 0.03]} />
-              <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.35} />
-            </mesh>
-            <mesh position={[0.98, 1.22, 0.09]}>
-              <sphereGeometry args={[0.018, 8, 8]} />
-              <meshStandardMaterial
-                color="#38bdf8"
-                emissive="#38bdf8"
-                emissiveIntensity={1.1}
-              />
-            </mesh>
+            {/* Tombol panggil lift yang BISA DIKETUK (target sentuh besar) */}
+            <group
+              position={[1.06, 1.22, 0.12]}
+              onClick={(e) => {
+                e.stopPropagation();
+                requestFloor(fl.number);
+              }}
+              onPointerOver={() => {
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = "auto";
+              }}
+            >
+              <mesh>
+                <boxGeometry args={[0.3, 0.46, 0.06]} />
+                <meshStandardMaterial
+                  color="#0b1220"
+                  emissive="#0ea5e9"
+                  emissiveIntensity={0.28}
+                  metalness={0.5}
+                  roughness={0.35}
+                />
+              </mesh>
+              <mesh position={[0, 0.12, 0.045]}>
+                <sphereGeometry args={[0.036, 12, 12]} />
+                <meshStandardMaterial
+                  color="#38bdf8"
+                  emissive="#38bdf8"
+                  emissiveIntensity={1.8}
+                />
+              </mesh>
+              <Text
+                position={[0, -0.1, 0.045]}
+                fontSize={0.085}
+                color="#e0f2fe"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {fl.label}
+              </Text>
+            </group>
           </group>
         ))}
 

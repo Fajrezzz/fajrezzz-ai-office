@@ -1,8 +1,8 @@
 /**
- * Fajrezzz AI Office — Installed GitHub AI Agent Skills & Modules Registry (19 Modules)
+ * Fajrezzz AI Office — Installed GitHub AI Agent Skills & Modules Registry (26 Modules)
  *
  * Distills structured agent playbooks, architecture patterns, and prompt directives
- * inspired by the 19 open-source GitHub repositories installed into our autonomous AI team.
+ * inspired by the 26 open-source GitHub repositories installed into our autonomous AI team.
  * Every module is mapped directly to divisions, 3D staff agents, and live LLM/video pipelines.
  */
 
@@ -301,6 +301,62 @@ export const INSTALLED_GITHUB_SKILLS: InstalledGitHubSkill[] = [
     assignedAgents: ["Reza (Manajer)", "Alya (QC)", "Hendra (CEO)"],
     promptDirective:
       "[karpathy-guidelines] Utamakan kejelasan dan kesederhanaan tajam: buang kalimat bertele-tele, uji asumsi sebelum menyimpulkan, dan verifikasi setiap output terhadap target retensi & kualitas nyata.",
+  },
+  {
+    id: "humanizer",
+    repo: "blader/humanizer",
+    name: "Humanizer — Penghapus Bau Tulisan AI",
+    url: "https://github.com/blader/humanizer",
+    license: "MIT",
+    category: "design_qa_ops",
+    summaryId:
+      "35 pola tulisan hasil AI (frasa pembuka asisten, 'bukan hanya X tapi juga Y', em dash berlebih, kesimpulan formulaik) + aturan membiarkan tulisan manusia yang sudah wajar.",
+    assignedDivisions: ["script", "qc", "think"],
+    assignedAgents: ["Dimas (Naskah)", "Alya (QC)"],
+    promptDirective:
+      "[humanizer] Tulis seperti manusia ngobrol: DILARANG 'Sebagai AI', 'Di era digital ini', pola 'bukan hanya X tetapi juga Y', maksimal 1 em dash per 120 karakter, tanpa '!!'. Perbaikan mekanis dijalankan otomatis oleh `humanizeText()`; teks manusia yang sudah enak dibaca JANGAN diubah.",
+  },
+  {
+    id: "ui-ux-pro-max",
+    repo: "nextlevelbuilder/ui-ux-pro-max-skill",
+    name: "UI/UX Pro Max — Design Intelligence & Audit Terukur",
+    url: "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    license: "MIT",
+    category: "design_qa_ops",
+    summaryId:
+      "Playbook desain per tipe produk (palet, skala tipografi, aturan layout, anti-pattern) + audit kontras WCAG, target sentuh 44px, dan ukuran teks minimum.",
+    assignedDivisions: ["script", "qc", "think"],
+    assignedAgents: ["Clara (Motion)", "Alya (QC)"],
+    promptDirective:
+      "[ui-ux-pro-max] Setiap desain panel/thumbnail wajib lulus audit terukur: kontras teks ≥ 4.5:1, target sentuh ≥ 44px (HP 722×1600), maksimal 2 warna aksen, tanpa glass panel di atas konten padat. Pakai `buildDesignPromptBlock()` + `auditDesign()`.",
+  },
+  {
+    id: "last30days-skill",
+    repo: "mvanhorn/last30days-skill",
+    name: "Last 30 Days — Riset Berbasis Kesegaran",
+    url: "https://github.com/mvanhorn/last30days-skill",
+    license: "MIT",
+    category: "research_data",
+    summaryId:
+      "Riset multi-sumber (Reddit, X, YouTube, HN, web) yang dibatasi 30 hari terakhir, memisahkan sinyal minggu ini dari kebisingan lama, dan menyebut umur bukti.",
+    assignedDivisions: ["research", "autopilot", "qc"],
+    assignedAgents: ["Raka (Riset)", "Reza (Manajer)"],
+    promptDirective:
+      "[last30days] Prioritaskan bukti terbit ≤ 30 hari dan sebut tanggalnya. Kalau bukti lebih tua, TULIS umurnya. Bedakan sinyal (ramai minggu ini + bukti baru) vs kebisingan (viral lama tanpa bukti). Dilarang mengarang tanggal/angka. Audit otomatis: `summarizeRecency()`.",
+  },
+  {
+    id: "rea-reverse-engineering",
+    repo: "morluto/rea",
+    name: "REA — Reverse Engineering Playbook (Referensi Terbatas)",
+    url: "https://github.com/morluto/rea",
+    license: "Lihat repo (MIT-style)",
+    category: "design_qa_ops",
+    summaryId:
+      "Playbook reverse engineering aplikasi sampai binary native (APK/jadx/apktool, analisis statis, MCP bridge). Butuh Android SDK + worker terpisah; tidak bisa jalan di Vercel/Next.js.",
+    assignedDivisions: ["think", "qc"],
+    assignedAgents: ["Hendra (CEO)", "Reza (Manajer)"],
+    promptDirective:
+      "[rea] Untuk tugas analisis biner/aplikasi: selalu statis dulu (apktool/jadx/strings), catat hash & versi, jangan menyimpulkan perilaku dari satu file, dan nyatakan batasan alat. CATATAN JUJUR: tool REA tidak berjalan di runtime ini (worker-required) — hanya checklist & disiplin analisisnya yang dipakai.",
   },
   {
     id: "agency-agents",

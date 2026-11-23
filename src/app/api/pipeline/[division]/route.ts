@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
 import { buildResearchRigorPrompt } from "@/lib/ai/research-rigor";
+import { buildRecencyPromptBlock } from "@/lib/ai/research-recency";
+import {
+  buildHumanizerPromptBlock,
+  humanizeSceneNarrations,
+} from "@/lib/ai/writing-humanizer";
+import { buildDesignPromptBlock } from "@/lib/ai/design-intelligence";
 import { buildInstalledSkillsPrompt } from "@/lib/ai/github-skills-registry";
 import { fetchLiveAiTrends } from "@/lib/ai/trend-intelligence";
 import {
@@ -348,6 +354,7 @@ export async function POST(
 ${researchSkills.promptBlock}
 
 ${buildResearchRigorPrompt()}
+${buildRecencyPromptBlock()}
 
 ATURAN WAJIB:
 - Fokus 100% TikTok Vertical 9:16 (20–60 detik).
@@ -621,6 +628,8 @@ Buat metadata TikTok Bahasa Indonesia yang profesional, informatif, dan non-spam
       const systemPrompt = `Anda adalah AI Creative Director & Scriptwriter TikTok Vertical 9:16 untuk topik AI AGENT & CLAUDE CODE (Bahasa Indonesia).
 
 ${scriptSkills.promptBlock}
+${buildHumanizerPromptBlock()}
+${buildDesignPromptBlock("content-studio")}
 
 ATURAN KETAT STORYTELLING & SYNC AUDIO-VISUAL:
 1. Total durasi video WAJIB 24–52 detik (5 sampai 6 adegan padat — jangan diperpanjang tanpa alasan!).
@@ -748,6 +757,18 @@ Tulis storyboard lengkap 5-6 adegan (total 28-48 detik) dengan variasi template 
           visualTemplate: parsedTpl,
           transitionIn: parsedTrans,
           codeSnippet: s.codeSnippet ? String(s.codeSnippet).trim().slice(0, 84) : undefined,
+        };
+      });
+
+      // v9.3 — buang bau tulisan AI sebelum masuk TTS/timeline (humanizer)
+      const humanized = humanizeSceneNarrations(scenes);
+      humanized.scenes.forEach((scene, idx) => {
+        scenes[idx] = {
+          ...scene,
+          subtitle:
+            scene.narration.length <= 72
+              ? scene.narration
+              : (scene.subtitle ?? "").trim() || scene.narration.slice(0, 72),
         };
       });
 

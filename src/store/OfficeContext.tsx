@@ -21,6 +21,12 @@ import {
   ROOF_Y as DATA_ROOF_Y,
 } from "@/lib/data/initial-office-data";
 import {
+  createLiftState,
+  liftStatusSnapshot,
+  type LiftFloor,
+  type LiftStatusSnapshot,
+} from "@/lib/office3d/elevator-controller";
+import {
   buildCompressedMemoryContext,
   recordMemoryEvent,
 } from "@/lib/ai/agent-memory";
@@ -136,6 +142,11 @@ interface OfficeContextValue {
   cameraNudgeRef: React.MutableRefObject<CameraNudgeState>;
   activeFloor: FloorView;
   setActiveFloor: (floor: FloorView) => void;
+  /** Status lift live untuk HUD (dibaca via polling ringan, bukan re-render tiap frame). */
+  liftStatusRef: React.MutableRefObject<LiftStatusSnapshot>;
+  /** Permintaan lantai dari tombol HUD / tombol 3D; dikonsumsi oleh komponen lift. */
+  liftRequestRef: React.MutableRefObject<LiftFloor | null>;
+  requestLiftFloor: (floor: LiftFloor) => void;
   lightingPreset: LightingPreset;
   setLightingPreset: (lighting: LightingPreset) => void;
   autoRotate: boolean;
@@ -296,6 +307,15 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     useState<BossTeleportCommand | null>(null);
 
   const [activeFloor, setActiveFloorState] = useState<FloorView>("all");
+  // LIFT: state machine hidup di ref (tidak memicu re-render tiap frame),
+  // HUD membaca snapshot-nya lewat polling ringan.
+  const liftStatusRef = useRef<LiftStatusSnapshot>(
+    liftStatusSnapshot(createLiftState(1))
+  );
+  const liftRequestRef = useRef<LiftFloor | null>(null);
+  const requestLiftFloor = useCallback((floor: LiftFloor) => {
+    liftRequestRef.current = floor;
+  }, []);
   const [lightingPreset, setLightingPreset] =
     useState<LightingPreset>("day");
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
@@ -1255,6 +1275,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       cameraNudgeRef,
       activeFloor,
       setActiveFloor,
+      liftStatusRef,
+      liftRequestRef,
+      requestLiftFloor,
       lightingPreset,
       setLightingPreset,
       autoRotate,
@@ -1321,6 +1344,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       focusOnAgent,
       activeFloor,
       setActiveFloor,
+      liftStatusRef,
+      liftRequestRef,
+      requestLiftFloor,
       lightingPreset,
       autoRotate,
       performanceMode,
