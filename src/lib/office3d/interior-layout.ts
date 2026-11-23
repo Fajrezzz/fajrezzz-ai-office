@@ -87,8 +87,9 @@ export const FLOOR_TWO_FURNITURE: FurniturePlacement[] = [
     rotationY: -Math.PI / 2,
     footprint: { w: 0.6, d: 2.4 },
   },
-  { kind: "planter", floor: 2, position: [-13.6, 2.9], footprint: { w: 0.9, d: 0.9 } },
-  { kind: "planter", floor: 2, position: [13.6, 2.9], footprint: { w: 0.9, d: 0.9 } },
+  // Planter menempel dinding samping (dulu di tengah promenade → terlihat "berserakan")
+  { kind: "planter", floor: 2, position: [-17.2, 3.4], footprint: { w: 0.9, d: 0.9 } },
+  { kind: "planter", floor: 2, position: [17.2, 3.4], footprint: { w: 0.9, d: 0.9 } },
   { kind: "rug", floor: 2, position: [0, 2.5], footprint: { w: 10.5, d: 2.9 } },
 ];
 
@@ -111,9 +112,10 @@ export const FLOOR_THREE_FURNITURE: FurniturePlacement[] = [
   {
     kind: "sofa_lounge",
     floor: 3,
-    position: [8.2, 1.9],
-    rotationY: Math.PI,
-    footprint: { w: 4.6, d: 3.6 },
+    // Menghadap ruang tengah (-Z), bukan menghadap dinding
+    position: [8.6, 2.7],
+    rotationY: 0,
+    footprint: { w: 5.0, d: 3.8 },
   },
   {
     kind: "bookshelf",
@@ -122,8 +124,9 @@ export const FLOOR_THREE_FURNITURE: FurniturePlacement[] = [
     rotationY: -Math.PI / 2,
     footprint: { w: 0.6, d: 2.4 },
   },
-  { kind: "planter", floor: 3, position: [-1.2, 1.6], footprint: { w: 0.9, d: 0.9 } },
-  { kind: "planter", floor: 3, position: [2.6, 2.6], footprint: { w: 0.9, d: 0.9 } },
+  // Planter di sudut/lantai dekat dinding — tidak lagi di tengah jalur orang
+  { kind: "planter", floor: 3, position: [-17.2, 1.1], footprint: { w: 0.9, d: 0.9 } },
+  { kind: "planter", floor: 3, position: [14.2, 3.9], footprint: { w: 0.9, d: 0.9 } },
   { kind: "rug", floor: 3, position: [-5.6, -0.2], footprint: { w: 3.6, d: 3.6 } },
 ];
 

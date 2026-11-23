@@ -19,6 +19,16 @@
 
 import type { EditorialEpisode, EditorialScene } from "./motion-renderer.ts";
 import { getTikTokSafeZone } from "./video-engine-v3.ts";
+import {
+  buildVisualVariation,
+  layoutForScene,
+  transitionForScene,
+  typographyForScene,
+  type AccentSet,
+  type PaperTone,
+  type TransitionModeId,
+  type VisualVariation,
+} from "./visual-variation.ts";
 
 export const ZINE_PALETTE = {
   paper: "#F1EBE0",
@@ -180,11 +190,13 @@ function drawPaper(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  globalSec: number
+  globalSec: number,
+  base: string = ZINE_PALETTE.paper,
+  deep: string = ZINE_PALETTE.paperDeep
 ): void {
   const g = ctx.createLinearGradient(0, 0, w * 0.35, h);
-  g.addColorStop(0, ZINE_PALETTE.paper);
-  g.addColorStop(1, ZINE_PALETTE.paperDeep);
+  g.addColorStop(0, base);
+  g.addColorStop(1, deep);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
@@ -342,19 +354,30 @@ function drawChip(
   x: number,
   y: number,
   label: string,
-  fontPx: number
+  fontPx: number,
+  bg: string = ZINE_PALETTE.ink,
+  fg: string = ZINE_PALETTE.white
 ): void {
   ctx.save();
   ctx.font = `800 ${fontPx}px "Helvetica Neue", Inter, system-ui, sans-serif`;
   const w = ctx.measureText(label).width + fontPx * 1.1;
   const h = fontPx * 1.9;
-  ctx.fillStyle = ZINE_PALETTE.ink;
+  ctx.fillStyle = bg;
   ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = ZINE_PALETTE.white;
+  ctx.fillStyle = fg;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
   ctx.fillText(label, x + fontPx * 0.55, y + h / 2 + fontPx * 0.04);
   ctx.restore();
+}
+
+/** Palet per scene: kertas terang, tinta gelap, aksen milik episode. */
+interface SceneTones {
+  light: string;
+  dark: string;
+  accent: string;
+  accentAlt: string;
+  onDark: boolean;
 }
 
 /** Artwork/B-roll sebagai potongan kertas: kartu miring + border putih + halftone */
@@ -368,8 +391,11 @@ function drawArtworkCard(
   rot: number,
   sceneIndex: number,
   globalSec: number,
-  panelIsPaper = false
+  tones: SceneTones
 ): void {
+  const panelBase = tones.onDark ? tones.light : tones.dark;
+  const panelContrast = tones.onDark ? tones.dark : tones.light;
+
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate((rot * Math.PI) / 180);
@@ -379,7 +405,7 @@ function drawArtworkCard(
   ctx.shadowColor = "rgba(10,10,11,0.28)";
   ctx.shadowBlur = w * 0.05;
   ctx.shadowOffsetY = h * 0.02;
-  ctx.fillStyle = ZINE_PALETTE.ink;
+  ctx.fillStyle = tones.dark;
   ctx.fillRect(-w / 2 - w * 0.012, -h / 2 - h * 0.012, w * 1.024, h * 1.024);
   ctx.restore();
 
@@ -394,14 +420,14 @@ function drawArtworkCard(
     const dh = image.height * scale;
     ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
 
-    // Duotone merah/amber (multiply) + lift (screen) → kesan sablon
+    // Duotone aksen episode (multiply) + lift (screen) → kesan sablon
     ctx.globalCompositeOperation = "multiply";
-    ctx.fillStyle = sceneIndex % 2 === 0 ? ZINE_PALETTE.red : ZINE_PALETTE.amber;
+    ctx.fillStyle = sceneIndex % 2 === 0 ? tones.accent : tones.accentAlt;
     ctx.globalAlpha = 0.34;
     ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.globalCompositeOperation = "screen";
     ctx.globalAlpha = 0.18;
-    ctx.fillStyle = ZINE_PALETTE.white;
+    ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
@@ -413,15 +439,15 @@ function drawArtworkCard(
     const short = Math.min(w, h);
 
     if (variant === 0) {
-      ctx.fillStyle = panelIsPaper ? ZINE_PALETTE.paper : ZINE_PALETTE.ink;
+      ctx.fillStyle = panelBase;
       ctx.fillRect(-w / 2, -h / 2, w, h);
-      drawInkBlot(ctx, 0, 0, short * 0.34, ZINE_PALETTE.red, globalSec, 2.1);
+      drawInkBlot(ctx, 0, 0, short * 0.34, tones.accent, globalSec, 2.1);
     } else if (variant === 1) {
-      // Panel merah + setengah lingkaran halftone raksasa
-      ctx.fillStyle = ZINE_PALETTE.red;
+      // Panel aksen + setengah lingkaran halftone raksasa
+      ctx.fillStyle = tones.accent;
       ctx.fillRect(-w / 2, -h / 2, w, h);
       ctx.save();
-      ctx.fillStyle = panelIsPaper ? ZINE_PALETTE.ink : ZINE_PALETTE.paper;
+      ctx.fillStyle = panelContrast;
       ctx.beginPath();
       ctx.arc(0, h * 0.24, short * 0.62, Math.PI, Math.PI * 2);
       ctx.fill();
@@ -435,7 +461,7 @@ function drawArtworkCard(
       ctx.restore();
     } else if (variant === 2) {
       // Bola prisma gradien (merah-hijau-biru) di atas kertas
-      ctx.fillStyle = panelIsPaper ? ZINE_PALETTE.ink : ZINE_PALETTE.paper;
+      ctx.fillStyle = panelContrast;
       ctx.fillRect(-w / 2, -h / 2, w, h);
       const ballR = short * 0.4;
       drawPrismSticker(ctx, 0, 0, ballR);
@@ -444,11 +470,11 @@ function drawArtworkCard(
       drawHalftoneRect(ctx, -w / 2, -h / 2, w, h, 1);
       ctx.restore();
     } else {
-      // Strip diagonal hitam-putih + nomor scene raksasa
-      ctx.fillStyle = ZINE_PALETTE.paper;
+      // Strip diagonal + nomor scene raksasa
+      ctx.fillStyle = panelBase;
       ctx.fillRect(-w / 2, -h / 2, w, h);
       ctx.save();
-      ctx.fillStyle = ZINE_PALETTE.ink;
+      ctx.fillStyle = panelContrast;
       for (let i = -3; i < 8; i++) {
         ctx.save();
         ctx.translate(-w / 2 + i * w * 0.2 + ((globalSec * w * 0.05) % (w * 0.2)), 0);
@@ -458,7 +484,7 @@ function drawArtworkCard(
       }
       ctx.restore();
       ctx.save();
-      ctx.fillStyle = ZINE_PALETTE.red;
+      ctx.fillStyle = tones.accent;
       ctx.font = `900 ${short * 0.5}px ${HEADLINE_FONT_STACK}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -480,12 +506,11 @@ function drawArtworkCard(
   ctx.restore();
 
   // Border putih tebal ala potongan kertas
-  ctx.strokeStyle = ZINE_PALETTE.white;
+  ctx.strokeStyle = "#FFFFFF";
   ctx.lineWidth = Math.max(3, w * 0.014);
   ctx.strokeRect(-w / 2, -h / 2, w, h);
   ctx.restore();
 }
-
 
 /**
  * Speed-lines ala manga: sisa gerakan keras di 0.14s pertama tiap cut.
@@ -519,6 +544,64 @@ function drawWhipSmear(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** Semua varian transisi keras zine (0..1 progres transisi). */
+function drawZineTransition(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  p: number,
+  mode: TransitionModeId,
+  accent: AccentSet
+): void {
+  const a = 1 - p;
+  if (a <= 0.02) return;
+
+  switch (mode) {
+    case "speedlines":
+      drawWhipSmear(ctx, w, h, p, accent.primary);
+      return;
+    case "flash": {
+      ctx.save();
+      ctx.globalAlpha = a * 0.5;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+      return;
+    }
+    case "slice": {
+      // Irisan tipis: hanya menyentuh tepi atas/bawah, teks tetap terbaca
+      const bands = 4;
+      const bandH = h * 0.055;
+      ctx.save();
+      for (let i = 0; i < bands; i += 1) {
+        const shift = (i % 2 === 0 ? 1 : -1) * a * w * 0.18;
+        ctx.globalAlpha = a * 0.38;
+        ctx.fillStyle = i % 2 === 0 ? accent.primary : accent.tertiary;
+        const y = i < bands / 2 ? i * bandH : h - (bands - i) * bandH;
+        ctx.fillRect(shift, y, w, bandH * 0.7);
+      }
+      ctx.restore();
+      return;
+    }
+    case "page_wipe": {
+      const x = w * (1 - p);
+      ctx.save();
+      const grad = ctx.createLinearGradient(x - w * 0.35, 0, x, 0);
+      grad.addColorStop(0, "rgba(255,255,255,0)");
+      grad.addColorStop(1, "rgba(255,255,255,0.92)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - w * 0.35, 0, w * 0.35, h);
+      ctx.fillStyle = accent.primary;
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillRect(x - w * 0.02, 0, w * 0.02, h);
+      ctx.restore();
+      return;
+    }
+    default:
+      return;
+  }
 }
 
 /* ============================================================================
@@ -565,6 +648,34 @@ function fitHeadline(
   return { fontPx, lineH: fontPx * 1.1 };
 }
 
+/** Bungkus caption jadi maksimal `maxLines` baris, tanpa memotong kata. */
+function wrapCaption(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  fontPx: number,
+  maxW: number,
+  maxLines: number
+): string[] {
+  ctx.save();
+  ctx.font = `600 ${fontPx}px ${HEADLINE_FONT_STACK}`;
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (ctx.measureText(next).width > maxW && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length === maxLines - 1) break;
+    } else {
+      current = next;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  ctx.restore();
+  return lines;
+}
+
 function drawZineScene(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -574,26 +685,122 @@ function drawZineScene(
   sceneIndex: number,
   localSec: number,
   globalSec: number,
-  image: HTMLImageElement | null
+  image: HTMLImageElement | null,
+  variation: VisualVariation
 ): void {
   const s = w / 1080;
   const sceneDur = Math.max(1, scene.durationSec);
   const punch = zinePunchScale(localSec);
   const glitch = zineGlitchOffset(localSec, sceneDur, w);
-  const isBlackScene = sceneIndex % 3 === 2;
-  const headlineFirst = sceneIndex % 2 === 0;
+  const paper: PaperTone = variation.paper;
+  const accent: AccentSet = variation.accent;
+  const mode = layoutForScene(variation, sceneIndex);
+  const typo = typographyForScene(variation, sceneIndex);
 
-  drawPaper(ctx, w, h, globalSec);
+  // Scene dominan gelap hanya kalau episode memang memakai pola itu
+  const darkEvery = variation.darkSceneEvery;
+  const isDarkScene =
+    paper.isDark ||
+    (darkEvery > 0 && sceneIndex % darkEvery === darkEvery - 1);
 
-  // Satu dari tiga scene dibuat dominan hitam (kontras keras seperti referensi)
-  if (isBlackScene) {
+  drawPaper(ctx, w, h, globalSec, paper.base, paper.deep);
+  if (isDarkScene && !paper.isDark) {
     ctx.save();
-    ctx.fillStyle = ZINE_PALETTE.ink;
+    ctx.fillStyle = paper.ink; // ink gelap di tone terang
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
 
-  // ---- Grain + vignette DI BAWAH teks (biar tipografi tetap tajam putih) ----
+  // Token kontras: berlaku untuk kertas terang maupun kertas gelap (charcoal)
+  const lightTone = paper.isDark ? paper.ink : paper.base;
+  const darkTone = paper.isDark ? paper.base : paper.ink;
+  const inkColor = isDarkScene ? lightTone : darkTone;
+  const paperColor = isDarkScene ? darkTone : lightTone;
+  const tones: SceneTones = {
+    light: lightTone,
+    dark: darkTone,
+    accent: accent.primary,
+    accentAlt: accent.secondary,
+    onDark: isDarkScene,
+  };
+
+  const safe = getTikTokSafeZone(w, h);
+  const bandTop = Math.max(h * 0.075, safe.top + h * 0.004);
+  const bandBottom = Math.min(h * 0.925, safe.bottom - h * 0.008);
+  const gap = h * 0.028;
+  const span = bandBottom - bandTop;
+
+  // ---- Band komposisi per mode layout (variasi antar episode & antar scene) --
+  let headBand = { top: bandTop, bottom: bandTop + span / 2 };
+  let artBand = { top: bandTop, bottom: bandBottom };
+  const headlineFirst = (variation.seed + sceneIndex) % 2 === 0;
+
+  if (mode === "band_swap") {
+    const split = bandTop + span * 0.5;
+    headBand = headlineFirst
+      ? { top: bandTop, bottom: split - gap }
+      : { top: split + gap, bottom: bandBottom };
+    artBand = headlineFirst
+      ? { top: split + gap, bottom: bandBottom }
+      : { top: bandTop, bottom: split - gap };
+  } else if (mode === "full_bleed_art") {
+    artBand = { top: bandTop, bottom: bandBottom };
+    headBand = {
+      top: bandBottom - span * 0.36,
+      bottom: bandBottom,
+    };
+  } else if (mode === "stacked_cards") {
+    artBand = { top: bandTop, bottom: bandTop + span * 0.44 };
+    headBand = { top: artBand.bottom + gap, bottom: bandBottom };
+  } else {
+    // text_only: tipografi penuh, tanpa artwork
+    headBand = { top: bandTop, bottom: bandBottom };
+    artBand = { top: bandTop, bottom: bandTop };
+  }
+
+  // ---- Artwork ----
+  const artH = Math.max(1, artBand.bottom - artBand.top);
+  const artCy = (artBand.top + artBand.bottom) / 2;
+  const fullBleed = mode === "full_bleed_art";
+  const cardH = fullBleed ? artH * 0.98 : mode === "stacked_cards" ? artH * 0.94 : artH * 0.94;
+  const cardW = fullBleed
+    ? w * 0.96
+    : mode === "stacked_cards"
+      ? Math.min(w * 0.58, cardH * 1.15)
+      : Math.min(w * 0.74, cardH * 1.06);
+  const hasArt = mode !== "text_only";
+
+  if (hasArt) {
+    drawInkBlot(
+      ctx,
+      w * 0.5,
+      artCy,
+      Math.max(cardW, cardH) * 0.56,
+      accent.primary,
+      globalSec,
+      sceneIndex * 1.7
+    );
+  } else {
+    // text_only: satu bentuk besar sebagai jangkar visual.
+    // Selalu pakai warna AKSEN (bukan warna tinta) supaya headline di atasnya
+    // tetap kontras — dulu blok hitam + teks hitam = headline hilang.
+    const shapeR = Math.min(w, h) * 0.3;
+    if (variation.seed % 2 === 0) {
+      drawInkBlot(ctx, w * 0.5, h * 0.5, shapeR, accent.primary, globalSec, sceneIndex);
+    } else {
+      ctx.save();
+      ctx.translate(w * 0.5, h * 0.5);
+      ctx.rotate(((sceneIndex % 2 === 0 ? -1 : 1) * 7 * Math.PI) / 180);
+      ctx.fillStyle = accent.primary;
+      ctx.fillRect(-w * 0.58, -h * 0.1, w * 1.16, h * 0.2);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = accent.tertiary;
+      ctx.fillRect(-w * 0.58, h * 0.11, w * 0.42, h * 0.014);
+      ctx.restore();
+    }
+  }
+
+  // Grain + vignette DI BAWAH teks supaya tipografi tetap tajam
   const grain = getGrainCanvas(w, h);
   if (grain) {
     ctx.save();
@@ -602,22 +809,27 @@ function drawZineScene(
     ctx.drawImage(grain, ox - 64, 0, w + 128, h);
     ctx.restore();
   }
-
-  const vig = ctx.createRadialGradient(
-    w / 2,
-    h * 0.5,
-    w * 0.22,
-    w / 2,
-    h * 0.5,
-    w * 0.95
-  );
+  const vig = ctx.createRadialGradient(w / 2, h * 0.5, w * 0.22, w / 2, h * 0.5, w * 0.95);
   vig.addColorStop(0, "rgba(0,0,0,0)");
-  vig.addColorStop(1, isBlackScene ? "rgba(0,0,0,0.34)" : "rgba(80,60,40,0.18)");
+  vig.addColorStop(1, isDarkScene ? "rgba(0,0,0,0.34)" : "rgba(80,60,40,0.18)");
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, w, h);
 
+  // ---- Aksen tepi per episode (warna sekunder + posisi dari seed) ----
+  ctx.save();
+  const stripeY = h * (0.34 + ((variation.seed >>> 3) % 40) / 100);
+  const stripeW = w * (0.16 + ((variation.seed >>> 7) % 22) / 100);
+  ctx.translate(w * 0.5, stripeY);
+  ctx.rotate((((variation.seed % 11) - 5) * 1.6 * Math.PI) / 180);
+  ctx.globalAlpha = isDarkScene ? 0.9 : 0.82;
+  ctx.fillStyle = accent.secondary;
+  ctx.fillRect(-stripeW / 2, -h * 0.011, stripeW, h * 0.022);
+  ctx.fillStyle = accent.tertiary;
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(-stripeW * 0.34, h * 0.03, stripeW * 0.68, h * 0.008);
+  ctx.restore();
 
-  // Ken Burns + tilt halus + guncangan mikro (energi ala referensi)
+  // ---- Grup zoom / tilt / punch ----
   const sceneProgress = Math.min(1, localSec / sceneDur);
   const zoomDrift = 1 + 0.055 * sceneProgress;
   const tiltDrift =
@@ -629,61 +841,32 @@ function drawZineScene(
   ctx.scale(zoomDrift, zoomDrift);
   ctx.translate(-w / 2, -h / 2);
 
-  /* --- Dua band vertikal yang TIDAK pernah tumpang tindih -------------------
-     band headline (tipografi) & band artwork. Posisi tukar tiap scene supaya
-     ritme cut terasa seperti referensi (teks atas-artwork bawah, gantian).   */
-  const safe = getTikTokSafeZone(w, h);
-  const bandTop = Math.max(h * 0.075, safe.top + h * 0.004);
-  const bandBottom = Math.min(h * 0.925, safe.bottom - h * 0.008);
-  const bandSplit = bandTop + (bandBottom - bandTop) * 0.5;
-  const bandGap = h * 0.028;
-  const headBand = headlineFirst
-    ? { top: bandTop, bottom: bandSplit - bandGap }
-    : { top: bandSplit + bandGap, bottom: bandBottom };
-  const artBand = headlineFirst
-    ? { top: bandSplit + bandGap, bottom: bandBottom }
-    : { top: bandTop, bottom: bandSplit - bandGap };
+  if (hasArt) {
+    ctx.save();
+    ctx.translate(w / 2, artCy);
+    ctx.scale(punch, punch);
+    ctx.translate(-w / 2, -artCy);
+    drawArtworkCard(
+      ctx,
+      image,
+      w / 2 - cardW / 2,
+      artCy - cardH / 2,
+      cardW,
+      cardH,
+      variation.cardRotation + zineCardRotation(sceneIndex) * 0.5,
+      sceneIndex + variation.panelOffset,
+      globalSec,
+      tones
+    );
+    ctx.restore();
+  }
 
-  /* --- Artwork: potongan kertas miring (B-roll) atau panel ink ------------- */
-  const artH = artBand.bottom - artBand.top;
-  const cardH = artH * 0.94;
-  const cardW = Math.min(w * 0.74, cardH * 1.06);
-  const artCy = (artBand.top + artBand.bottom) / 2;
-
-  drawInkBlot(
-    ctx,
-    w * 0.5,
-    artCy,
-    Math.max(cardW, cardH) * 0.56,
-    isBlackScene ? "rgba(226,58,46,0.88)" : "rgba(226,58,46,0.9)",
-    globalSec,
-    sceneIndex * 1.7
-  );
-
-  ctx.save();
-  ctx.translate(w / 2, artCy);
-  ctx.scale(punch, punch);
-  ctx.translate(-w / 2, -artCy);
-  drawArtworkCard(
-    ctx,
-    image,
-    w / 2 - cardW / 2,
-    artCy - cardH / 2,
-    cardW,
-    cardH,
-    zineCardRotation(sceneIndex),
-    sceneIndex,
-    globalSec,
-    isBlackScene && !image
-  );
-  ctx.restore();
-
-  /* --- Headline: tipografi raksasa, auto-fit, slab menempel di teks -------- */
+  // ---- Headline dengan gaya tipografi per scene ----
   const headlineText = (scene.onScreenText || scene.label || episode.title).toUpperCase();
   const bandH = headBand.bottom - headBand.top;
   const maxLines = bandH > h * 0.34 ? 3 : 2;
   const lines = zineSplitHeadline(headlineText, maxLines);
-  const { fontPx, lineH } = fitHeadline(ctx, lines, w * 0.92, bandH);
+  const { fontPx, lineH } = fitHeadline(ctx, lines, w * (fullBleed ? 0.86 : 0.92), bandH);
   const blockCenterY = (headBand.top + headBand.bottom) / 2;
 
   lines.forEach((line, li) => {
@@ -697,34 +880,59 @@ function drawZineScene(
     const offsetX =
       (li % 2 === 0 ? -1 : 1) * w * 0.012 +
       whipIn * (sceneIndex % 2 === 0 ? 1 : -1) * w * 0.07;
-    const accentLine = isBlackScene && li === Math.floor(lines.length / 2);
 
     ctx.save();
     ctx.translate(0, glitch.dy);
-    if (isBlackScene) {
-      // Dominan hitam: teks putih, satu baris di-highlight slab merah
-      if (accentLine) {
-        drawSlab(ctx, w / 2 - slabW / 2 + offsetX, y - slabH / 2, slabW, slabH, slabRot, ZINE_PALETTE.red);
-      }
+
+    if (typo === "outline") {
+      // Tipografi outline editorial: tanpa slab, stroke tebal
+      ctx.save();
+      ctx.font = `900 ${fontPx}px ${HEADLINE_FONT_STACK}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = Math.max(2, fontPx * 0.05);
+      ctx.strokeStyle = inkColor;
+      ctx.strokeText(line, w / 2 + glitch.dx + offsetX, y);
+      ctx.restore();
+    } else if (typo === "highlight") {
+      const accentLine = li === Math.floor(lines.length / 2);
+      drawSlab(
+        ctx,
+        w / 2 - slabW / 2 + offsetX,
+        y - slabH / 2,
+        slabW,
+        slabH,
+        slabRot,
+        accentLine ? accent.primary : inkColor
+      );
       drawGlitchText(
         ctx,
         line,
         w / 2 + glitch.dx + offsetX,
         y,
         fontPx,
-        accentLine ? ZINE_PALETTE.ink : ZINE_PALETTE.white,
+        accentLine ? accent.inkOnAccent : paperColor,
         "center",
-        accentLine ? 0 : glitch.split
+        glitch.split
       );
     } else {
-      drawSlab(ctx, w / 2 - slabW / 2 + offsetX, y - slabH / 2, slabW, slabH, slabRot);
+      // slab klasik (default look channel)
+      drawSlab(
+        ctx,
+        w / 2 - slabW / 2 + offsetX,
+        y - slabH / 2,
+        slabW,
+        slabH,
+        slabRot,
+        isDarkScene && li === 0 ? accent.primary : inkColor
+      );
       drawGlitchText(
         ctx,
         line,
         w / 2 + glitch.dx + offsetX,
         y,
         fontPx,
-        ZINE_PALETTE.white,
+        paperColor,
         "center",
         glitch.split
       );
@@ -732,37 +940,80 @@ function drawZineScene(
     ctx.restore();
   });
 
-  /* --- Stiker & chip ditempel di sudut band artwork (boleh overlap kartu) -- */
+  // ---- Caption penjelas (biar penonton awam paham konteksnya) ----
+  const captionText = (scene.narration || scene.onScreenText || "")
+    .replace(/[*_#>`]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (captionText && captionText.length > 12 && captionText !== headlineText) {
+    const capFont = Math.max(18, Math.min(46, w * 0.036));
+    const capMaxW = w * 0.78;
+    const capLines = wrapCaption(ctx, captionText, capFont, capMaxW, 3);
+    if (capLines.length > 0) {
+      const capLineH = capFont * 1.32;
+      const capH = capLines.length * capLineH + capFont * 0.5;
+      const lastHeadY = blockCenterY + ((lines.length - 1) / 2) * lineH;
+      const belowY = lastHeadY + lineH * 0.62;
+      const aboveY = blockCenterY - ((lines.length - 1) / 2) * lineH - lineH * 0.62 - capH;
+      const fitsBelow = belowY + capH <= headBand.bottom + h * 0.02;
+      const fitsAbove = aboveY >= headBand.top - h * 0.02;
+      const capTop = fitsBelow ? belowY : fitsAbove ? aboveY : -1;
+
+      if (capTop >= 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = accent.primary;
+        ctx.fillRect(w * 0.11, capTop + capFont * 0.2, w * 0.05, Math.max(2, capFont * 0.1));
+        ctx.fillStyle = inkColor;
+        ctx.font = `600 ${capFont}px ${HEADLINE_FONT_STACK}`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        capLines.forEach((line, li) => {
+          ctx.fillText(line, w * 0.11, capTop + capFont * 0.5 + li * capLineH);
+        });
+        ctx.restore();
+      }
+    }
+  }
+
+  // ---- Chip & sticker ----
   drawChip(
     ctx,
     w * 0.05,
     h * 0.028,
     `${episode.episodeNumber ? `EP ${String(episode.episodeNumber).padStart(2, "0")}` : "FAJREZZZ"} · ${String(sceneIndex + 1).padStart(2, "0")}/${String(episode.scenes.length).padStart(2, "0")}`,
-    Math.max(9, 13 * s)
+    Math.max(9, 13 * s),
+    inkColor,
+    paperColor
   );
-  drawPrismSticker(
-    ctx,
-    w / 2 + cardW / 2 - w * 0.03,
-    artCy - cardH / 2 + w * 0.03,
-    Math.max(12, w * 0.045)
-  );
+
+  if (hasArt) {
+    drawPrismSticker(
+      ctx,
+      w / 2 + cardW / 2 - w * 0.03,
+      artCy - cardH / 2 + w * 0.03,
+      Math.max(12, w * 0.045)
+    );
+  } else {
+    drawPrismSticker(ctx, w * 0.85, h * 0.1, Math.max(12, w * 0.04));
+  }
 
   ctx.restore(); // tutup grup zoom/tilt
 
-  // Label kecil vertikal (aksen editorial)
+  // Label vertikal
   ctx.save();
   ctx.translate(w * 0.945, h * 0.5);
   ctx.rotate(Math.PI / 2);
-  ctx.fillStyle = isBlackScene ? "rgba(255,255,255,0.55)" : "rgba(10,10,11,0.5)";
+  ctx.fillStyle = isDarkScene ? "rgba(255,255,255,0.55)" : "rgba(10,10,11,0.5)";
   ctx.font = `800 ${Math.max(9, 13 * s)}px "Helvetica Neue", Inter, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText((scene.label || "FAJREZZZ").toUpperCase().slice(0, 22), 0, 0);
   ctx.restore();
 
-  // ---- Border putih tipis (frame kertas) ----
+  // Border kertas
   const border = Math.max(2, 7 * s);
-  ctx.strokeStyle = ZINE_PALETTE.white;
+  ctx.strokeStyle = isDarkScene ? "rgba(246,241,231,0.85)" : ZINE_PALETTE.white;
   ctx.lineWidth = border;
   ctx.strokeRect(border / 2, border / 2, w - border, h - border);
 }
@@ -797,6 +1048,13 @@ export function renderZineFrame(
   const scene = episode.scenes[activeIndex] ?? episode.scenes[0];
   const image = brollImages?.[activeIndex] ?? null;
 
+  // Setiap episode punya sidik jari visual sendiri (tone kertas, aksen, layout, tipografi)
+  const variation = buildVisualVariation(
+    episode.title,
+    episode.episodeNumber,
+    episode.niche
+  );
+
   ctx.save();
   ctx.textAlign = "center";
 
@@ -812,12 +1070,20 @@ export function renderZineFrame(
     activeIndex,
     localSec,
     elapsedSec,
-    image
+    image,
+    variation
   );
 
-  // Transisi keras ala referensi: whip smear sisa cut sebelumnya
+  // Transisi keras berganti gaya tiap scene (speedlines / flash / slice / page-wipe)
   if (activeIndex > 0 && localSec < 0.2) {
-    drawWhipSmear(ctx, width, height, localSec / 0.2, ZINE_PALETTE.red);
+    drawZineTransition(
+      ctx,
+      width,
+      height,
+      localSec / 0.2,
+      transitionForScene(variation, activeIndex),
+      variation.accent
+    );
   }
 
   if (flash > 0) {

@@ -636,6 +636,9 @@ ATURAN KETAT STORYTELLING & SYNC AUDIO-VISUAL:
    - "cta_finale" (kesimpulan payoff + CTA natural komentar/follow)
 4. Setiap narasi adegan pendek, ritmis, 11–20 kata bahasa Indonesia natural yang enak diucapkan voiceover (agar pas 4–8 detik per adegan dan sinkron sempurna dengan subtitle).
 5. Adegan terakhir WAJIB memberikan payoff/kesimpulan bernilai + CTA natural.
+6. PENONTON AWAM: setiap istilah teknis (agent, token, LLM, prompt, API, workflow) WAJIB langsung diberi analogi sehari-hari di kalimat yang sama — contoh: "agent itu kayak karyawan digital yang dapat tugas tertulis". Dilarang menumpuk jargon tanpa penjelasan.
+7. ALUR WAJIB JELAS: apa itu (1 adegan) → kenapa penting untuk penonton → contoh nyata yang bisa dibayangkan → kesimpulan. "subtitle" 4–7 kata ini yang tampil besar di layar, jadi harus bisa dipahami tanpa narasi; "visualCue" = headline 3–6 kata yang spesifik, bukan puitis.
+8. DILARANG mengarang angka statistik. Kalau menyebut angka, sebut sumbernya di narasi atau ganti dengan perbandingan yang jujur.
 
 Balas HANYA JSON valid:
 {
