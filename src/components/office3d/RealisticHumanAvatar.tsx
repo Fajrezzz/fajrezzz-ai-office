@@ -7,6 +7,8 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export type HumanAvatarVariant =
+  | "vroid_male"
+  | "vroid_female"
   | "rpm_male"
   | "rb_male_a"
   | "rb_male_b"
@@ -43,6 +45,8 @@ export interface RealisticHumanAvatarProps {
 }
 
 const MODEL_PATHS: Record<HumanAvatarVariant | "xbot", string> = {
+  vroid_male: "/models/vroid_male.glb",
+  vroid_female: "/models/vroid_female.glb",
   rpm_male: "/models/rpm_male.glb",
   rb_male_a: "/models/rb_male_a.glb",
   rb_male_b: "/models/rb_male_b.glb",
@@ -51,6 +55,38 @@ const MODEL_PATHS: Record<HumanAvatarVariant | "xbot", string> = {
   rb_female: "/models/rb_female.glb",
   michelle: "/models/Michelle.glb",
   xbot: "/models/Xbot.glb",
+};
+
+const VROID_VARIANTS = new Set<HumanAvatarVariant>([
+  "vroid_male",
+  "vroid_female",
+]);
+
+const VROID_BONE_MAP: Record<string, string> = {
+  J_Bip_C_Hips: "Hips",
+  J_Bip_C_Spine: "Spine",
+  J_Bip_C_Chest: "Spine1",
+  J_Bip_C_UpperChest: "Spine2",
+  J_Bip_C_Neck: "Neck",
+  J_Bip_C_Head: "Head",
+  J_Bip_L_Shoulder: "LeftShoulder",
+  J_Bip_L_UpperArm: "LeftArm",
+  J_Bip_L_LowerArm: "LeftForeArm",
+  J_Bip_L_Hand: "LeftHand",
+  J_Bip_L_Middle1: "LeftHandMiddle1",
+  J_Bip_R_Shoulder: "RightShoulder",
+  J_Bip_R_UpperArm: "RightArm",
+  J_Bip_R_LowerArm: "RightForeArm",
+  J_Bip_R_Hand: "RightHand",
+  J_Bip_R_Middle1: "RightHandMiddle1",
+  J_Bip_L_UpperLeg: "LeftUpLeg",
+  J_Bip_L_LowerLeg: "LeftLeg",
+  J_Bip_L_Foot: "LeftFoot",
+  J_Bip_L_ToeBase: "LeftToeBase",
+  J_Bip_R_UpperLeg: "RightUpLeg",
+  J_Bip_R_LowerLeg: "RightLeg",
+  J_Bip_R_Foot: "RightFoot",
+  J_Bip_R_ToeBase: "RightToeBase",
 };
 
 const RB_VARIANTS = new Set<HumanAvatarVariant>([
@@ -88,6 +124,7 @@ const CHILD_BONE_MAP: Record<string, string> = {
 };
 
 function canonicalBoneName(name: string): string {
+  if (VROID_BONE_MAP[name]) return VROID_BONE_MAP[name];
   return name.replace(/^mixamorig:?/, "");
 }
 
@@ -133,6 +170,10 @@ function prepareTemplate(
   if (existing) return existing;
 
   const scene = cloneSkinned(rawScene);
+  // VRM 0.x models face -Z by spec -> rotate 180 deg so they face +Z just like Mixamo Xbot!
+  if (key !== "xbot" && VROID_VARIANTS.has(key)) {
+    scene.rotation.y = Math.PI;
+  }
   const holder = new THREE.Group();
   holder.add(scene);
   holder.updateMatrixWorld(true);
@@ -459,6 +500,58 @@ function patchRocketboxMaterial(
 }
 
 /**
+ * VRoid Anime Cloth Top/Bottom Shader:
+ * Cleanly recolors merged VRoid upper top (hoodie/shirt/blouse/varsity) & lower pants/skirt
+ * while keeping crisp anime fabric shadows, folds, zippers, and sneakers intact!
+ */
+function patchVroidClothMaterial(
+  mat: THREE.MeshStandardMaterial,
+  topColor: string,
+  pantsColor: string,
+  splitY: number,
+  keepOriginal: boolean
+) {
+  if (keepOriginal) return;
+  const uniforms = {
+    uTop: { value: new THREE.Color(topColor) },
+    uBottom: { value: new THREE.Color(pantsColor) },
+    uSplitY: { value: splitY },
+  };
+  mat.userData.vroidUniforms = uniforms;
+  mat.roughness = 0.72;
+  mat.metalness = 0.04;
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying float vVroidY;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvVroidY = position.y;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying float vVroidY;\nuniform vec3 uTop;\nuniform vec3 uBottom;\nuniform float uSplitY;"
+      )
+      .replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+        {
+          vec3 c = diffuseColor.rgb;
+          float lum = dot(c, vec3(0.299, 0.587, 0.114));
+          // Keep footwear near y < 0.14 subtly neutral/dark; recolor top & bottom cleanly
+          if (vVroidY > 0.13) {
+            float topMix = smoothstep(uSplitY - 0.025, uSplitY + 0.025, vVroidY);
+            vec3 target = mix(uBottom, uTop, topMix);
+            // Preserve crisp anime shading & crease contrast while faithfully rendering white/lavender/blue/black
+            float shade = 0.42 + lum * 1.12;
+            diffuseColor.rgb = mix(c, target * shade, 0.92);
+          }
+        }`
+      );
+  };
+  mat.customProgramCacheKey = () => "fajrezzz-vroid-cloth-v1";
+  mat.needsUpdate = true;
+}
+
+/**
  * Recolors Michelle's red dress into sleek Fajrezzz outfits (Black, Lavender, White, Navy)
  * without tinting her skin or dark hair.
  */
@@ -556,9 +649,14 @@ function LoadedHumanAvatar({
 
       const instance = cloneSkinned(gltf.scene);
       const boneMap: Record<string, THREE.Bone> = {};
+      const isVroid = VROID_VARIANTS.has(variant);
       const isRb = RB_VARIANTS.has(variant);
       const isRpm = RPM_VARIANTS.has(variant);
       let nativeGlassesFound = false;
+
+      if (isVroid) {
+        instance.rotation.y = Math.PI;
+      }
 
       instance.traverse((obj) => {
         if ((obj as THREE.Bone).isBone) {
@@ -572,6 +670,10 @@ function LoadedHumanAvatar({
           mesh.frustumCulled = false;
           mesh.castShadow = true;
           mesh.receiveShadow = true;
+
+          if (isVroid && hasHijab && /Hair/i.test(mesh.name)) {
+            mesh.visible = false;
+          }
 
           if (isRpm) {
             if (/Headwear/i.test(mesh.name)) {
@@ -595,7 +697,28 @@ function LoadedHumanAvatar({
 
           const applyMat = (m: THREE.Material): THREE.Material => {
             const cloned = m.clone() as THREE.MeshStandardMaterial;
-            if (isRb) {
+            if (isVroid) {
+              const mName = cloned.name || "";
+              if (/CLOTH/i.test(mName)) {
+                const splitY = variant === "vroid_male" ? 0.96 : 0.91;
+                patchVroidClothMaterial(
+                  cloned,
+                  topColor,
+                  pantsColor,
+                  splitY,
+                  keepOriginalOutfit
+                );
+              } else if (/HAIR/i.test(mName)) {
+                // Smoothly tint VRoid anime hair per team member while preserving highlight sheen
+                cloned.color.set(hairColor).lerp(new THREE.Color("#ffffff"), 0.22);
+                cloned.roughness = 0.56;
+              } else if (/EyeIris/i.test(mName) && variant === "vroid_male") {
+                // Replace AvatarSample_C crimson iris with natural dark obsidian/espresso anime eyes matching Our Team!
+                cloned.color.set("#261a16");
+              } else if (/SKIN|FACE/i.test(mName)) {
+                cloned.roughness = 0.62;
+              }
+            } else if (isRb) {
               patchRocketboxMaterial(
                 cloned,
                 topColor,
@@ -614,7 +737,7 @@ function LoadedHumanAvatar({
             } else if (variant === "michelle") {
               patchMichelleMaterial(cloned, topColor, keepOriginalOutfit);
             }
-            cloned.roughness = Math.max(cloned.roughness ?? 0.72, 0.52);
+            cloned.roughness = Math.max(cloned.roughness ?? 0.68, 0.48);
             return cloned;
           };
 
@@ -937,11 +1060,6 @@ export function RealisticHumanAvatar(props: RealisticHumanAvatarProps) {
 
 if (typeof window !== "undefined") {
   useGLTF.preload(MODEL_PATHS.xbot);
-  useGLTF.preload(MODEL_PATHS.rpm_male);
-  useGLTF.preload(MODEL_PATHS.rb_male_a);
-  useGLTF.preload(MODEL_PATHS.rb_male_b);
-  useGLTF.preload(MODEL_PATHS.rpm_female);
-  useGLTF.preload(MODEL_PATHS.rpm_female_b);
-  useGLTF.preload(MODEL_PATHS.rb_female);
-  useGLTF.preload(MODEL_PATHS.michelle);
+  useGLTF.preload(MODEL_PATHS.vroid_male);
+  useGLTF.preload(MODEL_PATHS.vroid_female);
 }

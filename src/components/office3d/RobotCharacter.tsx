@@ -66,91 +66,92 @@ interface StaffVisualSpec {
  * modeled directly after Bos's "Our Team · 22 Amazing People" portrait.
  */
 const STAFF_AVATAR_MAP: Record<string, StaffVisualSpec> = {
-  // Man #1: Black Fajrezzz Hoodie + Glasses
+  // Man #1 (Raka): Black Fajrezzz Hoodie + Glasses + Purple F Logo
   "staff-01": {
-    variant: "rb_male_a",
+    variant: "vroid_male",
     topColor: "#141722",
     pantsColor: "#10121a",
-    hairColor: "#131316",
+    hairColor: "#14161e",
     hasGlasses: true,
     fajrezzzBadgeColor: "#8b5cf6",
   },
-  // Woman #7 + #2: Signature Lavender Purple Blouse + Glasses
+  // Woman #7 (Nadia): Signature Lavender Purple Collared Blouse + Glasses
   "staff-02": {
-    variant: "rpm_female",
+    variant: "vroid_female",
     topColor: "#8b5cf6",
     pantsColor: "#161822",
-    hairColor: "#211612",
+    hairColor: "#1e1614",
     hasGlasses: true,
     fajrezzzBadgeColor: "#c4b5fd",
   },
-  // Man #2: Crisp White/Light-Grey Fajrezzz Hoodie
+  // Man #2 (Dimas): Crisp White/Light-Grey Fajrezzz Hoodie + Glasses
   "staff-03": {
-    variant: "rb_male_b",
+    variant: "vroid_male",
     topColor: "#eef2f6",
     pantsColor: "#1a1f2c",
-    hairColor: "#171516",
+    hairColor: "#15161e",
+    hasGlasses: true,
     fajrezzzBadgeColor: "#6366f1",
   },
-  // Woman #8: Black Fajrezzz Hoodie + Glasses
+  // Woman #8 (Clara): Black Fajrezzz Hoodie + Glasses
   "staff-04": {
-    variant: "rpm_female_b",
+    variant: "vroid_female",
     topColor: "#161824",
     pantsColor: "#2c3242",
-    hairColor: "#281912",
+    hairColor: "#2b1c15",
     hasGlasses: true,
     fajrezzzBadgeColor: "#a855f7",
   },
-  // Man #4: Black-Purple Zip Jacket + Neck Headphones (Audio Studio)
+  // Man #4 (Bima): Black-Purple Zip Jacket + Neck Headphones (Audio Studio)
   "staff-05": {
-    variant: "rpm_male",
+    variant: "vroid_male",
     topColor: "#1e1b4b",
     pantsColor: "#11141e",
-    hairColor: "#131318",
+    hairColor: "#12141c",
     hasNeckHeadphones: true,
     fajrezzzBadgeColor: "#a855f7",
   },
-  // Woman #2/#5: Crisp White Collared Blouse + Glasses
+  // Woman #2/#5 (Salsa): Crisp White Collared Blouse + Glasses
   "staff-06": {
-    variant: "rb_female",
+    variant: "vroid_female",
     topColor: "#f8fafc",
     pantsColor: "#1b1e29",
-    hairColor: "#2b1b13",
+    hairColor: "#2e1c14",
     hasGlasses: true,
     fajrezzzBadgeColor: "#6366f1",
   },
-  // Man #12: Royal Blue Fajrezzz Varsity Jacket
+  // Man #12 (Fajar): Royal Blue Fajrezzz Varsity Jacket
   "staff-07": {
-    variant: "rb_male_a",
+    variant: "vroid_male",
     topColor: "#1d4ed8",
     pantsColor: "#141824",
-    hairColor: "#161515",
+    hairColor: "#161720",
     fajrezzzBadgeColor: "#38bdf8",
   },
-  // Woman #4: All-Black Modest Fajrezzz Outfit + Black Silk Hijab
+  // Woman #4 (Alya): All-Black Modest Fajrezzz Outfit + Black Silk Hijab
   "staff-08": {
-    variant: "rpm_female_b",
+    variant: "vroid_female",
     topColor: "#14161f",
     pantsColor: "#0e1017",
     hairColor: "#111318",
     hasHijab: true,
     fajrezzzBadgeColor: "#8b5cf6",
   },
-  // Man #6: Crisp White Dress Shirt + Navy Executive Tie + Glasses (Director L3)
+  // Man #6 (Reza): Crisp White Dress Shirt + Navy Executive Tie + Glasses (Director L3)
   "staff-09": {
-    variant: "rb_male_b",
+    variant: "vroid_male",
     topColor: "#f8fafc",
     pantsColor: "#151822",
-    hairColor: "#151416",
+    hairColor: "#14161d",
     tieColor: "#1e3a8a",
     hasGlasses: true,
   },
-  // Woman #1/#6: Sleek Jet-Black Executive Outfit + Wavy Chestnut Hair
+  // Woman #6 (Tania): Sleek Jet-Black Executive Outfit + Warm Chestnut Hair
   "staff-10": {
-    variant: "michelle",
+    variant: "vroid_female",
     topColor: "#1a1d2a",
     pantsColor: "#11131b",
-    hairColor: "#3a2216",
+    hairColor: "#5a3524",
     fajrezzzBadgeColor: "#a855f7",
   },
 };

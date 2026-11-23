@@ -316,13 +316,13 @@ export function BossPlayer() {
         />
       </mesh>
 
-      {/* Photorealistic 1.78m Center-Lead Fajrezzz Jacket Avatar for BOS FAJREZ (from Team Photo) */}
+      {/* Official VRoid Anime 1.78m Center-Lead Fajrezzz Jacket Avatar for BOS FAJREZ (from Team Photo) */}
       <RealisticHumanAvatar
-        variant="rb_male_b"
+        variant="vroid_male"
         pose={avatarPose}
         topColor="#131628"
         pantsColor="#0b0e18"
-        hairColor="#121318"
+        hairColor="#12141c"
         fajrezzzBadgeColor="#a855f7"
         targetHeight={1.78}
         phaseOffset={0.2}

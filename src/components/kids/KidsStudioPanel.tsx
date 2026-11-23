@@ -41,8 +41,10 @@ import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
 import {
   buildEditorialEpisode,
   renderEditorialFrame,
+  scheduleSceneTransitionsSfx,
   startAmbientSynthBed,
 } from "@/lib/pipeline/motion-renderer";
+import { getCachedSceneBRoll } from "@/lib/pipeline/scene-broll-client";
 import { speakSceneTracks } from "@/lib/pipeline/browser-divisions";
 import {
   buildScriptSummaryArchive,
@@ -208,16 +210,17 @@ export function KidsStudioPanel() {
     stopPlayback();
     setPlayTime(0);
     const canvas = canvasRef.current;
-    if (!canvas || !renderableEpisode) return;
+    if (!canvas || !renderableEpisode || !activeEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8);
-  }, [renderableEpisode, stopPlayback]);
+    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
+    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8, broll);
+  }, [renderableEpisode, activeEpisode, stopPlayback]);
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
   const togglePlayPreview = () => {
-    if (!renderableEpisode || !canvasRef.current) return;
+    if (!renderableEpisode || !activeEpisode || !canvasRef.current) return;
     if (isPlaying) {
       stopPlayback();
       return;
@@ -227,8 +230,19 @@ export function KidsStudioPanel() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
+
     if (!isMuted) {
-      melodyStopRef.current = startAmbientSynthBed(true).stop;
+      const synth = startAmbientSynthBed(true);
+      melodyStopRef.current = synth.stop;
+      if (synth.audioCtx && synth.voiceBus) {
+        scheduleSceneTransitionsSfx(
+          synth.audioCtx,
+          synth.voiceBus,
+          synth.audioCtx.currentTime + 0.08,
+          renderableEpisode.scenes.map((s) => s.durationSec)
+        );
+      }
       const tracks = activeEpisode?.divisions.voice.output?.sceneTracks;
       if (tracks && tracks.length > 0) {
         speechStopRef.current = speakSceneTracks(tracks, (sn) =>
@@ -248,7 +262,7 @@ export function KidsStudioPanel() {
         return;
       }
       setPlayTime(elapsed);
-      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
+      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed, broll);
       rafRef.current = window.requestAnimationFrame(loop);
     };
     rafRef.current = window.requestAnimationFrame(loop);
@@ -455,7 +469,7 @@ export function KidsStudioPanel() {
                 🧠 {INSTALLED_GITHUB_SKILLS.length} Modul GitHub AI Skills &amp; Memori Jangka Panjang Terpasang
               </span>
               <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-200">
-                19/19 AKTIF
+                {INSTALLED_GITHUB_SKILLS.length}/{INSTALLED_GITHUB_SKILLS.length} AKTIF
               </span>
               {longTermMem && longTermMem.entries.length > 0 && (
                 <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
@@ -672,9 +686,9 @@ export function KidsStudioPanel() {
                 AI Auto-Pilot Sedang Menyiapkan Episode Pertama Secara Mandiri...
               </h3>
               <p className="mx-auto mt-1 max-w-md text-xs text-slate-300">
-                Bos tidak perlu mengetik atau memencet apa pun — 19 GitHub AI Skills
+                Bos tidak perlu mengetik atau memencet apa pun — {INSTALLED_GITHUB_SKILLS.length} GitHub AI Skills
                 sedang bekerja memilih topik viral, menulis naskah, merekam suara
-                neural, menggambar motion teks, dan merender video otomatis.
+                neural, membuat AI B-Roll + motion teks sinematik, dan merender video otomatis.
               </p>
             </>
           ) : (

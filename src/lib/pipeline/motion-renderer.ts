@@ -271,17 +271,18 @@ function drawGlassCard(
 }
 
 /**
- * VIRAL CLAUDE-STYLE TIKTOK MOTION GRAPHICS RENDERER
- * Renders spring-physics kinetic typography, 5 distinct modular visual scenes
- * (Keynote Hook, Live Animated Bar Chart, Node-Graph Flowchart with Neon Pulses,
- * Bento-Grid Radial Progress, and Interactive Cursor CTA Finale) + karaoke word highlight!
+ * NEXT-GEN 2026 CINEMATIC MOTION GRAPHICS & AI B-ROLL RENDERER
+ * (MoneyPrinterTurbo + Hyperframes + Hallmark Anti-AI-Slop)
+ * Renders Ken Burns animated AI B-Roll, zoom-punch/light-leak scene transitions,
+ * floating cinematic bokeh, spring-physics kinetic modules, and energetic CapCut Pro captions!
  */
 export function renderEditorialFrame(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   episode: EditorialEpisode,
-  elapsedSec: number
+  elapsedSec: number,
+  brollImages?: Array<HTMLImageElement | null>
 ): void {
   const isVertical = height > width;
   const padX = isVertical ? Math.round(width * 0.075) : Math.round(width * 0.07);
@@ -306,44 +307,120 @@ export function renderEditorialFrame(
 
   const sceneDur = Math.max(1, activeScene.durationSec);
   const sceneProg = clamp01(localSec / sceneDur);
-  const enterSpring = springOut(localSec / 0.55);
-  const exitAlpha = sceneProg > 0.92 ? clamp01(1 - (sceneProg - 0.92) / 0.08) : 1;
+  const enterSpring = springOut(localSec / 0.48);
+  const cutPunch = 1 - easeOutCubic(localSec / 0.36); // Snappy zoom-punch on every cut!
+  const exitAlpha = sceneProg > 0.93 ? clamp01(1 - (sceneProg - 0.93) / 0.07) : 1;
   const pal = MOOD_PALETTES[activeScene.mood] ?? MOOD_PALETTES.bright;
 
-  // 1. DEEP OBSIDIAN + DRIFTING AURORA MESH BACKGROUND
+  // 1. CINEMATIC KEN BURNS AI B-ROLL LAYER + AURORA DEPTH FALLBACK
   const bgGrad = ctx.createLinearGradient(0, 0, width, height);
   bgGrad.addColorStop(0, pal.bg1);
   bgGrad.addColorStop(1, pal.bg2);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
 
-  const orb1X = width * (0.24 + Math.sin(elapsedSec * 0.42) * 0.14);
-  const orb1Y = height * (0.22 + Math.cos(elapsedSec * 0.35) * 0.08);
-  const g1 = ctx.createRadialGradient(orb1X, orb1Y, 10, orb1X, orb1Y, width * 0.72);
-  g1.addColorStop(0, pal.glow);
-  g1.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, width, height);
+  const activeImg = brollImages?.[activeIndex] ?? null;
+  if (activeImg && activeImg.complete && activeImg.naturalWidth > 0) {
+    // Smooth Ken Burns zoom-in / zoom-out + handheld float + snappy zoom-punch entrance!
+    const zoomDir = activeIndex % 2 === 0 ? 1 : -1;
+    const kbZoom =
+      (zoomDir > 0 ? 1.05 + sceneProg * 0.14 : 1.19 - sceneProg * 0.13) +
+      cutPunch * 0.12;
+    const panX =
+      Math.sin(elapsedSec * 0.65 + activeIndex) * 14 +
+      (zoomDir > 0 ? -1 : 1) * sceneProg * 18;
+    const panY = Math.cos(elapsedSec * 0.52 + activeIndex) * 10;
+    const microTilt = Math.sin(elapsedSec * 0.48 + activeIndex * 1.3) * 0.012;
 
-  const orb2X = width * (0.78 + Math.cos(elapsedSec * 0.38) * 0.12);
-  const orb2Y = height * (0.76 + Math.sin(elapsedSec * 0.48) * 0.09);
-  const g2 = ctx.createRadialGradient(orb2X, orb2Y, 10, orb2X, orb2Y, width * 0.65);
-  g2.addColorStop(0, `${pal.accent2}30`);
-  g2.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, width, height);
-
-  // Subtle architectural dot-matrix grid with slow parallax drift
-  const spacing = isVertical ? 32 : 36;
-  const driftX = (elapsedSec * 12) % spacing;
-  const driftY = (elapsedSec * 8) % spacing;
-  ctx.fillStyle = "rgba(148, 163, 184, 0.14)";
-  for (let x = -spacing + driftX; x < width + spacing; x += spacing) {
-    for (let y = -spacing + driftY; y < height + spacing; y += spacing) {
-      ctx.beginPath();
-      ctx.arc(x, y, 1.35, 0, Math.PI * 2);
-      ctx.fill();
+    const imgRatio = activeImg.naturalWidth / activeImg.naturalHeight;
+    const canvasRatio = width / height;
+    let drawW = width;
+    let drawH = height;
+    if (imgRatio > canvasRatio) {
+      drawH = height;
+      drawW = height * imgRatio;
+    } else {
+      drawW = width;
+      drawH = width / imgRatio;
     }
+
+    ctx.save();
+    ctx.translate(width / 2 + panX, height / 2 + panY);
+    ctx.rotate(microTilt);
+    ctx.scale(kbZoom, kbZoom);
+    ctx.globalAlpha = 0.72 * exitAlpha;
+    ctx.drawImage(activeImg, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+
+    // Editorial Cinema Color Grade + Top/Bottom Scrim so Kinetic Typography pops 100%!
+    const scrim = ctx.createLinearGradient(0, 0, 0, height);
+    scrim.addColorStop(0, "rgba(4, 8, 18, 0.74)");
+    scrim.addColorStop(0.35, "rgba(6, 11, 24, 0.42)");
+    scrim.addColorStop(0.68, "rgba(6, 11, 24, 0.58)");
+    scrim.addColorStop(1, "rgba(4, 8, 18, 0.92)");
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    // Ultra-dynamic animated 3D perspective aurora sweep when B-Roll is generating/offline
+    const orb1X = width * (0.24 + Math.sin(elapsedSec * 0.75) * 0.18);
+    const orb1Y = height * (0.24 + Math.cos(elapsedSec * 0.62) * 0.12);
+    const g1 = ctx.createRadialGradient(orb1X, orb1Y, 10, orb1X, orb1Y, width * 0.78);
+    g1.addColorStop(0, pal.glow);
+    g1.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, width, height);
+
+    const orb2X = width * (0.76 + Math.cos(elapsedSec * 0.68) * 0.16);
+    const orb2Y = height * (0.74 + Math.sin(elapsedSec * 0.82) * 0.12);
+    const g2 = ctx.createRadialGradient(orb2X, orb2Y, 10, orb2X, orb2Y, width * 0.72);
+    g2.addColorStop(0, `${pal.accent2}38`);
+    g2.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, width, height);
+
+    // Sweeping diagonal cinema light beam
+    const beamX = ((elapsedSec * 220) % (width + 420)) - 210;
+    const beamG = ctx.createLinearGradient(beamX - 120, 0, beamX + 120, height);
+    beamG.addColorStop(0, "rgba(255,255,255,0)");
+    beamG.addColorStop(0.5, `${pal.accent}1a`);
+    beamG.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = beamG;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Cinematic Floating Bokeh Light Particles (Parallax Depth — always moving!)
+  ctx.save();
+  for (let p = 0; p < 16; p++) {
+    const px = ((p * 173.7 + elapsedSec * (18 + (p % 4) * 9)) % (width + 60)) - 30;
+    const py =
+      height -
+      (((p * 97.3 + elapsedSec * (26 + (p % 5) * 11)) % (height + 80)) - 40);
+    const pr = 2 + (p % 4) * 1.9;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = p % 2 === 0 ? `${pal.accent}44` : `${pal.accent2}38`;
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Snappy Light-Leak Flash Transition on the first 0.28s of every scene cut!
+  if (localSec < 0.28) {
+    const flashAlpha = (1 - localSec / 0.28) * 0.28;
+    const flashGrad = ctx.createRadialGradient(
+      width * 0.5,
+      height * 0.45,
+      10,
+      width * 0.5,
+      height * 0.45,
+      width * 0.85
+    );
+    flashGrad.addColorStop(0, `rgba(255, 255, 255, ${flashAlpha})`);
+    flashGrad.addColorStop(0.5, `${pal.accent}${Math.round(flashAlpha * 180)
+      .toString(16)
+      .padStart(2, "0")}`);
+    flashGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = flashGrad;
+    ctx.fillRect(0, 0, width, height);
   }
 
   // 2. TIKTOK / STORIES SEGMENTED CHAPTER PROGRESS BAR AT TOP
@@ -1026,21 +1103,23 @@ export function renderEditorialFrame(
       if (isActive) {
         ctx.save();
         const cx = rx + item.w / 2;
+        const dynamicTilt = (activeWordGlobal % 2 === 0 ? -1 : 1) * 0.042;
         ctx.translate(cx, ry);
-        ctx.scale(activePopScale, activePopScale);
+        ctx.rotate(dynamicTilt);
+        ctx.scale(activePopScale * 1.04, activePopScale * 1.04);
         drawRoundedRect(
           ctx,
-          -item.w / 2 - 10,
-          -capFont * 0.64,
-          item.w + 20,
-          capFont * 1.28,
-          12
+          -item.w / 2 - 12,
+          -capFont * 0.66,
+          item.w + 24,
+          capFont * 1.32,
+          14
         );
         const pillGrad = ctx.createLinearGradient(-item.w / 2, 0, item.w / 2, 0);
         pillGrad.addColorStop(0, pal.accent);
         pillGrad.addColorStop(1, pal.accent2);
         ctx.shadowColor = pal.glow;
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 22;
         ctx.fillStyle = pillGrad;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -1050,10 +1129,16 @@ export function renderEditorialFrame(
         ctx.fillText(item.word, 0, 1);
         ctx.restore();
       } else {
-        ctx.fillStyle = item.idx < activeWordLocal ? "#ffffff" : "rgba(226, 232, 240, 0.72)";
+        ctx.save();
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(4, Math.round(capFont * 0.14));
+        ctx.strokeStyle = "rgba(2, 6, 23, 0.9)";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
+        ctx.strokeText(item.word, rx, ry);
+        ctx.fillStyle = item.idx < activeWordLocal ? "#ffffff" : "rgba(226, 232, 240, 0.78)";
         ctx.fillText(item.word, rx, ry);
+        ctx.restore();
       }
       rx += item.w + wordGap;
     });
@@ -1204,6 +1289,21 @@ export function startAmbientSynthBed(
     const notes = chords[step % chords.length];
     step += 1;
 
+    // Rhythmic modern sub-bass pulse (2 pulses per chord bar for energetic pacing)
+    [0, 0.92].forEach((offset) => {
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.type = "triangle";
+      sub.frequency.setValueAtTime(notes[0] * 0.5, now + offset);
+      subGain.gain.setValueAtTime(0.001, now + offset);
+      subGain.gain.linearRampToValueAtTime(0.28, now + offset + 0.04);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.52);
+      sub.connect(subGain);
+      subGain.connect(master);
+      sub.start(now + offset);
+      sub.stop(now + offset + 0.55);
+    });
+
     notes.forEach((freq) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1211,18 +1311,18 @@ export function startAmbientSynthBed(
       osc.frequency.setValueAtTime(freq, now);
 
       gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.22, now + 0.35);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.9);
+      gain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.85);
 
       osc.connect(gain);
       gain.connect(master);
       osc.start(now);
-      osc.stop(now + 1.95);
+      osc.stop(now + 1.9);
     });
   };
 
   playChord();
-  const intervalId = window.setInterval(playChord, 1900);
+  const intervalId = window.setInterval(playChord, 1850);
 
   return {
     audioStream: dest.stream,
@@ -1233,4 +1333,88 @@ export function startAmbientSynthBed(
       ctx.close().catch(() => {});
     },
   };
+}
+
+/**
+ * Schedule modern YouTube/TikTok editing Sound Effects (SFX) directly into AudioContext:
+ * - Deep Sub-Bass Hook Impact at t=0
+ * - Airy Filtered Whoosh on every scene cut
+ * - Crisp UI Pop when key motion cards animate in
+ */
+export function scheduleSceneTransitionsSfx(
+  audioCtx: AudioContext,
+  targetBus: AudioNode,
+  baseAudioTime: number,
+  sceneDurations: number[]
+): void {
+  // 1. Create reusable white-noise buffer for airy Whoosh SFX
+  const noiseDur = 0.42;
+  const noiseBuf = audioCtx.createBuffer(
+    1,
+    Math.floor(audioCtx.sampleRate * noiseDur),
+    audioCtx.sampleRate
+  );
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.7;
+  }
+
+  let offsetSec = 0;
+  sceneDurations.forEach((dur, idx) => {
+    const t = baseAudioTime + offsetSec;
+
+    if (idx === 0) {
+      // Deep Cinematic Hook Bass Drop (78Hz -> 28Hz)
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(78, t);
+      osc.frequency.exponentialRampToValueAtTime(28, t + 0.55);
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.32, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+      osc.connect(gain);
+      gain.connect(targetBus);
+      osc.start(t);
+      osc.stop(t + 0.62);
+    } else {
+      // Airy Whoosh Transition SFX on every scene cut
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuf;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.value = 2.2;
+      filter.frequency.setValueAtTime(280, t);
+      filter.frequency.exponentialRampToValueAtTime(2400, t + 0.16);
+      filter.frequency.exponentialRampToValueAtTime(420, t + 0.38);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.16, t + 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(targetBus);
+      src.start(t);
+      src.stop(t + 0.42);
+    }
+
+    // Crisp Modern UI Pop SFX at t + 0.25s when motion card springs in
+    const popT = t + 0.25;
+    const popOsc = audioCtx.createOscillator();
+    const popGain = audioCtx.createGain();
+    popOsc.type = "sine";
+    popOsc.frequency.setValueAtTime(440, popT);
+    popOsc.frequency.exponentialRampToValueAtTime(920, popT + 0.065);
+    popGain.gain.setValueAtTime(0.001, popT);
+    popGain.gain.linearRampToValueAtTime(0.08, popT + 0.012);
+    popGain.gain.exponentialRampToValueAtTime(0.001, popT + 0.08);
+    popOsc.connect(popGain);
+    popGain.connect(targetBus);
+    popOsc.start(popT);
+    popOsc.stop(popT + 0.09);
+
+    offsetSec += dur;
+  });
 }

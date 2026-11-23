@@ -276,6 +276,45 @@ export const INSTALLED_GITHUB_SKILLS: InstalledGitHubSkill[] = [
     promptDirective:
       "[OpenMausBot] Eksekusi tugas secara proaktif sampai menghasilkan deliverable nyata yang siap ditonton/diunduh tanpa menunggu instruksi berulang.",
   },
+  {
+    id: "moneyprinterturbo",
+    repo: "harry0703/MoneyPrinterTurbo",
+    name: "MoneyPrinterTurbo Automated AI Short Video Engine",
+    url: "https://github.com/harry0703/MoneyPrinterTurbo",
+    license: "MIT",
+    category: "video_motion_voice",
+    summaryId: "Pipeline video pendek otomatis: Topik → Naskah → AI B-Roll sinematik per adegan → Suara TTS → Subtitle kinetik → SFX & BGM → Video HD.",
+    assignedDivisions: ["script", "voice", "motion", "editing", "autopilot"],
+    assignedAgents: ["Dimas (Naskah)", "Bima (Suara)", "Clara (Motion)", "Fajar (Editing)"],
+    promptDirective:
+      "[MoneyPrinterTurbo] Setiap adegan WAJIB punya visualCue sinematik konkret yang bisa langsung digenerate menjadi AI B-Roll berkelas (misal: 'futuristic neon data dashboard dark studio cinematic lighting'), pacing cepat 3–6 detik per cut, dan kalimat punchy untuk subtitle kinetik.",
+  },
+  {
+    id: "andrej-karpathy-skills",
+    repo: "multica-ai/andrej-karpathy-skills",
+    name: "Andrej Karpathy Agent Discipline & Precision",
+    url: "https://github.com/multica-ai/andrej-karpathy-skills",
+    license: "MIT",
+    category: "design_qa_ops",
+    summaryId: "Disiplin agen ala Karpathy: berpikir jernih sebelum bertindak, kesederhanaan tajam, perubahan bedah presisi & verifikasi berbasis target.",
+    assignedDivisions: ["think", "autopilot", "research", "script", "qc"],
+    assignedAgents: ["Reza (Manajer)", "Alya (QC)", "Hendra (CEO)"],
+    promptDirective:
+      "[karpathy-guidelines] Utamakan kejelasan dan kesederhanaan tajam: buang kalimat bertele-tele, uji asumsi sebelum menyimpulkan, dan verifikasi setiap output terhadap target retensi & kualitas nyata.",
+  },
+  {
+    id: "agency-agents",
+    repo: "msitarzewski/agency-agents",
+    name: "Agency-Agents Complete Multi-Division AI Personas",
+    url: "https://github.com/msitarzewski/agency-agents",
+    license: "MIT",
+    category: "agent_orchestration",
+    summaryId: "Persona spesialis agensi AI lengkap lintas divisi (Marketing, Design, Engineering, Reality Checker QC) dengan SOP & deliverable terbukti.",
+    assignedDivisions: ["think", "autopilot", "research", "seo", "script", "qc"],
+    assignedAgents: ["Semua 22 Staf Kantor 3D"],
+    promptDirective:
+      "[agency-agents] Bekerjalah sesuai persona ahli divisimu dengan standar agensi kelas dunia + Reality Checker QC: pastikan deliverable konkret, unik, tajam, dan siap publikasi.",
+  },
 ];
 
 /**

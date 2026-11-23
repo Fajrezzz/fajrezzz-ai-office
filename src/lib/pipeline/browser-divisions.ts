@@ -5,8 +5,13 @@ import {
   buildEditorialEpisode,
   renderEditorialFrame,
   renderEditorialThumbnail,
+  scheduleSceneTransitionsSfx,
   startAmbientSynthBed,
 } from "@/lib/pipeline/motion-renderer";
+import {
+  fetchEpisodeBRollImages,
+  getCachedSceneBRoll,
+} from "@/lib/pipeline/scene-broll-client";
 import {
   fetchNeuralSpeechClip,
   getCachedNeuralClip,
@@ -258,11 +263,13 @@ export async function runMotionDivisionBrowser(
   }
 
   const sceneFrames: SceneMotionFrame[] = [];
+  // Fetch FREE Rp 0 AI Cinematic B-Roll images for every scene (MoneyPrinterTurbo + ComfyUI pattern)
+  const brollImages = await fetchEpisodeBRollImages(editorial, format);
   let cursorSec = 0;
 
   for (const scene of editorial.scenes) {
     const sampleTime = cursorSec + scene.durationSec * 0.48;
-    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime);
+    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime, brollImages);
     const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.78);
     sceneFrames.push({
       sceneNumber: scene.sceneNumber,
@@ -306,14 +313,22 @@ export async function runEditingDivisionBrowser(
     throw new Error("Naskah & Motion belum siap untuk Editing.");
   }
 
-  // Ensure Neural Human Voice MP3 clips are ready for muxing into the exported video!
-  const sceneClips = await Promise.all(
-    editorial.scenes.map(
-      (sc) =>
-        getCachedNeuralClip(sc.narration, "ardi") ??
-        fetchNeuralSpeechClip(sc.narration, "ardi")
-    )
-  );
+  // Ensure AI Cinematic B-Roll images + Neural Human Voice MP3 clips are ready for muxing!
+  const cachedBroll = getCachedSceneBRoll(editorial, format);
+  const brollPromise = cachedBroll.some((img) => img !== null)
+    ? Promise.resolve(cachedBroll)
+    : fetchEpisodeBRollImages(editorial, format);
+
+  const [brollImages, sceneClips] = await Promise.all([
+    brollPromise,
+    Promise.all(
+      editorial.scenes.map(
+        (sc) =>
+          getCachedNeuralClip(sc.narration, "ardi") ??
+          fetchNeuralSpeechClip(sc.narration, "ardi")
+      )
+    ),
+  ]);
 
   // Sync each scene duration so the neural narrator finishes naturally without getting cut off
   const syncedScenes = editorial.scenes.map((sc, idx) => {
@@ -383,6 +398,14 @@ export async function runEditingDivisionBrowser(
       }
       sceneOffsetSec += sc.durationSec;
     });
+
+    // Mix real Bass-Drop Hook, Airy Whoosh transitions & UI Pop SFX into the video audio!
+    scheduleSceneTransitionsSfx(
+      audioCtx,
+      voiceBus,
+      baseAudioTime,
+      syncedEditorial.scenes.map((s) => s.durationSec)
+    );
   }
 
   const combinedStream = new MediaStream();
@@ -434,7 +457,7 @@ export async function runEditingDivisionBrowser(
         resolve();
         return;
       }
-      renderEditorialFrame(ctx, width, height, syncedEditorial, elapsedSec);
+      renderEditorialFrame(ctx, width, height, syncedEditorial, elapsedSec, brollImages);
       onProgress?.(Math.min(99, Math.round((elapsedSec / totalSec) * 100)));
       window.requestAnimationFrame(tick);
     };
