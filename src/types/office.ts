@@ -17,9 +17,19 @@ export type PerformanceMode = "eco" | "balanced" | "high";
 
 export type LightingPreset = "day" | "sunset" | "night";
 
-export type FloorView = "all" | "l1" | "l2" | "l3" | "roof";
+export type FloorNumber = 1 | 2 | 3 | 4 | 5;
 
-export type BossFloor = 1 | 2 | 3 | 4;
+export type FloorView = "all" | "l1" | "l2" | "l3" | "l4" | "l5" | "roof";
+
+export type BossFloor = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type TeamDivisionKey =
+  | "research_trend"
+  | "script_story"
+  | "visual_motion"
+  | "video_editing"
+  | "voice_subtitle"
+  | "quality_control";
 
 export type BossActionState = "idle" | "walking" | "running" | "swimming";
 
@@ -50,7 +60,7 @@ export type Vector3Tuple = [number, number, number];
 export interface WaypointNode {
   id: string;
   label: string;
-  floor: 1 | 2 | 3;
+  floor: FloorNumber;
   position: Vector3Tuple;
   facingYaw: number;
   neighbors: string[];
@@ -61,7 +71,8 @@ export interface Workstation {
   id: string;
   code: string;
   name: string;
-  floor: 1 | 2 | 3;
+  floor: FloorNumber;
+  divisionTeam?: TeamDivisionKey;
   position: Vector3Tuple;
   rotationY: number;
   accentColor: string;
@@ -89,7 +100,13 @@ export interface OfficeAgent {
   code: string;
   name: string;
   role: string;
-  floor: 1 | 2 | 3;
+  floor: FloorNumber;
+  divisionTeam?: TeamDivisionKey;
+  assignedPipelineDivision?: "research" | "seo" | "script" | "voice" | "motion" | "editing" | "qc";
+  skills?: string[];
+  responsibility?: string;
+  maxConcurrentTasks?: number;
+  activeTaskTitle?: string | null;
   accentColor: string;
   secondaryColor: string;
   appearance: AvatarAppearance;
@@ -178,7 +195,7 @@ export interface OutreachScriptItem {
 export interface AssignedStaffContribution {
   staffName: string;
   role: string;
-  floor: 1 | 2 | 3;
+  floor: FloorNumber;
   outputLabel: string;
 }
 

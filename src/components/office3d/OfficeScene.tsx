@@ -6,6 +6,7 @@ import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { AdaptivePerformanceController } from "@/components/office3d/AdaptivePerformanceController";
 import { BossPlayer } from "@/components/office3d/BossPlayer";
 import { CyberOutdoorCampus } from "@/components/office3d/CyberOutdoorCampus";
 import { DrivableVehicles } from "@/components/office3d/DrivableVehicles";
@@ -13,6 +14,7 @@ import { InteriorActivityRooms } from "@/components/office3d/InteriorActivityRoo
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { OfficeExtrasStaff } from "@/components/office3d/OfficeExtrasStaff";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
+import { UpperProductionFloors } from "@/components/office3d/UpperProductionFloors";
 import { WeatherEffects } from "@/components/office3d/WeatherEffects";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
@@ -23,17 +25,31 @@ const CAMERA_PRESETS: Record<
   CameraPreset,
   { pos: Vector3Tuple; target: Vector3Tuple }
 > = {
-  front: { pos: [14, 12.2, 28.5], target: [0, 4.6, 1.8] },
-  isometric: { pos: [-26, 20, 26], target: [0, 4.5, 1.5] },
-  interior: { pos: [0, 12.8, 13.8], target: [0, 4.4, -3.2] },
-  executive: { pos: [11, 13.5, 13.5], target: [0, 8.6, -3.2] },
-  rooftop: { pos: [18, 22.5, 16.5], target: [0, 11.8, -2.5] },
+  front: { pos: [17, 16.5, 34.5], target: [0, 8.6, 0.5] },
+  isometric: { pos: [-30, 24.5, 31], target: [0, 8.8, 0.2] },
+  interior: { pos: [0, 12.2, 14.5], target: [0, 4.4, -3.2] },
+  executive: { pos: [11, 14.2, 14.8], target: [0, 8.6, -3.2] },
+  rooftop: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
   pool: { pos: [12.5, 5.2, 22.0], target: [-1.5, 1.5, 10.5] },
   supercar: { pos: [14.8, 3.6, 17.6], target: [9.4, 0.9, 11.3] },
 };
 
+const FLOOR_CAMERA_VIEWS: Record<
+  string,
+  { pos: Vector3Tuple; target: Vector3Tuple }
+> = {
+  all: { pos: [17, 16.5, 34.5], target: [0, 8.6, 0.5] },
+  l1: { pos: [11.5, 5.4, 18.2], target: [0, 1.6, -1.5] },
+  l2: { pos: [0.5, 10.4, 14.8], target: [0, 4.4, -3.2] },
+  l3: { pos: [0.5, 14.2, 14.8], target: [0, 8.4, -3.2] },
+  l4: { pos: [0.5, 18.0, 14.8], target: [0, 12.2, -3.2] },
+  l5: { pos: [0.5, 21.8, 14.8], target: [0, 16.0, -3.2] },
+  roof: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
+};
+
 function FreeRoamCameraRig() {
   const {
+    activeFloor,
     cameraPreset,
     cameraResetTick,
     cameraFocusCommand,
@@ -70,13 +86,17 @@ function FreeRoamCameraRig() {
   const moveDelta = useMemo(() => new THREE.Vector3(), []);
   const bossTargetVec = useMemo(() => new THREE.Vector3(), []);
 
-  // Preset trigger
+  // Preset & 5-floor cutaway smooth camera trigger
   useEffect(() => {
-    const preset = CAMERA_PRESETS[cameraPreset] ?? CAMERA_PRESETS.front;
+    const floorView = FLOOR_CAMERA_VIEWS[activeFloor];
+    const preset =
+      activeFloor !== "all" && floorView
+        ? floorView
+        : CAMERA_PRESETS[cameraPreset] ?? CAMERA_PRESETS.front;
     desiredPosRef.current.set(...preset.pos);
     desiredTargetRef.current.set(...preset.target);
     isTransitioningRef.current = true;
-  }, [cameraPreset, cameraResetTick]);
+  }, [activeFloor, cameraPreset, cameraResetTick]);
 
   // Snap smoothly behind BOS FAJREZ when Boss Mode is activated or Boss teleports
   useEffect(() => {
@@ -407,13 +427,13 @@ export function OfficeScene() {
     workstations,
     selectedAgentId,
     setSelectedAgentId,
+    setSelectedWorkstationId,
     activeFloor,
     lightingPreset,
     performanceMode,
     isSimulationRunning,
     showLabelsIn3D,
     notifyAgentArrived,
-    sendAgentToWaypoint,
     focusCameraOn,
   } = useOffice();
 
@@ -442,15 +462,32 @@ export function OfficeScene() {
   // Performance Tiers: Eco = NO shadows, Bal = low-res 512 shadow, High = sharp 2048 shadow
   const shadowSize = isHigh ? 2048 : 512;
 
+  // Per-floor visibility & frustum culling for mobile-first performance
   const visibleAgents = useMemo(() => {
     return agents.filter((a) => {
+      if (activeFloor === "all" || activeFloor === "roof") return true;
       if (activeFloor === "l1") return a.floor === 1;
-      if (activeFloor === "l2") return a.floor === 1 || a.floor === 2;
+      if (activeFloor === "l2") return a.floor === 2;
+      if (activeFloor === "l3") return a.floor === 3;
+      if (activeFloor === "l4") return a.floor === 4;
+      if (activeFloor === "l5") return a.floor === 5;
       return true;
     });
   }, [agents, activeFloor]);
 
-  const showWorkstations = activeFloor !== "l1";
+  const visibleWorkstations = useMemo(() => {
+    return workstations.filter((ws) => {
+      if (activeFloor === "all" || activeFloor === "roof") return true;
+      if (activeFloor === "l1") return ws.floor === 1;
+      if (activeFloor === "l2") return ws.floor === 2;
+      if (activeFloor === "l3") return ws.floor === 3;
+      if (activeFloor === "l4") return ws.floor === 4;
+      if (activeFloor === "l5") return ws.floor === 5;
+      return true;
+    });
+  }, [workstations, activeFloor]);
+
+  const showWorkstations = visibleWorkstations.length > 0;
 
   return (
     <>
@@ -528,7 +565,10 @@ export function OfficeScene() {
       {/* Dynamic Weather System (Rain, Storm Lightning, Atmospheric Fog) */}
       <WeatherEffects isHigh={isHigh} />
 
-      {/* Grand 28m 3-Story Luxury Architectural HQ + Rooftop Helicopter & Badminton Court */}
+      {/* Automatic Mobile-First Adaptive Performance Controller (Section C & D) */}
+      <AdaptivePerformanceController />
+
+      {/* Grand 28m Multi-Floor Architectural HQ (L1-L3 Base) */}
       <OfficeArchitecture
         activeFloor={activeFloor}
         performanceMode={performanceMode}
@@ -537,37 +577,46 @@ export function OfficeScene() {
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
-      {/* Stage 2 Interior Activity Rooms (MT5 Control Room, Gym/Arcade/Sim, L3 Billiards/Cinema, Pergola, Neon H & Hologram HQ) */}
+      {/* Multi-Floor Expansion: Floors 4 & 5 + Panoramic Cyan Elevator + Lobby Hologram Portal + Crown Sky Deck */}
+      <UpperProductionFloors
+        activeFloor={activeFloor}
+        isNight={isNight}
+        onFocusPoint={(pt) => focusCameraOn(pt)}
+      />
+
+      {/* Stage 2 Interior Activity Rooms */}
       <InteriorActivityRooms
         showL1={true}
-        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof"}
-        showRoof={activeFloor === "all" || activeFloor === "roof"}
+        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "l4" || activeFloor === "l5" || activeFloor === "roof"}
+        showRoof={false}
         isNight={isNight}
       />
 
-      {/* L3 VIP Executives (CEO, Manajer Senior, Sekretaris, CFO) + L1 Reception & Lounge Staff */}
+      {/* L1 Reception & Campus Staff */}
       <OfficeExtrasStaff
         activeFloor={activeFloor}
         showLabels={showLabelsIn3D}
         isSimulationRunning={isSimulationRunning}
       />
 
-      {/* 8 Modern L2 Workstations */}
+      {/* 15 Interactive Multi-Floor Workstations (Culled Per Floor!) */}
       {showWorkstations && (
         <WorkstationCluster
-          workstations={workstations}
+          workstations={visibleWorkstations}
           agents={agents}
           lightingPreset={lightingPreset}
           onSelectWorkstation={(ws) => {
-            if (selectedAgentId) {
-              sendAgentToWaypoint(selectedAgentId, ws.waypointId);
+            setSelectedWorkstationId(ws.id);
+            if (ws.assignedAgentId) {
+              setSelectedAgentId(ws.assignedAgentId);
             }
+            focusCameraOn([ws.position[0], ws.position[1] + 1.1, ws.position[2]], [3.2, 2.2, 4.0]);
           }}
           onFocusPoint={(pt) => focusCameraOn(pt, [2.6, 2.2, 3.4])}
         />
       )}
 
-      {/* 10 Realistic Humanoid Placeholder Staff Avatars */}
+      {/* 15 Active Task-Capable Staff Avatars (Culled Per Floor!) */}
       {visibleAgents.map((agent) => (
         <RobotCharacter
           key={agent.id}
@@ -575,7 +624,10 @@ export function OfficeScene() {
           isSelected={agent.id === selectedAgentId}
           isSimulationRunning={isSimulationRunning}
           showLabels={showLabelsIn3D}
-          onSelect={setSelectedAgentId}
+          onSelect={(id) => {
+            setSelectedWorkstationId(null);
+            setSelectedAgentId(id);
+          }}
           onFocusPoint={(pt) => focusCameraOn(pt, [3.2, 2.0, 4.2])}
           onArrive={notifyAgentArrived}
         />

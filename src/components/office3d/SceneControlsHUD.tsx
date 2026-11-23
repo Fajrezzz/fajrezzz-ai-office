@@ -39,6 +39,7 @@ import {
   FLOOR_1_Y,
   FLOOR_3_Y,
 } from "@/lib/data/initial-office-data";
+import { FloorPlanMiniMap } from "@/components/office3d/FloorPlanMiniMap";
 import { useOffice } from "@/store/OfficeContext";
 import { useAgency } from "@/store/AgencyContext";
 import { PIPELINE_DIVISIONS } from "@/types/pipeline";
@@ -47,23 +48,24 @@ import type {
   CameraPreset,
   FloorView,
   LightingPreset,
-  PerformanceMode,
 } from "@/types/office";
 
 const FLOOR_OPTIONS: { id: FloorView; label: string }[] = [
-  { id: "all", label: "Full" },
-  { id: "l1", label: "L1" },
-  { id: "l2", label: "L2 Ops" },
-  { id: "l3", label: "L3 Exec" },
+  { id: "all", label: "Full 5L" },
+  { id: "l1", label: "L1 Lobby" },
+  { id: "l2", label: "L2 Riset" },
+  { id: "l3", label: "L3 Visual" },
+  { id: "l4", label: "L4 Render" },
+  { id: "l5", label: "L5 Audio/QC" },
   { id: "roof", label: "Atap" },
 ];
 
 const CAMERA_OPTIONS: { id: CameraPreset; label: string }[] = [
   { id: "front", label: "Depan" },
-  { id: "interior", label: "Ops L2" },
-  { id: "executive", label: "Exec L3" },
+  { id: "isometric", label: "Isometrik" },
+  { id: "interior", label: "L2 Riset" },
+  { id: "executive", label: "L3 Visual" },
   { id: "pool", label: "Kolam" },
-  { id: "supercar", label: "Porsche 22" },
   { id: "rooftop", label: "Atap" },
 ];
 
@@ -75,12 +77,6 @@ const LIGHTING_OPTIONS: {
   { id: "day", label: "Siang", icon: Sun },
   { id: "sunset", label: "Sore", icon: Sunrise },
   { id: "night", label: "Malam", icon: Moon },
-];
-
-const PERF_OPTIONS: { id: PerformanceMode; label: string }[] = [
-  { id: "eco", label: "Eco" },
-  { id: "balanced", label: "Bal" },
-  { id: "high", label: "High" },
 ];
 
 /** Smooth 360-degree Touch & Mouse Game Analog Joystick for BOS FAJREZ */
@@ -176,9 +172,13 @@ function VirtualAnalogJoystick({
 export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const {
     agents,
+    workstations,
     setActiveSection,
     selectedAgentId,
     setSelectedAgentId,
+    selectedWorkstationId,
+    setSelectedWorkstationId,
+    adaptiveFps,
     cameraPreset,
     setCameraPreset,
     focusCameraOn,
@@ -190,8 +190,6 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     setLightingPreset,
     autoRotate,
     setAutoRotate,
-    performanceMode,
-    setPerformanceMode,
     isSimulationRunning,
     setIsSimulationRunning,
     showLabelsIn3D,
@@ -226,17 +224,28 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const [clockText, setClockText] = useState("11:45");
   const [showMovePad, setShowMovePad] = useState(false);
   const [isBarExpanded, setIsBarExpanded] = useState(false);
+  const [floorPlanOpen, setFloorPlanOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"logs" | "input" | "output">("logs");
   const prevSelectedRef = useRef<string | null>(selectedAgentId);
 
-  // Auto-open real task/log inspector when user clicks an agent in the 3D scene
+  const selectedWorkstation = selectedWorkstationId
+    ? workstations.find((w) => w.id === selectedWorkstationId) ?? null
+    : null;
+
+  // Auto-open real task/log inspector when user clicks an agent or workstation in the 3D scene
   useEffect(() => {
     if (selectedAgentId && selectedAgentId !== prevSelectedRef.current) {
       setInspectorOpen(true);
     }
     prevSelectedRef.current = selectedAgentId;
   }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (selectedWorkstationId) {
+      setInspectorOpen(true);
+    }
+  }, [selectedWorkstationId]);
 
   const selectedSnapshot = selectedAgentId
     ? getAgentSnapshot(selectedAgentId)
@@ -249,7 +258,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   };
 
   const cycleFloor = () => {
-    const order: FloorView[] = ["all", "l1", "l2", "l3", "roof"];
+    const order: FloorView[] = ["all", "l1", "l2", "l3", "l4", "l5", "roof"];
     const next = order[(order.indexOf(activeFloor) + 1) % order.length];
     setActiveFloor(next);
   };
@@ -257,20 +266,14 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const cycleCamera = () => {
     const order: CameraPreset[] = [
       "front",
+      "isometric",
       "interior",
       "executive",
       "pool",
-      "supercar",
       "rooftop",
     ];
     const next = order[(order.indexOf(cameraPreset) + 1) % order.length];
     setCameraPreset(next);
-  };
-
-  const cyclePerformance = () => {
-    const order: PerformanceMode[] = ["eco", "balanced", "high"];
-    const next = order[(order.indexOf(performanceMode) + 1) % order.length];
-    setPerformanceMode(next);
   };
 
   const ActiveLightingIcon =
@@ -278,11 +281,9 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const activeLightingShort =
     LIGHTING_OPTIONS.find((o) => o.id === lightingPreset)?.label ?? "Siang";
   const activeFloorShort =
-    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full";
+    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full 5L";
   const activeCameraShort =
     CAMERA_OPTIONS.find((o) => o.id === cameraPreset)?.label ?? "Depan";
-  const activePerfShort =
-    PERF_OPTIONS.find((o) => o.id === performanceMode)?.label ?? "Eco";
 
   useEffect(() => {
     const update = () => {
@@ -338,7 +339,9 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     { id: 1, label: "L1" },
     { id: 2, label: "L2" },
     { id: 3, label: "L3" },
-    { id: 4, label: "Atap" },
+    { id: 4, label: "L4" },
+    { id: 5, label: "L5" },
+    { id: 6, label: "Atap" },
   ];
 
   return (
@@ -418,22 +421,16 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               </button>
             )}
 
-            {/* 5. Graphics Quality Quick Cycle (Eco / Bal / High) */}
+            {/* 5. 2D Multi-Floor Blueprint / Floor-Plan View Button (Section B) */}
             <button
               type="button"
-              onClick={cyclePerformance}
-              title={`Grafis: ${activePerfShort} (Ketuk untuk ganti)`}
-              aria-label={`Kualitas grafis ${activePerfShort}`}
-              className={`flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1 rounded-xl border px-2.5 text-[11px] font-bold transition ${
-                performanceMode === "high"
-                  ? "border-fuchsia-400/60 bg-fuchsia-500/20 text-fuchsia-100"
-                  : performanceMode === "balanced"
-                  ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-100"
-                  : "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
-              }`}
+              onClick={() => setFloorPlanOpen(true)}
+              title="Buka Denah Lantai 2D (5 Lantai & 15 Workstation)"
+              aria-label="Denah Lantai 2D"
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1 rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-2.5 text-[11px] font-bold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/25"
             >
-              <Zap className="h-4 w-4 shrink-0" />
-              <span>{activePerfShort}</span>
+              <Building2 className="h-4 w-4 shrink-0 text-emerald-300" />
+              <span className="hidden sm:inline">Denah</span>
             </button>
 
             {/* 5b. Autonomous Real-AI Brain Toggle (Groq / Gemini) */}
@@ -704,38 +701,24 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               </div>
             )}
 
-            {/* Kualitas Grafis / Performance Mode */}
-            <div className="space-y-1">
-              <div className="text-[10px] font-bold tracking-wider text-emerald-300 uppercase">
-                Performa Grafis (Android Friendly)
+            {/* Adaptive Performance Status (Automatic Mobile-First — No Manual Quality Buttons) */}
+            <div className="flex items-center justify-between rounded-xl border border-emerald-400/25 bg-emerald-950/25 px-3 py-2 text-[11px] text-emerald-200">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Auto-Adaptive 3D Performance</span>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {PERF_OPTIONS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPerformanceMode(p.id)}
-                    className={`min-h-[44px] rounded-xl border px-3 text-xs font-bold transition ${
-                      performanceMode === p.id
-                        ? "border-emerald-300 bg-emerald-500/30 text-white shadow-[0_0_12px_rgba(52,211,153,0.4)]"
-                        : "border-white/10 bg-slate-900/75 text-slate-300 hover:border-emerald-400/50"
-                    }`}
-                  >
-                    {p.label}
-                    <span className="ml-1 text-[10px] font-normal opacity-80">
-                      {p.id === "eco"
-                        ? "≥30fps"
-                        : p.id === "balanced"
-                        ? "Bloom"
-                        : "Full"}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <span className="font-mono text-[10px] text-emerald-300">
+                {adaptiveFps} FPS · Culling Lantai Aktif
+              </span>
             </div>
           </div>
         )}
       </div>
+
+      {/* 2D Interactive Multi-Floor Blueprint Overlay */}
+      {floorPlanOpen && (
+        <FloorPlanMiniMap onClose={() => setFloorPlanOpen(false)} />
+      )}
 
       {/* ================= FREE-ROAM TOUCH MOVE PAD (when not in Boss Mode) ================= */}
       {!isBossMode && showMovePad && (
@@ -1190,8 +1173,28 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                 </div>
               ) : (
                 <div className="mt-2 rounded-xl bg-slate-900/80 p-2 text-[10px] text-slate-400">
-                  Staf pendukung kantor — antrean divisi terhubung ke 7 divisi
-                  produksi utama (Riset, SEO, Naskah, Suara, Motion, Editing, QC).
+                  Staf aktif L{selectedAgent.floor} · {selectedAgent.role} · Workstation{" "}
+                  {selectedAgent.assignedWorkstationId.toUpperCase()} — terhubung ke pipeline produksi nyata.
+                </div>
+              )}
+
+              {/* Workstation Inspector Banner when a 3D Workstation Desk is clicked */}
+              {selectedWorkstation && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-cyan-400/35 bg-cyan-950/35 px-2.5 py-1.5 text-[10px] text-cyan-100">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Monitor className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+                    <span className="truncate font-bold">
+                      {selectedWorkstation.code} (L{selectedWorkstation.floor}) ·{" "}
+                      {selectedWorkstation.name} — {selectedWorkstation.specs}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWorkstationId(null)}
+                    className="shrink-0 text-[10px] text-cyan-300 hover:text-white"
+                  >
+                    Tutup Meja
+                  </button>
                 </div>
               )}
             </div>

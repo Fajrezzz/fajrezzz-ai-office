@@ -13,11 +13,14 @@ import {
   FLOOR_1_Y,
   FLOOR_2_Y,
   FLOOR_3_Y,
+  FLOOR_4_Y,
+  FLOOR_5_Y,
   INITIAL_ACTIVITIES,
   INITIAL_AGENTS,
   INITIAL_TASKS,
   INITIAL_WORKSTATIONS,
   OFFICE_WAYPOINTS,
+  ROOF_Y as DATA_ROOF_Y,
 } from "@/lib/data/initial-office-data";
 import {
   buildCompressedMemoryContext,
@@ -46,13 +49,15 @@ import type {
   Workstation,
 } from "@/types/office";
 
-export const ROOF_Y = 11.8;
+export const ROOF_Y = DATA_ROOF_Y;
 
 export const BOSS_FLOOR_ELEVATIONS: Record<BossFloor, number> = {
   1: FLOOR_1_Y,
   2: FLOOR_2_Y,
   3: FLOOR_3_Y,
-  4: ROOF_Y,
+  4: FLOOR_4_Y,
+  5: FLOOR_5_Y,
+  6: ROOF_Y,
 };
 
 function formatClock(date = new Date()): string {
@@ -105,6 +110,11 @@ interface OfficeContextValue {
   activities: ActivityEvent[];
   selectedAgentId: string | null;
   setSelectedAgentId: (id: string | null) => void;
+  selectedWorkstationId: string | null;
+  setSelectedWorkstationId: (id: string | null) => void;
+  focusOnWorkstation: (workstationId: string) => void;
+  adaptiveFps: number;
+  setAdaptiveFps: (fps: number) => void;
   cameraPreset: CameraPreset;
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
@@ -189,16 +199,25 @@ interface OfficeContextValue {
 const OfficeContext = createContext<OfficeContextValue | null>(null);
 
 const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
-  "staff-01": "wp-seat-06",
-  "staff-02": "wp-seat-03",
-  "staff-03": "wp-seat-07",
-  "staff-04": "wp-seat-05",
-  "staff-05": "wp-seat-01",
-  "staff-06": "wp-seat-02",
-  "staff-07": "wp-seat-04",
-  "staff-08": "wp-seat-08",
-  "staff-09": "wp-l3-boardroom",
-  "staff-10": "wp-l1-seat",
+  // Floor 2 — Research & Script (5 staff)
+  "staff-01": "wp-ws-01",
+  "staff-02": "wp-ws-02",
+  "staff-08": "wp-ws-03",
+  "staff-03": "wp-ws-04",
+  "staff-09": "wp-ws-05",
+  // Floor 3 — Visual & Motion Design (3 staff)
+  "staff-04": "wp-ws-06",
+  "staff-10": "wp-ws-07",
+  "staff-11": "wp-ws-08",
+  // Floor 4 — Video Editing & Rendering (3 staff)
+  "staff-06": "wp-ws-09",
+  "staff-12": "wp-ws-10",
+  "staff-13": "wp-ws-11",
+  // Floor 5 — Voice, Subtitle & Quality Control (4 staff)
+  "staff-05": "wp-ws-12",
+  "staff-14": "wp-ws-13",
+  "staff-07": "wp-ws-14",
+  "staff-15": "wp-ws-15",
 };
 
 export function OfficeProvider({ children }: { children: React.ReactNode }) {
@@ -228,6 +247,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
     "staff-01"
   );
+  const [selectedWorkstationId, setSelectedWorkstationId] = useState<string | null>(
+    null
+  );
+  const [adaptiveFps, setAdaptiveFps] = useState<number>(60);
   const [cameraPreset, setCameraPresetState] =
     useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
@@ -262,6 +285,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setActiveFloorState("l2");
     } else if (floor === 3) {
       setActiveFloorState("l3");
+    } else if (floor === 4) {
+      setActiveFloorState("l4");
+    } else if (floor === 5) {
+      setActiveFloorState("l5");
     } else {
       setActiveFloorState("roof");
     }
@@ -304,7 +331,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     setActiveFloorState(floor);
     if (floor === "l2") {
       setCameraPresetState("interior");
-    } else if (floor === "l3") {
+    } else if (floor === "l3" || floor === "l4" || floor === "l5") {
       setCameraPresetState("executive");
     } else if (floor === "roof") {
       setCameraPresetState("rooftop");
@@ -333,17 +360,19 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     (agentId: string) => {
       const targetAgent = agents.find((a) => a.id === agentId);
       if (!targetAgent) return;
+      setSelectedWorkstationId(null);
       setSelectedAgentId(agentId);
       const wp = OFFICE_WAYPOINTS[targetAgent.currentWaypointId];
       if (!wp) return;
 
-      if (wp.floor === 2) {
-        setActiveFloorState("l2");
-      } else if (wp.floor === 3) {
-        setActiveFloorState("l3");
-      } else {
-        setActiveFloorState("all");
-      }
+      const floorViewMap: Record<number, FloorView> = {
+        1: "l1",
+        2: "l2",
+        3: "l3",
+        4: "l4",
+        5: "l5",
+      };
+      setActiveFloorState(floorViewMap[wp.floor] ?? "all");
 
       focusCameraOn(
         [wp.position[0], wp.position[1] + 1.15, wp.position[2]],
@@ -351,6 +380,28 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       );
     },
     [agents, focusCameraOn]
+  );
+
+  const focusOnWorkstation = useCallback(
+    (workstationId: string) => {
+      const ws = workstations.find((w) => w.id === workstationId);
+      if (!ws) return;
+      setSelectedWorkstationId(workstationId);
+      if (ws.assignedAgentId) setSelectedAgentId(ws.assignedAgentId);
+      const floorViewMap: Record<number, FloorView> = {
+        1: "l1",
+        2: "l2",
+        3: "l3",
+        4: "l4",
+        5: "l5",
+      };
+      setActiveFloorState(floorViewMap[ws.floor] ?? "all");
+      focusCameraOn(
+        [ws.position[0], ws.position[1] + 1.1, ws.position[2]],
+        [3.4, 2.5, 4.4]
+      );
+    },
+    [workstations, focusCameraOn]
   );
 
   const [performanceMode, setPerformanceModeState] =
@@ -503,12 +554,16 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       const nextY = BOSS_FLOOR_ELEVATIONS[floor];
       const floorName =
         floor === 1
-          ? "Lantai 1 & Area Kolam"
+          ? "Lantai 1 Lobby & Kolam"
           : floor === 2
-          ? "Lantai 2 Operations Hall"
+          ? "Lantai 2 Research & Script"
           : floor === 3
-          ? "Lantai 3 Executive Suite"
-          : "Atap Helipad & Padel";
+          ? "Lantai 3 Visual & Motion Design"
+          : floor === 4
+          ? "Lantai 4 Video Editing & Render"
+          : floor === 5
+          ? "Lantai 5 Voice, Subtitle & QC"
+          : "Atap Sky Deck & Helipad";
 
       teleportBoss([clampedX, nextY, clampedZ], floor, floorName);
     },
@@ -1178,6 +1233,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       activities,
       selectedAgentId,
       setSelectedAgentId,
+      selectedWorkstationId,
+      setSelectedWorkstationId,
+      focusOnWorkstation,
+      adaptiveFps,
+      setAdaptiveFps,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
@@ -1241,6 +1301,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       tasks,
       activities,
       selectedAgentId,
+      selectedWorkstationId,
+      focusOnWorkstation,
+      adaptiveFps,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,

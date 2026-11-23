@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       : [];
     const channelGoal =
       (body.channelGoal || "").trim() ||
-      "Mencapai monetisasi YouTube YPP (1.000 subscriber + 10 juta Shorts views / 4.000 jam tayang) dan viral di TikTok untuk brand Fajrezzz AI Office.";
+      "Memproduksi video TikTok 9:16 kualitas tinggi bertema AI Agent, Claude Code, AI coding tools, multi-agent systems, dan otomasi AI untuk Fajrezzz AI Office.";
 
     const { promptBlock, activeSkillRepos } = buildInstalledSkillsPrompt("think");
 

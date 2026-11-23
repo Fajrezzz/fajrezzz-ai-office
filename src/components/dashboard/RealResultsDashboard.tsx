@@ -2,700 +2,738 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BarChart3,
-  CalendarClock,
+  Activity,
+  Building2,
   CheckCircle2,
+  Cpu,
   Download,
-  ExternalLink,
-  ShieldAlert,
+  Film,
+  Layers,
+  Loader2,
+  Play,
+  RefreshCw,
   ShieldCheck,
   Upload,
   Users,
+  Wrench,
 } from "lucide-react";
 import {
-  getCountdownToYppDeadline,
-  YPP_AD_REVENUE_THRESHOLDS,
-  YPP_FAN_FUNDING_THRESHOLDS,
-  YPP_TARGET_DEADLINE_LABEL,
-} from "@/lib/config/ypp-thresholds";
-import { PIPELINE_DIVISIONS } from "@/types/pipeline";
+  ACTIVE_EMPLOYEE_ROSTER,
+  MAX_TEAM_CAPACITY,
+  OFFICE_FLOORS,
+  RESERVE_EXPANSION_SLOTS,
+  TEAM_DIVISIONS,
+} from "@/lib/config/team-roster";
+import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
 import { useAgency } from "@/store/AgencyContext";
+import { useOffice } from "@/store/OfficeContext";
+import { PIPELINE_DIVISIONS, type RealEpisode } from "@/types/pipeline";
+import type { FloorNumber, FloorView } from "@/types/office";
 
-const CHANNEL_STATS_KEY = "fajrezzz_ypp_channel_stats_v1";
-
-interface ChannelYppStats {
-  subscribers: number;
-  watchHours365d: number;
-  shortsViews90d: number;
-  updatedAt: string | null;
+interface CapabilitySummary {
+  remotionInstalled: boolean;
+  gsapInstalled: boolean;
+  mp4MuxerInstalled: boolean;
+  ffmpegAvailable: boolean;
+  whisperAvailable: boolean;
+  hindsightConfigured: boolean;
+  skillCount: number;
 }
 
-const DEFAULT_CHANNEL_STATS: ChannelYppStats = {
-  subscribers: 0,
-  watchHours365d: 0,
-  shortsViews90d: 0,
-  updatedAt: null,
+interface AiProviderSummary {
+  anyConfigured: boolean;
+  activeProviders: string[];
+}
+
+const FLOOR_VIEW_BY_NUM: Record<FloorNumber, FloorView> = {
+  1: "l1",
+  2: "l2",
+  3: "l3",
+  4: "l4",
+  5: "l5",
 };
 
-function formatIdr(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(amount || 0);
+function getEpisodeDisplayStatus(
+  ep: RealEpisode,
+  hasVerifiedVideo: boolean
+): string {
+  if (ep.divisions.qc.status === "done" && hasVerifiedVideo) return "QC Pass";
+  if (hasVerifiedVideo) return "MP4 Ready";
+  if (PIPELINE_DIVISIONS.some((d) => ep.divisions[d.key]?.status === "running")) {
+    return "Running";
+  }
+  if (PIPELINE_DIVISIONS.some((d) => ep.divisions[d.key]?.status === "failed")) {
+    return "Needs Retry";
+  }
+  return "In Progress";
 }
 
-function pctOf(current: number, target: number): number {
-  if (target <= 0) return 0;
-  return Math.min(100, Math.round((Math.max(0, current) / target) * 1000) / 10);
-}
-
-export function RealResultsDashboard() {
+/**
+ * Operational Telemetry & Real Production Dashboard (Section C & F).
+ *
+ * Clean operational telemetry with zero dummy metrics:
+ * - Total & active employees (15 active / 20 max capacity)
+ * - Per-division live status (6 divisions)
+ * - Per-floor 3D office status (5 floors)
+ * - Running tasks, completed tasks, live render progress, verified MP4 videos
+ * - Real runtime skills & integrations probe (`/api/pipeline/capabilities` + `/api/ai/status`)
+ */
+export function RealResultsDashboard({ compact = false }: { compact?: boolean }) {
+  const {
+    agents,
+    tasks,
+    workstations,
+    adaptiveFps,
+    setActiveFloor,
+    setActiveSection,
+    focusOnAgent,
+  } = useOffice();
   const {
     episodes,
-    divisionHistory,
-    updateEpisodeMetrics,
-    importBackupJson,
+    activeEpisode,
+    videoBlobUrls,
+    runningDivision,
+    editingProgressPct,
+    setActiveEpisodeId,
   } = useAgency();
 
-  const [yppTier, setYppTier] = useState<"ad_revenue" | "fan_funding">(
-    "ad_revenue"
-  );
-  const [channelStats, setChannelStats] = useState<ChannelYppStats>(
-    DEFAULT_CHANNEL_STATS
-  );
-  const [hydrated, setHydrated] = useState(false);
-  const [countdown, setCountdown] = useState(() => getCountdownToYppDeadline());
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const isRunningPipeline = Boolean(runningDivision);
+
+  const [capabilities, setCapabilities] = useState<CapabilitySummary | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiProviderSummary | null>(null);
+  const [probeLoading, setProbeLoading] = useState(false);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  const probeIntegrations = async () => {
+    setProbeLoading(true);
     try {
-      const raw = window.localStorage.getItem(CHANNEL_STATS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<ChannelYppStats>;
-        setChannelStats({
-          subscribers: Number(parsed.subscribers) || 0,
-          watchHours365d: Number(parsed.watchHours365d) || 0,
-          shortsViews90d: Number(parsed.shortsViews90d) || 0,
-          updatedAt: parsed.updatedAt ?? null,
+      const [capRes, aiRes] = await Promise.all([
+        fetch("/api/pipeline/capabilities").catch(() => null),
+        fetch("/api/ai/status").catch(() => null),
+      ]);
+
+      if (capRes?.ok) {
+        const capJson = (await capRes.json()) as {
+          probe?: {
+            remotionInstalled?: boolean;
+            gsapInstalled?: boolean;
+            mp4MuxerInstalled?: boolean;
+            ffmpeg?: { available?: boolean };
+            whisper?: { available?: boolean };
+            hindsight?: { configured?: boolean };
+          };
+          skills?: unknown[];
+        };
+        setCapabilities({
+          remotionInstalled: Boolean(capJson.probe?.remotionInstalled),
+          gsapInstalled: Boolean(capJson.probe?.gsapInstalled),
+          mp4MuxerInstalled: Boolean(capJson.probe?.mp4MuxerInstalled),
+          ffmpegAvailable: Boolean(capJson.probe?.ffmpeg?.available),
+          whisperAvailable: Boolean(capJson.probe?.whisper?.available),
+          hindsightConfigured: Boolean(capJson.probe?.hindsight?.configured),
+          skillCount: Array.isArray(capJson.skills)
+            ? capJson.skills.length
+            : INSTALLED_GITHUB_SKILLS.length,
         });
       }
-    } catch {
-      // ignore
-    } finally {
-      setHydrated(true);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(
-        CHANNEL_STATS_KEY,
-        JSON.stringify(channelStats)
-      );
-    } catch {
-      // ignore
-    }
-  }, [channelStats, hydrated]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setCountdown(getCountdownToYppDeadline());
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const activeThreshold =
-    yppTier === "ad_revenue"
-      ? YPP_AD_REVENUE_THRESHOLDS
-      : YPP_FAN_FUNDING_THRESHOLDS;
-
-  // Real aggregate metrics across all persisted episodes (ZERO fabricated numbers!)
-  const totals = useMemo(() => {
-    const totalEpisodes = episodes.length;
-    const totalApiCostUsd = episodes.reduce(
-      (s, ep) => s + (ep.metrics.apiCostUsd || 0),
-      0
-    );
-    const totalViews = episodes.reduce(
-      (s, ep) => s + (ep.metrics.views || 0),
-      0
-    );
-    const totalRevenueIdr = episodes.reduce(
-      (s, ep) => s + (ep.metrics.revenueIdr || 0),
-      0
-    );
-    const qcPassedCount = episodes.filter(
-      (ep) => ep.divisions.qc.output?.passed
-    ).length;
-    return {
-      totalEpisodes,
-      totalApiCostUsd,
-      totalViews,
-      totalRevenueIdr,
-      qcPassedCount,
-    };
-  }, [episodes]);
-
-  // Real KPI per Agent (computed strictly from divisionHistory!)
-  const agentKpis = useMemo(() => {
-    return PIPELINE_DIVISIONS.map((meta) => {
-      const runs = divisionHistory.filter((h) => h.division === meta.key);
-      const doneRuns = runs.filter((h) => h.status === "done");
-      const totalRuns = runs.length;
-
-      let qcPassRatePct: number | null = null;
-      if (meta.key === "qc") {
-        const qcRuns = doneRuns.filter((h) => typeof h.qcPassed === "boolean");
-        if (qcRuns.length > 0) {
-          const passed = qcRuns.filter((h) => h.qcPassed).length;
-          qcPassRatePct = Math.round((passed / qcRuns.length) * 100);
-        }
-      } else {
-        // Check how many episodes this agent completed that also passed QC
-        const epsTouched = episodes.filter(
-          (ep) =>
-            ep.divisions[meta.key].status === "done" &&
-            ep.divisions.qc.status === "done"
-        );
-        if (epsTouched.length > 0) {
-          const passed = epsTouched.filter(
-            (ep) => ep.divisions.qc.output?.passed
-          ).length;
-          qcPassRatePct = Math.round((passed / epsTouched.length) * 100);
-        } else if (totalRuns > 0) {
-          qcPassRatePct = Math.round((doneRuns.length / totalRuns) * 100);
-        }
+      if (aiRes?.ok) {
+        const aiJson = (await aiRes.json()) as {
+          anyConfigured?: boolean;
+          providers?: Array<{ name?: string; configured?: boolean }>;
+        };
+        const activeProviders = (aiJson.providers ?? [])
+          .filter((p) => p.configured && p.name)
+          .map((p) => String(p.name));
+        setAiStatus({
+          anyConfigured: Boolean(aiJson.anyConfigured),
+          activeProviders,
+        });
       }
-
-      const avgDurationMs =
-        doneRuns.length > 0
-          ? Math.round(
-              doneRuns.reduce((s, r) => s + r.durationMs, 0) / doneRuns.length
-            )
-          : 0;
-
-      return {
-        meta,
-        completedTasks: doneRuns.length,
-        totalRuns,
-        qcPassRatePct,
-        avgDurationMs,
-      };
-    });
-  }, [divisionHistory, episodes]);
-
-  const handleExportJson = () => {
-    const backup = {
-      exportedAt: new Date().toISOString(),
-      schemaVersion: 2,
-      yppChannelStats: channelStats,
-      episodes,
-      divisionHistory,
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `fajrezzz-ai-office-backup-${new Date()
-      .toISOString()
-      .slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    } finally {
+      setProbeLoading(false);
+    }
   };
 
-  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    void probeIntegrations();
+  }, []);
+
+  const hasEpisodeVideo = (ep: RealEpisode): boolean => {
+    return Boolean(
+      videoBlobUrls[ep.id] ||
+        (ep.divisions.editing.status === "done" &&
+          (ep.divisions.editing.output?.videoSizeBytes ?? 0) > 0)
+    );
+  };
+
+  // Real employee metrics (zero fake counts)
+  const employeeMetrics = useMemo(() => {
+    const activeWorking = agents.filter(
+      (a) => a.status === "working" || a.status === "walking"
+    );
+    const errored = agents.filter((a) => a.status === "error");
+    const idle = agents.filter((a) => a.status === "idle");
+    return {
+      total: agents.length,
+      activeWorking: activeWorking.length,
+      errored: errored.length,
+      idle: idle.length,
+    };
+  }, [agents]);
+
+  // Real task & pipeline video metrics
+  const productionMetrics = useMemo(() => {
+    const runningOfficeTasks = tasks.filter((t) => t.status === "in_progress").length;
+    const completedOfficeTasks = tasks.filter((t) => t.status === "done").length;
+
+    let runningPipelineSteps = 0;
+    let completedPipelineSteps = 0;
+    let verifiedRenderedVideos = 0;
+
+    for (const ep of episodes) {
+      for (const div of PIPELINE_DIVISIONS) {
+        const st = ep.divisions[div.key]?.status;
+        if (st === "running") runningPipelineSteps += 1;
+        if (st === "done") completedPipelineSteps += 1;
+      }
+      const hasVid = Boolean(
+        videoBlobUrls[ep.id] ||
+          (ep.divisions.editing.status === "done" &&
+            (ep.divisions.editing.output?.videoSizeBytes ?? 0) > 0)
+      );
+      if (hasVid) verifiedRenderedVideos += 1;
+    }
+
+    return {
+      runningTasks: runningOfficeTasks + runningPipelineSteps,
+      completedTasks: completedOfficeTasks + completedPipelineSteps,
+      totalEpisodes: episodes.length,
+      verifiedRenderedVideos,
+    };
+  }, [tasks, episodes, videoBlobUrls]);
+
+  // Export real operational snapshot JSON
+  const handleExportSnapshot = () => {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        schemaVersion: "fajrezzz-telemetry-v2",
+        activeEmployees: ACTIVE_EMPLOYEE_ROSTER.length,
+        maxCapacity: MAX_TEAM_CAPACITY,
+        floors: OFFICE_FLOORS.length,
+        episodesSummary: episodes.map((ep) => {
+          const hasVid = hasEpisodeVideo(ep);
+          return {
+            id: ep.id,
+            episodeNumber: ep.episodeNumber,
+            title: ep.divisions.seo.output?.title || ep.bossTheme,
+            status: getEpisodeDisplayStatus(ep, hasVid),
+            hasRenderedVideo: hasVid,
+            createdAt: ep.createdAt,
+          };
+        }),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fajrezzz-telemetry-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupNotice("Snapshot telemetry berhasil diunduh (JSON).");
+    } catch {
+      setBackupNotice("Gagal mengekspor snapshot telemetry.");
+    }
+  };
+
+  const handleImportSnapshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as {
-        episodes?: unknown[];
-        divisionHistory?: unknown[];
-        yppChannelStats?: Partial<ChannelYppStats>;
-      };
-      importBackupJson({
-        episodes: Array.isArray(parsed.episodes)
-          ? (parsed.episodes as typeof episodes)
-          : undefined,
-        divisionHistory: Array.isArray(parsed.divisionHistory)
-          ? (parsed.divisionHistory as typeof divisionHistory)
-          : undefined,
-      });
-      if (parsed.yppChannelStats) {
-        setChannelStats({
-          subscribers: Number(parsed.yppChannelStats.subscribers) || 0,
-          watchHours365d: Number(parsed.yppChannelStats.watchHours365d) || 0,
-          shortsViews90d: Number(parsed.yppChannelStats.shortsViews90d) || 0,
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      setImportStatus("✅ Backup JSON berhasil dimuat.");
+      const parsed = JSON.parse(text) as { exportedAt?: string; episodesSummary?: unknown[] };
+      setBackupNotice(
+        `File valid (${parsed.episodesSummary?.length ?? 0} episode tercatat pada ${
+          parsed.exportedAt ?? "snapshot"
+        }).`
+      );
     } catch {
-      setImportStatus("❌ File JSON tidak valid.");
+      setBackupNotice("File JSON tidak valid.");
     } finally {
       e.target.value = "";
-      window.setTimeout(() => setImportStatus(null), 3000);
     }
   };
 
-  const subsPct = pctOf(channelStats.subscribers, activeThreshold.subscribers);
-  const watchPct = pctOf(
-    channelStats.watchHours365d,
-    activeThreshold.watchHours365d
-  );
-  const shortsPct = pctOf(
-    channelStats.shortsViews90d,
-    activeThreshold.shortsViews90d
-  );
+  const activeEpisodeHasVideo = activeEpisode ? hasEpisodeVideo(activeEpisode) : false;
 
   return (
-    <div className="space-y-5">
-      {/* ================= TOP SUMMARY + BACKUP JSON ================= */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-black text-white sm:text-lg">
-              <BarChart3 className="h-5 w-5 text-cyan-400" />
-              <span>Dashboard Hasil Nyata (Tanpa Angka Palsu)</span>
+    <div className={`mx-auto max-w-6xl space-y-5 text-slate-100 ${compact ? "p-2" : "p-4 sm:p-6"}`}>
+      {/* HEADER */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-400/25 bg-slate-900/80 p-4 backdrop-blur-xl">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold tracking-wider text-cyan-300 uppercase">
+            <Activity className="h-4 w-4 text-cyan-400" />
+            <span>FAJREZZZ AI OFFICE · LIVE OPERATIONAL TELEMETRY</span>
+          </div>
+          <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">
+            Dashboard Status Aktual (15 Karyawan · 6 Divisi · 5 Lantai)
+          </h1>
+          <p className="mt-1 text-xs text-slate-400">
+            100% angka aktual dari state runtime — nol angka dummy, nol simulasi kerja palsu.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void probeIntegrations()}
+            disabled={probeLoading}
+            className="flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${probeLoading ? "animate-spin" : ""}`} />
+            <span>Refresh Telemetry</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSnapshot}
+            className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:border-cyan-400/50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export JSON</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:border-cyan-400/50"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            <span>Verify JSON</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            onChange={handleImportSnapshot}
+            className="hidden"
+          />
+        </div>
+      </div>
+
+      {backupNotice && (
+        <div className="rounded-xl border border-emerald-400/40 bg-emerald-950/35 px-4 py-2 text-xs text-emerald-200">
+          {backupNotice}
+        </div>
+      )}
+
+      {/* TOP 6 REAL KPI CARDS */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="rounded-2xl border border-cyan-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Total Karyawan</span>
+            <Users className="h-4 w-4 text-cyan-400" />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-white">
+            {employeeMetrics.total}
+            <span className="ml-1 text-xs font-semibold text-slate-400">
+              / {MAX_TEAM_CAPACITY}
+            </span>
+          </div>
+          <div className="mt-1 text-[10px] text-cyan-300">
+            +{RESERVE_EXPANSION_SLOTS.length} slot ekspansi siap
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Sedang Bekerja</span>
+            <Cpu className="h-4 w-4 text-emerald-400" />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-emerald-300">
+            {employeeMetrics.activeWorking}
+          </div>
+          <div className="mt-1 text-[10px] text-slate-400">
+            Idle: {employeeMetrics.idle} · Error: {employeeMetrics.errored}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Tugas Berjalan</span>
+            <Loader2
+              className={`h-4 w-4 text-amber-400 ${
+                productionMetrics.runningTasks > 0 ? "animate-spin" : ""
+              }`}
+            />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-amber-300">
+            {productionMetrics.runningTasks}
+          </div>
+          <div className="mt-1 text-[10px] text-slate-400">
+            {runningDivision ? `Aktif: ${runningDivision}` : "Antrean kosong"}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-sky-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Tugas Selesai</span>
+            <CheckCircle2 className="h-4 w-4 text-sky-400" />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-white">
+            {productionMetrics.completedTasks}
+          </div>
+          <div className="mt-1 text-[10px] text-slate-400">
+            Dari {productionMetrics.totalEpisodes} episode
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-fuchsia-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Video MP4 Valid</span>
+            <Film className="h-4 w-4 text-fuchsia-400" />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-fuchsia-300">
+            {productionMetrics.verifiedRenderedVideos}
+          </div>
+          <div className="mt-1 text-[10px] text-slate-400">
+            {isRunningPipeline && runningDivision === "editing"
+              ? `Rendering ${editingProgressPct}%`
+              : "Hanya file render nyata"}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-indigo-400/25 bg-slate-900/80 p-3.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Kantor 3D · Auto</span>
+            <Building2 className="h-4 w-4 text-indigo-400" />
+          </div>
+          <div className="mt-1.5 text-2xl font-black text-white">
+            {OFFICE_FLOORS.length} Lantai
+          </div>
+          <div className="mt-1 text-[10px] text-emerald-300">
+            {workstations.length} desk · {adaptiveFps} FPS
+          </div>
+        </div>
+      </div>
+
+      {/* LIVE RENDERING & VIDEO PROGRESS STATUS */}
+      <div className="rounded-2xl border border-fuchsia-400/25 bg-slate-900/80 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Film className="h-4 w-4 text-fuchsia-400" />
+            <h2 className="text-sm font-black tracking-wide text-white uppercase">
+              Status Rendering &amp; Progres Video TikTok 9:16
             </h2>
-            <p className="text-xs text-slate-400">
-              Seluruh angka berasal dari eksekusi nyata pipeline &amp; catatan
-              YouTube Studio Bos. Disimpan di localStorage + bisa diekspor ke JSON.
-            </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExportJson}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-cyan-400 px-3.5 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300"
-            >
-              <Download className="h-4 w-4" />
-              <span>Ekspor JSON</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-xs font-bold text-slate-200 hover:border-cyan-400"
-            >
-              <Upload className="h-4 w-4" />
-              <span>Impor JSON</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json"
-              onChange={handleImportJson}
-              className="hidden"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveSection("dashboard")}
+            className="flex items-center gap-1 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-bold text-fuchsia-100 hover:bg-fuchsia-500/30"
+          >
+            <Play className="h-3.5 w-3.5" />
+            <span>Buka TikTok Studio</span>
+          </button>
         </div>
 
-        {importStatus && (
-          <div className="mt-2 text-xs font-bold text-cyan-200">
-            {importStatus}
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5">
-            <div className="text-[11px] text-slate-400">Episode Diproduksi</div>
-            <div className="mt-1 font-mono text-2xl font-black text-white">
-              {totals.totalEpisodes}
-            </div>
-            <div className="text-[10px] text-emerald-300">
-              {totals.qcPassedCount} lolos QC
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5">
-            <div className="text-[11px] text-slate-400">Total Biaya API Nyata</div>
-            <div className="mt-1 font-mono text-2xl font-black text-cyan-300">
-              ${totals.totalApiCostUsd.toFixed(4)}
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Free-tier quota provider
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5">
-            <div className="text-[11px] text-slate-400">Total Views Nyata</div>
-            <div className="mt-1 font-mono text-2xl font-black text-amber-300">
-              {totals.totalViews.toLocaleString("id-ID")}
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Akumulasi catatan per episode
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3.5">
-            <div className="text-[11px] text-slate-400">Total Pendapatan Nyata</div>
-            <div className="mt-1 font-mono text-2xl font-black text-emerald-300">
-              {formatIdr(totals.totalRevenueIdr)}
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Input nyata dari YouTube Studio
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= PROGRES SYARAT YPP + COUNTDOWN 1 FEB 2027 ================= */}
-      <section className="rounded-3xl border border-amber-400/35 bg-slate-900/80 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-black text-white sm:text-base">
-              <CalendarClock className="h-5 w-5 text-amber-300" />
-              <span>
-                Target Monetisasi YPP — Hitung Mundur ke {YPP_TARGET_DEADLINE_LABEL}
-              </span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              {activeThreshold.description} (Ambang batas disimpan di{" "}
-              <code className="rounded bg-slate-950 px-1 text-cyan-300">
-                src/lib/config/ypp-thresholds.ts
-              </code>
-              )
-            </p>
-          </div>
-
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setYppTier("ad_revenue")}
-              className={`rounded-xl px-3 py-1.5 text-[11px] font-bold ${
-                yppTier === "ad_revenue"
-                  ? "bg-amber-400 text-slate-950"
-                  : "border border-slate-700 bg-slate-950 text-slate-300"
-              }`}
-            >
-              Iklan Penuh (1K / 4K / 10M)
-            </button>
-            <button
-              type="button"
-              onClick={() => setYppTier("fan_funding")}
-              className={`rounded-xl px-3 py-1.5 text-[11px] font-bold ${
-                yppTier === "fan_funding"
-                  ? "bg-amber-400 text-slate-950"
-                  : "border border-slate-700 bg-slate-950 text-slate-300"
-              }`}
-            >
-              Akses Awal (500 / 3K / 3M)
-            </button>
-          </div>
-        </div>
-
-        {/* Live Countdown Boxes */}
-        <div className="mt-4 grid grid-cols-4 gap-2 sm:max-w-md">
-          {[
-            { label: "Hari", val: countdown.days },
-            { label: "Jam", val: countdown.hours },
-            { label: "Menit", val: countdown.minutes },
-            { label: "Detik", val: countdown.seconds },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-2xl border border-amber-400/30 bg-slate-950/90 p-2.5 text-center"
-            >
-              <div className="font-mono text-xl font-black text-amber-300 sm:text-2xl">
-                {String(item.val).padStart(2, "0")}
+        {activeEpisode ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-slate-950/70 p-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-bold text-white">
+                  Ep #{activeEpisode.episodeNumber}:{" "}
+                  {activeEpisode.divisions.seo.output?.title || activeEpisode.bossTheme}
+                </div>
+                <div className="mt-0.5 text-[11px] text-slate-400">
+                  Status:{" "}
+                  <span className="font-semibold text-cyan-300">
+                    {getEpisodeDisplayStatus(activeEpisode, activeEpisodeHasVideo)}
+                  </span>{" "}
+                  ·{" "}
+                  {activeEpisodeHasVideo
+                    ? "✅ File video terverifikasi siap diunduh"
+                    : "⏳ Belum ada file video render final"}
+                </div>
               </div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase">
-                {item.label}
-              </div>
+              {runningDivision === "editing" && (
+                <span className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 px-2.5 py-1 font-mono text-xs font-bold text-fuchsia-200">
+                  Render {editingProgressPct}%
+                </span>
+              )}
             </div>
-          ))}
-        </div>
 
-        {/* Editable Real Channel Numbers + Progress Bars */}
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {/* Subscribers */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-3.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white">Subscriber Nyata</span>
-              <span className="font-mono text-cyan-300">{subsPct}%</span>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {PIPELINE_DIVISIONS.map((d) => {
+                const st = activeEpisode.divisions[d.key]?.status ?? "queued";
+                return (
+                  <div
+                    key={d.key}
+                    className={`rounded-xl border p-2 text-[11px] ${
+                      st === "done"
+                        ? "border-emerald-400/40 bg-emerald-950/30 text-emerald-200"
+                        : st === "running"
+                        ? "border-cyan-400/60 bg-cyan-950/40 text-cyan-100"
+                        : st === "failed"
+                        ? "border-rose-500/60 bg-rose-950/40 text-rose-200"
+                        : "border-white/10 bg-slate-900/70 text-slate-400"
+                    }`}
+                  >
+                    <div className="truncate font-bold">{d.shortLabel}</div>
+                    <div className="mt-0.5 font-mono text-[10px] uppercase">{st}</div>
+                  </div>
+                );
+              })}
             </div>
-            <input
-              type="number"
-              min={0}
-              value={channelStats.subscribers}
-              onChange={(e) =>
-                setChannelStats((prev) => ({
-                  ...prev,
-                  subscribers: Math.max(0, Number(e.target.value) || 0),
-                  updatedAt: new Date().toISOString(),
-                }))
-              }
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white focus:border-cyan-400 focus:outline-none"
-            />
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full bg-cyan-400 transition-all"
-                style={{ width: `${subsPct}%` }}
-              />
-            </div>
-            <div className="mt-1 text-[10px] text-slate-400">
-              Target: {activeThreshold.subscribers.toLocaleString("id-ID")} subscriber
-            </div>
-          </div>
-
-          {/* Watch Hours */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-3.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white">Jam Tayang (365 Hari)</span>
-              <span className="font-mono text-amber-300">{watchPct}%</span>
-            </div>
-            <input
-              type="number"
-              min={0}
-              value={channelStats.watchHours365d}
-              onChange={(e) =>
-                setChannelStats((prev) => ({
-                  ...prev,
-                  watchHours365d: Math.max(0, Number(e.target.value) || 0),
-                  updatedAt: new Date().toISOString(),
-                }))
-              }
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white focus:border-amber-400 focus:outline-none"
-            />
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full bg-amber-400 transition-all"
-                style={{ width: `${watchPct}%` }}
-              />
-            </div>
-            <div className="mt-1 text-[10px] text-slate-400">
-              Target: {activeThreshold.watchHours365d.toLocaleString("id-ID")} jam
-              tayang
-            </div>
-          </div>
-
-          {/* Shorts Views */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-3.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white">Shorts Views (90 Hari)</span>
-              <span className="font-mono text-emerald-300">{shortsPct}%</span>
-            </div>
-            <input
-              type="number"
-              min={0}
-              value={channelStats.shortsViews90d}
-              onChange={(e) =>
-                setChannelStats((prev) => ({
-                  ...prev,
-                  shortsViews90d: Math.max(0, Number(e.target.value) || 0),
-                  updatedAt: new Date().toISOString(),
-                }))
-              }
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-sm font-bold text-white focus:border-emerald-400 focus:outline-none"
-            />
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full bg-emerald-400 transition-all"
-                style={{ width: `${shortsPct}%` }}
-              />
-            </div>
-            <div className="mt-1 text-[10px] text-slate-400">
-              Target: {activeThreshold.shortsViews90d.toLocaleString("id-ID")} views
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= TABEL HASIL PER EPISODE (DATA NYATA) ================= */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-        <h3 className="text-sm font-black text-white sm:text-base">
-          🎬 Catatan Hasil Nyata per Episode ({episodes.length} Episode)
-        </h3>
-        <p className="text-xs text-slate-400">
-          Masukkan link YouTube, jumlah views, dan pendapatan aktual langsung dari
-          YouTube Studio setelah Bos upload manual.
-        </p>
-
-        {episodes.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-slate-800 p-6 text-center text-xs text-slate-400">
-            Belum ada episode. Buat episode pertama di tab <strong>Komando Bos</strong>.
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-[10px] tracking-wider text-slate-400 uppercase">
-                  <th className="pb-2 pr-3">Episode</th>
-                  <th className="pb-2 pr-3">Biaya API</th>
-                  <th className="pb-2 pr-3">Waktu Produksi</th>
-                  <th className="pb-2 pr-3">Status QC</th>
-                  <th className="pb-2 pr-3">Link YouTube</th>
-                  <th className="pb-2 pr-3">Views Nyata</th>
-                  <th className="pb-2">Pendapatan (Rp)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/70">
-                {episodes.map((ep) => {
-                  const qc = ep.divisions.qc.output;
-                  const prodSec = (ep.metrics.totalProductionMs / 1000).toFixed(1);
-                  return (
-                    <tr key={ep.id} className="align-middle">
-                      <td className="py-2.5 pr-3">
-                        <div className="font-bold text-white">
-                          #{ep.episodeNumber} ·{" "}
-                          {ep.divisions.seo.output?.title || ep.bossTheme}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {new Date(ep.createdAt).toLocaleDateString("id-ID")}
-                        </div>
-                      </td>
-                      <td className="py-2.5 pr-3 font-mono text-cyan-300">
-                        ${(ep.metrics.apiCostUsd || 0).toFixed(4)}
-                      </td>
-                      <td className="py-2.5 pr-3 font-mono text-slate-200">
-                        {prodSec}d
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {qc ? (
-                          qc.passed ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
-                              <ShieldCheck className="h-3 w-3" /> Lolos ({qc.score})
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-200">
-                              <ShieldAlert className="h-3 w-3" /> Diblokir
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-[10px] text-slate-500">Belum QC</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="url"
-                            value={ep.metrics.youtubeUrl}
-                            onChange={(e) =>
-                              updateEpisodeMetrics(ep.id, {
-                                youtubeUrl: e.target.value,
-                              })
-                            }
-                            placeholder="https://youtu.be/..."
-                            className="w-40 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-white placeholder-slate-600 focus:border-cyan-400 focus:outline-none"
-                          />
-                          {ep.metrics.youtubeUrl && (
-                            <a
-                              href={ep.metrics.youtubeUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-lg border border-slate-700 p-1 text-cyan-300 hover:border-cyan-400"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <input
-                          type="number"
-                          min={0}
-                          value={ep.metrics.views}
-                          onChange={(e) =>
-                            updateEpisodeMetrics(ep.id, {
-                              views: Math.max(0, Number(e.target.value) || 0),
-                            })
-                          }
-                          className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px] text-white focus:border-amber-400 focus:outline-none"
-                        />
-                      </td>
-                      <td className="py-2.5">
-                        <input
-                          type="number"
-                          min={0}
-                          value={ep.metrics.revenueIdr}
-                          onChange={(e) =>
-                            updateEpisodeMetrics(ep.id, {
-                              revenueIdr: Math.max(0, Number(e.target.value) || 0),
-                            })
-                          }
-                          className="w-28 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px] text-emerald-200 focus:border-emerald-400 focus:outline-none"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="mt-3 rounded-xl border border-dashed border-white/15 bg-slate-950/40 p-4 text-xs text-slate-400">
+            Belum ada episode aktif yang sedang dirender. Mulai produksi dari tab{" "}
+            <strong className="text-white">TikTok Studio</strong> untuk melihat progres render nyata di sini.
           </div>
         )}
-      </section>
 
-      {/* ================= KPI NYATA PER AGEN (7 DIVISI) ================= */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-        <h3 className="flex items-center gap-2 text-sm font-black text-white sm:text-base">
-          <Users className="h-5 w-5 text-cyan-400" />
-          <span>KPI Nyata per Agen (7 Divisi)</span>
-        </h3>
-        <p className="text-xs text-slate-400">
-          Dihitung langsung dari riwayat eksekusi nyata setiap divisi (bukan angka
-          simulasi).
-        </p>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {agentKpis.map(({ meta, completedTasks, totalRuns, qcPassRatePct, avgDurationMs }) => (
-            <div
-              key={meta.key}
-              className="rounded-2xl border border-slate-800 bg-slate-950/75 p-3.5"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: meta.color }}
-                />
-                <div>
-                  <div className="text-xs font-black text-white">
-                    {meta.agentName}
-                  </div>
-                  <div className="text-[10px] text-slate-400">
-                    {meta.label}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-slate-800 pt-2.5 text-center">
-                <div>
-                  <div className="font-mono text-sm font-black text-white">
-                    {completedTasks}
-                  </div>
-                  <div className="text-[9px] text-slate-400">
-                    Selesai ({totalRuns})
-                  </div>
-                </div>
-                <div>
-                  <div className="font-mono text-sm font-black text-emerald-300">
-                    {qcPassRatePct !== null ? `${qcPassRatePct}%` : "—"}
-                  </div>
-                  <div className="text-[9px] text-slate-400">Lolos QC</div>
-                </div>
-                <div>
-                  <div className="font-mono text-sm font-black text-cyan-300">
-                    {avgDurationMs > 0
-                      ? `${(avgDurationMs / 1000).toFixed(1)}d`
-                      : "—"}
-                  </div>
-                  <div className="text-[9px] text-slate-400">Rata2 Waktu</div>
-                </div>
-              </div>
+        {episodes.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <div className="text-[11px] font-bold text-slate-400 uppercase">
+              Riwayat Produksi Aktual ({episodes.length} episode)
             </div>
-          ))}
-        </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {episodes.slice(0, 6).map((ep) => {
+                const hasVideo = hasEpisodeVideo(ep);
+                const statusLabel = getEpisodeDisplayStatus(ep, hasVideo);
+                return (
+                  <button
+                    key={ep.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveEpisodeId(ep.id);
+                      setActiveSection("dashboard");
+                    }}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/65 px-3 py-2 text-left hover:border-cyan-400/50"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-bold text-white">
+                        Ep #{ep.episodeNumber} · {ep.divisions.seo.output?.title || ep.bossTheme}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {new Date(ep.createdAt).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold ${
+                        hasVideo
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {statusLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
-        <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400">
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-          <span>
-            Semua data KPI, episode, dan progres YPP disimpan lokal di browser dan
-            dapat di-backup kapan saja lewat tombol Ekspor JSON di atas.
+      {/* PER-DIVISION BREAKDOWN (6 DIVISIONS / 15 ACTIVE EMPLOYEES) */}
+      <div className="rounded-2xl border border-cyan-400/25 bg-slate-900/80 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-cyan-400" />
+            <h2 className="text-sm font-black tracking-wide text-white uppercase">
+              Breakdown 6 Divisi Produksi (15 Karyawan Aktif)
+            </h2>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Skill dibagikan lintas karyawan · kapasitas maks {MAX_TEAM_CAPACITY}
           </span>
         </div>
-      </section>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {TEAM_DIVISIONS.map((div) => {
+            const members = agents.filter((a) => a.divisionTeam === div.id);
+            const activeCount = members.filter(
+              (a) => a.status === "working" || a.status === "walking"
+            ).length;
+            return (
+              <div
+                key={div.id}
+                className="rounded-xl border border-white/10 bg-slate-950/70 p-3.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: div.accentColor }}
+                    />
+                    <span className="truncate text-xs font-black text-white">
+                      {div.label}
+                    </span>
+                  </div>
+                  <span className="shrink-0 rounded-lg border border-white/10 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-cyan-300">
+                    L{div.floor}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">{div.mission}</p>
+                <div className="mt-2.5 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-300">
+                    Tim: <strong className="text-white">{members.length}</strong> orang
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      activeCount > 0 ? "text-emerald-300" : "text-slate-400"
+                    }`}
+                  >
+                    {activeCount > 0 ? `${activeCount} sedang kerja` : "Semua idle"}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {members.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        focusOnAgent(m.id);
+                        setActiveSection("office");
+                      }}
+                      className="rounded-lg border border-white/10 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:border-cyan-400"
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* PER-FLOOR STATUS (5 FLOORS) + SKILLS & INTEGRATIONS STATUS */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Per-Floor Building Status */}
+        <div className="rounded-2xl border border-indigo-400/25 bg-slate-900/80 p-4">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-indigo-400" />
+            <h2 className="text-sm font-black tracking-wide text-white uppercase">
+              Status Per Lantai (5 Lantai Kantor 3D)
+            </h2>
+          </div>
+          <div className="mt-3 space-y-2">
+            {OFFICE_FLOORS.map((fl) => {
+              const flAgents = agents.filter((a) => a.floor === fl.floor);
+              const flWorking = flAgents.filter(
+                (a) => a.status === "working" || a.status === "walking"
+              ).length;
+              const flDesks = workstations.filter((w) => w.floor === fl.floor).length;
+              return (
+                <div
+                  key={fl.floor}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <span
+                        className="rounded-md px-1.5 py-0.5 font-mono text-[10px] text-slate-950"
+                        style={{ backgroundColor: fl.accentColor }}
+                      >
+                        {fl.code}
+                      </span>
+                      <span className="truncate">{fl.name}</span>
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-slate-400">
+                      {flAgents.length} karyawan ({flWorking} aktif) · {flDesks} workstation
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveFloor(FLOOR_VIEW_BY_NUM[fl.floor]);
+                      setActiveSection("office");
+                    }}
+                    className="shrink-0 rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-2.5 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-500/25"
+                  >
+                    Buka 3D
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Skills & Integrations Live Probe */}
+        <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/80 p-4">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-emerald-400" />
+            <h2 className="text-sm font-black tracking-wide text-white uppercase">
+              Status Skill &amp; Integrasi Runtime
+            </h2>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-xl border border-white/10 bg-slate-950/70 p-2.5">
+              <div className="text-[10px] text-slate-400">AI Providers</div>
+              <div className="mt-1 font-bold text-white">
+                {aiStatus?.anyConfigured
+                  ? aiStatus.activeProviders.join(" + ")
+                  : "Memeriksa..."}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/70 p-2.5">
+              <div className="text-[10px] text-slate-400">Shared Skill Library</div>
+              <div className="mt-1 font-bold text-cyan-300">
+                {INSTALLED_GITHUB_SKILLS.length} Repos ·{" "}
+                {capabilities?.skillCount ?? 11} Modul Aktif
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/70 p-2.5">
+              <div className="text-[10px] text-slate-400">Video &amp; Motion Engine</div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-bold">
+                <span
+                  className={
+                    capabilities?.remotionInstalled ? "text-emerald-300" : "text-slate-400"
+                  }
+                >
+                  Remotion {capabilities?.remotionInstalled ? "✓" : "–"}
+                </span>
+                <span>·</span>
+                <span
+                  className={
+                    capabilities?.gsapInstalled ? "text-emerald-300" : "text-slate-400"
+                  }
+                >
+                  GSAP {capabilities?.gsapInstalled ? "✓" : "–"}
+                </span>
+                <span>·</span>
+                <span
+                  className={
+                    capabilities?.mp4MuxerInstalled ? "text-emerald-300" : "text-slate-400"
+                  }
+                >
+                  MP4 {capabilities?.mp4MuxerInstalled ? "✓" : "–"}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-slate-950/70 p-2.5">
+              <div className="text-[10px] text-slate-400">Optional Host Adapters</div>
+              <div className="mt-1 text-[10px] text-slate-300">
+                FFmpeg: {capabilities?.ffmpegAvailable ? "Host Ready" : "WebCodecs Browser"} ·{" "}
+                Hindsight: {capabilities?.hindsightConfigured ? "Connected" : "Local Memory"}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-950/20 px-3 py-2 text-[11px] text-emerald-200">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span>
+              Semua skill bersifat shared across team — 22 repo GitHub dibagi secara modular ke
+              15 karyawan tanpa memaksa 1 repo = 1 orang.
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

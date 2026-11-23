@@ -49,6 +49,10 @@ import {
   recordMemoryEvent,
 } from "@/lib/ai/agent-memory";
 import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
+import {
+  ACTIVE_EMPLOYEE_ROSTER,
+  distributeDivisionTaskToTeam,
+} from "@/lib/config/team-roster";
 
 const EPISODES_STORAGE_KEY = "fajrezzz_real_episodes_v2";
 const HISTORY_STORAGE_KEY = "fajrezzz_division_history_v2";
@@ -359,6 +363,40 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const meta = PIPELINE_DIVISIONS.find((d) => d.key === division);
       if (!meta) return;
+      const distributed = distributeDivisionTaskToTeam(
+        division,
+        customLabel || meta.shortLabel
+      );
+
+      if (distributed.length > 0) {
+        distributed.forEach((member) => {
+          if (state === "working") {
+            dispatchAgentRealWork(
+              member.agentId,
+              "working",
+              member.deskWaypointId,
+              customLabel ?? member.taskLabel
+            );
+          } else if (state === "error") {
+            dispatchAgentRealWork(
+              member.agentId,
+              "error",
+              member.deskWaypointId,
+              customLabel ?? `ERROR pada ${meta.label} — butuh Retry`
+            );
+          } else {
+            dispatchAgentRealWork(
+              member.agentId,
+              "idle",
+              member.loungeWaypointId,
+              customLabel ?? "☕ Antrean kosong — IDLE / standby di lantai"
+            );
+          }
+        });
+        return;
+      }
+
+      // Fallback single-agent dispatch
       if (state === "working") {
         dispatchAgentRealWork(
           meta.agentId,
@@ -378,7 +416,7 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           meta.agentId,
           "idle",
           meta.loungeWaypointId,
-          customLabel ?? "☕ Antrean kosong — IDLE / ngopi santai"
+          customLabel ?? "☕ Antrean kosong — IDLE / standby"
         );
       }
     },
@@ -1655,15 +1693,18 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
 
   const getAgentSnapshot = useCallback(
     (agentId: string): AgentRealStateSnapshot | null => {
-      const meta = PIPELINE_DIVISIONS.find((d) => d.agentId === agentId);
+      const rosterMember = ACTIVE_EMPLOYEE_ROSTER.find((e) => e.id === agentId);
+      const meta = rosterMember
+        ? PIPELINE_DIVISIONS.find((d) => d.key === rosterMember.assignedPipelineDivision)
+        : PIPELINE_DIVISIONS.find((d) => d.agentId === agentId);
       if (!meta) return null;
       const ep = activeEpisode ?? episodes[0] ?? null;
       const rec = ep?.divisions[meta.key] ?? null;
       return {
         division: meta.key,
-        divisionLabel: meta.label,
-        agentId: meta.agentId,
-        agentName: meta.agentName,
+        divisionLabel: rosterMember ? `L${rosterMember.floor} · ${rosterMember.role}` : meta.label,
+        agentId: rosterMember?.id ?? meta.agentId,
+        agentName: rosterMember?.name ?? meta.agentName,
         episodeId: ep?.id ?? null,
         episodeTitle: ep?.divisions.seo.output?.title || ep?.bossTheme || null,
         status: rec?.status ?? "queued",

@@ -712,8 +712,13 @@ export function OfficeArchitecture({
 
   const showL2 = activeFloor !== "l1";
   const showL3 =
-    activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof";
-  const showRoof = activeFloor === "all" || activeFloor === "roof";
+    activeFloor === "all" ||
+    activeFloor === "l3" ||
+    activeFloor === "l4" ||
+    activeFloor === "l5" ||
+    activeFloor === "roof";
+  // Old L3 rooftop slab at Y=11.8 is replaced by Floors 4 & 5 + Crown Sky Deck (Y=19.2) in UpperProductionFloors.tsx
+  const showRoof = false;
 
   const handleSurfaceDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
