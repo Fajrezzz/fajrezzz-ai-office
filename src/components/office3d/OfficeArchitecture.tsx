@@ -5,7 +5,6 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
-import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
 import { useOffice } from "@/store/OfficeContext";
 import {
   FLOOR_1_Y,
@@ -717,9 +716,6 @@ export function OfficeArchitecture({
     activeFloor === "l4" ||
     activeFloor === "l5" ||
     activeFloor === "roof";
-  // Old L3 rooftop slab at Y=11.8 is replaced by Floors 4 & 5 + Crown Sky Deck (Y=19.2) in UpperProductionFloors.tsx
-  const showRoof = false;
-
   const handleSurfaceDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (onFocusPoint) {
@@ -743,12 +739,12 @@ export function OfficeArchitecture({
           ============================================================ */}
       <group position={[-11.8, 0, -8.4]}>
         <mesh
-          position={[0, showRoof ? 5.8 : showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0]}
+          position={[0, showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0]}
         >
           <boxGeometry
             args={[
               2.1,
-              showRoof ? 11.4 : showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
+              showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
               2.0,
             ]}
           />
@@ -764,12 +760,12 @@ export function OfficeArchitecture({
         {[-0.98, 0.98].map((rx, i) => (
           <mesh
             key={i}
-            position={[rx, showRoof ? 5.8 : showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0.96]}
+            position={[rx, showL3 ? 5.6 : showL2 ? 3.8 : 1.9, 0.96]}
           >
             <boxGeometry
               args={[
                 0.08,
-                showRoof ? 11.4 : showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
+                showL3 ? 11.0 : showL2 ? 7.4 : 3.6,
                 0.08,
               ]}
             />
@@ -1976,203 +1972,6 @@ export function OfficeArchitecture({
             intensity={isNight ? 18 : isSunset ? 11 : 7}
             distance={24}
           />
-        </group>
-      )}
-
-      {/* ============================================================
-          ROOFTOP — HELIPAD, BADMINTON COURT, CYBERPUNK RGB NEON TRIM & SIGNAGE (Y=11.6)
-          ============================================================ */}
-      {showRoof && (
-        <group>
-          {/* Vertical Corner Cyberpunk Neon Edge Bars (Left Electric Cyan, Right Hot Magenta) */}
-          <mesh position={[-19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.085, 11.4, 0.085]} />
-            <meshStandardMaterial
-              color="#cffafe"
-              emissive="#00f0ff"
-              emissiveIntensity={isNight ? 2.2 : isSunset ? 1.1 : 0.35}
-            />
-          </mesh>
-          <mesh position={[19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.085, 11.4, 0.085]} />
-            <meshStandardMaterial
-              color="#fce7f3"
-              emissive="#ec4899"
-              emissiveIntensity={isNight ? 2.2 : isSunset ? 1.1 : 0.35}
-            />
-          </mesh>
-
-          {/* Nanverse-Style Architectural Concrete Roof Deck + Matte Charcoal Fascia Band */}
-          <mesh
-            position={[0, 11.58, -2.5]}
-            castShadow
-            receiveShadow
-            onDoubleClick={handleSurfaceDoubleClick}
-          >
-            <boxGeometry args={[39.4, 0.42, 16.0]} />
-            <meshStandardMaterial color="#cfc9be" roughness={0.76} />
-          </mesh>
-
-          {/* Dark Matte Charcoal Steel Roof Fascia All Around (Nanverse Exoskeleton) */}
-          <mesh position={[0, 11.78, 5.56]} castShadow>
-            <boxGeometry args={[39.6, 0.56, 0.22]} />
-            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
-          </mesh>
-          <mesh position={[0, 11.78, -10.5]} castShadow>
-            <boxGeometry args={[39.6, 0.56, 0.22]} />
-            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
-          </mesh>
-          {[-19.7, 19.7].map((rx, ri) => (
-            <mesh key={`roof-side-${ri}`} position={[rx, 11.78, -2.5]} castShadow>
-              <boxGeometry args={[0.22, 0.56, 16.1]} />
-              <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
-            </mesh>
-          ))}
-
-          {/* Rooftop Full-Width Cyberpunk RGB Neon Rim */}
-          <mesh position={[0, 11.52, 5.66]}>
-            <boxGeometry args={[39.6, 0.065, 0.065]} />
-            <meshStandardMaterial
-              color="#cffafe"
-              emissive="#00f0ff"
-              emissiveIntensity={isNight ? 2.1 : isSunset ? 1.1 : 0.35}
-            />
-          </mesh>
-
-          {/* CYBERPUNK RGB ILLUMINATED "FAJREZZZ AI OFFICE" CROWN SIGNAGE */}
-          <group position={[0, 12.6, 5.56]}>
-            <mesh castShadow>
-              <boxGeometry args={[13.2, 1.12, 0.24]} />
-              <meshStandardMaterial color="#111624" metalness={0.68} roughness={0.28} />
-            </mesh>
-            <mesh position={[0, 0.58, 0.1]}>
-              <boxGeometry args={[13.25, 0.065, 0.06]} />
-              <meshStandardMaterial
-                color="#cffafe"
-                emissive="#00f0ff"
-                emissiveIntensity={isNight ? 2.4 : isSunset ? 1.35 : 0.45}
-              />
-            </mesh>
-            <mesh position={[0, -0.58, 0.1]}>
-              <boxGeometry args={[13.25, 0.065, 0.06]} />
-              <meshStandardMaterial
-                color="#f3e8ff"
-                emissive="#a855f7"
-                emissiveIntensity={isNight ? 2.4 : isSunset ? 1.35 : 0.45}
-              />
-            </mesh>
-            <Text
-              position={[0, 0, 0.15]}
-              fontSize={0.76}
-              color="#e0f2fe"
-              letterSpacing={0.14}
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.015}
-              outlineColor="#0f172a"
-            >
-              FAJREZZZ AI OFFICE
-              <meshStandardMaterial
-                color="#e0f2fe"
-                emissive={isNight ? "#38bdf8" : isSunset ? "#818cf8" : "#38bdf8"}
-                emissiveIntensity={isNight ? 2.1 : isSunset ? 1.15 : 0.35}
-                toneMapped={!(isNight || isSunset)}
-              />
-            </Text>
-          </group>
-
-          {/* Nanverse-Style Rooftop Smoked Glass Balustrade + Corner Greenery Planters */}
-          <mesh position={[0, 12.34, 5.38]}>
-            <boxGeometry args={[38.8, 1.0, 0.06]} />
-            <meshPhysicalMaterial
-              color="#3c6074"
-              transparent
-              opacity={0.28}
-              roughness={0.1}
-            />
-          </mesh>
-          {[
-            [-18.6, 4.6],
-            [-15.8, 4.6],
-            [15.8, 4.6],
-            [18.6, 4.6],
-            [-18.6, -9.4],
-            [18.6, -9.4],
-          ].map(([gx, gz], gi) => (
-            <group key={`roof-bush-${gi}`} position={[gx, 11.84, gz]}>
-              <mesh position={[0, 0.22, 0]} castShadow>
-                <boxGeometry args={[1.1, 0.44, 0.9]} />
-                <meshStandardMaterial color="#2c3138" roughness={0.65} />
-              </mesh>
-              <mesh position={[0, 0.62, 0]} castShadow>
-                <sphereGeometry args={[0.52, 10, 8]} />
-                <meshStandardMaterial color="#48683a" roughness={0.88} />
-              </mesh>
-            </group>
-          ))}
-
-          {/* WEST ROOF: Clean Nanverse Architectural Concrete Circular Helipad ("H") */}
-          <group position={[-7.5, 11.82, -2.6]}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-              <circleGeometry args={[4.4, 36]} />
-              <meshStandardMaterial color="#d8d3c8" roughness={0.78} />
-            </mesh>
-            <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[3.72, 4.02, 36]} />
-              <meshStandardMaterial
-                color="#cffafe"
-                emissive="#00f0ff"
-                emissiveIntensity={isNight ? 1.85 : 0.35}
-              />
-            </mesh>
-            <mesh position={[-0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.45, 2.6]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.45} />
-            </mesh>
-            <mesh position={[0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.45, 2.6]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.5} />
-            </mesh>
-            <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[1.9, 0.45]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.5} />
-            </mesh>
-            {/* 4 Helipad Beacon Lights */}
-            {[
-              [-4.2, 0.12, -4.2],
-              [4.2, 0.12, -4.2],
-              [-4.2, 0.12, 4.2],
-              [4.2, 0.12, 4.2],
-            ].map((bp, bi) => (
-              <mesh key={bi} position={bp as [number, number, number]}>
-                <cylinderGeometry args={[0.14, 0.16, 0.22, 10]} />
-                <meshStandardMaterial
-                  color="#34d399"
-                  emissive="#10b981"
-                  emissiveIntensity={isNight ? 2.8 : 0.9}
-                />
-              </mesh>
-            ))}
-          </group>
-
-          {/* LUXURY HELICOPTER ON HELIPAD + REAL BADMINTON COURT, FLOODLIGHTS & PLAYERS */}
-          <RooftopAttractions
-            isNight={isNight}
-            isSunset={isSunset}
-            isSimulationRunning={isSimulationRunning}
-          />
-
-          {/* Rooftop Sky Lounge Sofa Terrace (Front Center) */}
-          <group position={[0, 11.8, 3.4]}>
-            <mesh position={[0, 0.28, 0]} castShadow>
-              <boxGeometry args={[3.6, 0.44, 0.95]} />
-              <meshStandardMaterial color="#f4efe6" roughness={0.86} />
-            </mesh>
-            <mesh position={[0, 0.62, -0.38]} castShadow>
-              <boxGeometry args={[3.6, 0.44, 0.22]} />
-              <meshStandardMaterial color="#e6dfd2" roughness={0.86} />
-            </mesh>
-          </group>
         </group>
       )}
     </group>

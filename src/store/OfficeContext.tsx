@@ -533,7 +533,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           "BOS FAJREZ",
           "user",
-          `Berpindah ke ${label} (Lantai ${floor === 4 ? "Atap" : floor}).`,
+          `Berpindah ke ${label} (${floor === 6 ? "Lantai Atap" : `Lantai ${floor}`}).`,
           "success",
           label
         );

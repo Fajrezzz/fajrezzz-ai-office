@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useOffice } from "@/store/OfficeContext";
+import { ROOF_Y, useOffice } from "@/store/OfficeContext";
 import type { LightingPreset, PerformanceMode } from "@/types/office";
 
 export type WeatherMode =
@@ -160,7 +160,7 @@ export const TELEPORT_LOCATIONS: {
   id: string;
   label: string;
   zone: string;
-  floor: 0 | 1 | 2 | 3 | 4;
+  floor: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   position: [number, number, number];
   yaw: number;
 }[] = [
@@ -171,7 +171,7 @@ export const TELEPORT_LOCATIONS: {
   { id: "tp-ceo", label: "Kamar CEO & Lounge (L3)", zone: "Kamar CEO & Lounge L3", floor: 3, position: [0, 7.8, 1.5], yaw: Math.PI },
   { id: "tp-pool", label: "Kolam Renang & Bot Trading", zone: "Dek Kolam Renang", floor: 0, position: [-10.8, 0.18, 10.7], yaw: -Math.PI / 2 },
   { id: "tp-parking", label: "Parkiran & Porsche 911", zone: "Area Parkir & Mobil", floor: 0, position: [7.2, 0.18, 11.3], yaw: Math.PI / 2 },
-  { id: "tp-rooftop", label: "Rooftop Badminton & Helipad", zone: "Rooftop Sky Deck", floor: 4, position: [0, 11.82, 0], yaw: Math.PI },
+  { id: "tp-rooftop", label: "Rooftop Badminton & Helipad", zone: "Rooftop Sky Deck", floor: 6, position: [0, ROOF_Y, 1.6], yaw: Math.PI },
 ];
 
 const INITIAL_MT5_ACCOUNTS: Mt5Account[] = Array.from({ length: 18 }).map(
@@ -447,8 +447,14 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const iv = window.setInterval(() => {
       const [bx, by, bz] = bossPositionRef.current;
-      if (by > 10.5) {
-        setCurrentLocationName(bx < 0 ? "Rooftop · Helipad H" : "Rooftop · Badminton & Pergola");
+      if (by > 17.6) {
+        setCurrentLocationName(
+          bx < 0.5 ? "Rooftop · Helipad H & Helikopter" : "Rooftop · Badminton & Sky Deck"
+        );
+      } else if (by > 13.4) {
+        setCurrentLocationName("L5 · Voice, Subtitle & QC Suite");
+      } else if (by > 10.5) {
+        setCurrentLocationName("L4 · Video Editing & Render Deck");
       } else if (by > 6.5) {
         setCurrentLocationName(bx > 10 ? "L3 · Lounge Biliar & Bioskop" : "L3 · Kamar CEO & Lounge");
       } else if (by > 2.8) {

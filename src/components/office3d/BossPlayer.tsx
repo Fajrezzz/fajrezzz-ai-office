@@ -201,9 +201,14 @@ export function BossPlayer() {
         } else if (bossFloor === 2 || bossFloor === 3) {
           posRef.current.x = Math.max(-18.2, Math.min(18.2, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(4.8, posRef.current.z));
+        } else if (bossFloor === 4 || bossFloor === 5) {
+          // Floors 4 & 5 decks stop at X = ±13.6 / Z = -9.9..3.9
+          posRef.current.x = Math.max(-12.9, Math.min(12.9, posRef.current.x));
+          posRef.current.z = Math.max(-9.2, Math.min(3.3, posRef.current.z));
         } else {
-          posRef.current.x = Math.max(-18.4, Math.min(18.4, posRef.current.x));
-          posRef.current.z = Math.max(-9.5, Math.min(4.8, posRef.current.z));
+          // Crown Sky Deck (rooftop): stay inside the glass balustrade
+          posRef.current.x = Math.max(-12.9, Math.min(12.9, posRef.current.x));
+          posRef.current.z = Math.max(-9.2, Math.min(3.2, posRef.current.z));
         }
 
         const targetYaw = Math.atan2(moveDir.x, moveDir.z);

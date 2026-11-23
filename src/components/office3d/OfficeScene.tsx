@@ -217,8 +217,12 @@ function FreeRoamCameraRig() {
       const [bx, by, bz] = bossPositionRef.current;
       if (activeVehicleId) {
         setCurrentLocationName("Mengemudi · Cyber Avenue");
+      } else if (by > 17.6) {
+        setCurrentLocationName("Rooftop · Helipad & Bulu Tangkis");
+      } else if (by > 13.4) {
+        setCurrentLocationName("Lantai 5 · Voice, Subtitle & QC");
       } else if (by > 10.5) {
-        setCurrentLocationName("Rooftop · Helipad & Padel RGB");
+        setCurrentLocationName("Lantai 4 · Video Editing & Render");
       } else if (by > 6.5) {
         setCurrentLocationName("Lantai 3 · CEO Suite & Biliar");
       } else if (by > 2.8) {
@@ -581,6 +585,8 @@ export function OfficeScene() {
       <UpperProductionFloors
         activeFloor={activeFloor}
         isNight={isNight}
+        isSunset={isSunset}
+        isSimulationRunning={isSimulationRunning}
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 

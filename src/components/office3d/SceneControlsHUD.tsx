@@ -803,7 +803,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-slate-950/88 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-md">
                 <Crown className="h-3.5 w-3.5 text-amber-400" />
                 <span>
-                  L{bossFloor === 4 ? " ATAP" : bossFloor} · {bossActionText}
+                  {bossFloor === 6 ? "ATAP" : `L${bossFloor}`} · {bossActionText}
                 </span>
                 <button
                   type="button"

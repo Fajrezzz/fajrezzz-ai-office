@@ -10,6 +10,87 @@ interface RooftopAttractionsProps {
   isSimulationRunning: boolean;
 }
 
+/**
+ * IMPORTANT — local coordinate space:
+ * This module is mounted INSIDE the Crown Sky-Deck group in UpperProductionFloors.tsx,
+ * which is already positioned at `ROOF_Y` (19.2). So every Y below is deck-relative
+ * (≈ 0 = deck surface). The old absolute Y=11.82 placement was buried inside Floor 4
+ * (slab 11.6 → ceiling 15.29), which made the helicopter & badminton court invisible.
+ */
+export const ROOFTOP_HELIPAD_XZ: [number, number] = [-7.4, -2.4];
+export const ROOFTOP_COURT_XZ: [number, number] = [6.6, -2.6];
+
+/** Circular Concrete Helipad Deck with "H" marking, neon ring & 4 corner beacons */
+function HelipadDeck({ isNight }: { isNight: boolean }) {
+  return (
+    <group position={[ROOFTOP_HELIPAD_XZ[0], 0, ROOFTOP_HELIPAD_XZ[1]]}>
+      {/* Cast Architectural Concrete Landing Pad */}
+      <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[4.32, 40]} />
+        <meshStandardMaterial color="#d8d3c8" roughness={0.8} metalness={0.04} />
+      </mesh>
+      {/* Matte Charcoal Perimeter Band */}
+      <mesh position={[0, 0.009, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.86, 4.3, 40]} />
+        <meshStandardMaterial color="#1b1f26" roughness={0.58} metalness={0.35} />
+      </mesh>
+      {/* Glowing Cyan Touchdown Ring */}
+      <mesh position={[0, 0.013, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.6, 3.8, 40]} />
+        <meshStandardMaterial
+          color="#cffafe"
+          emissive="#22d3ee"
+          emissiveIntensity={isNight ? 2.1 : 0.5}
+          toneMapped={!isNight}
+        />
+      </mesh>
+      {/* Painted White "H" Landing Marking */}
+      {[-0.92, 0.92].map((hx, i) => (
+        <mesh key={`h-bar-${i}`} position={[hx, 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.44, 2.6]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.45} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.9, 0.44]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.45} />
+      </mesh>
+      {/* 4 Green Omni-Directional Landing Beacons */}
+      {[
+        [-3.55, -3.55],
+        [3.55, -3.55],
+        [-3.55, 3.55],
+        [3.55, 3.55],
+      ].map(([bx, bz], i) => (
+        <group key={`pad-beacon-${i}`} position={[bx, 0, bz]}>
+          <mesh position={[0, 0.1, 0]}>
+            <cylinderGeometry args={[0.13, 0.15, 0.2, 10]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.7} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.22, 0]}>
+            <sphereGeometry args={[0.09, 10, 10]} />
+            <meshStandardMaterial
+              color="#34d399"
+              emissive="#10b981"
+              emissiveIntensity={isNight ? 3.2 : 1.1}
+              toneMapped={!isNight}
+            />
+          </mesh>
+        </group>
+      ))}
+      {/* Edge Lighting for the Landing Pad */}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[4.32, 4.45, 40]} />
+        <meshStandardMaterial
+          color={isNight ? "#fef9c3" : "#e2e8f0"}
+          emissive="#fde68a"
+          emissiveIntensity={isNight ? 1.9 : 0.25}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 /** Executive Twin-Engine Luxury Helicopter parked on the West Rooftop Helipad */
 function LuxuryHelicopter({
   position,
@@ -670,16 +751,19 @@ export function RooftopAttractions({
 }: RooftopAttractionsProps) {
   return (
     <group>
+      {/* Circular "H" Helipad Deck on the West Side of the Crown Sky Deck */}
+      <HelipadDeck isNight={isNight} />
+
       {/* Executive Helicopter parked directly on the West Helipad */}
       <LuxuryHelicopter
-        position={[-7.5, 11.82, -2.6]}
+        position={[ROOFTOP_HELIPAD_XZ[0], 0.03, ROOFTOP_HELIPAD_XZ[1]]}
         isNight={isNight}
         isSimulationRunning={isSimulationRunning}
       />
 
       {/* Authentic BWF Rooftop Badminton Court + Floodlights + 2 Players */}
       <RooftopBadmintonCourt
-        position={[6.5, 11.81, -2.6]}
+        position={[ROOFTOP_COURT_XZ[0], 0.012, ROOFTOP_COURT_XZ[1]]}
         isNight={isNight}
         isSunset={isSunset}
         isSimulationRunning={isSimulationRunning}

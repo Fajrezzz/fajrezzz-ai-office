@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef } from "react";
+import { Text } from "@react-three/drei";
 import * as THREE from "three";
+import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
 import {
   FLOOR_1_Y,
   FLOOR_4_Y,
@@ -13,6 +15,8 @@ import type { FloorView, Vector3Tuple } from "@/types/office";
 interface UpperProductionFloorsProps {
   activeFloor: FloorView;
   isNight: boolean;
+  isSunset?: boolean;
+  isSimulationRunning?: boolean;
   onFocusPoint?: (point: Vector3Tuple) => void;
 }
 
@@ -21,12 +25,17 @@ interface UpperProductionFloorsProps {
  * - Adds Floor 4 (Video Editing & Rendering, Y=11.6) & Floor 5 (Voice, Subtitle & QC, Y=15.4)
  * - Extends the glowing cyan panoramic glass elevator shaft seamlessly from L1 -> L5 -> Roof
  * - Adds the Ground-Floor Cyan Hologram Arrival Portal (inspired by isometric cyber-office reference)
+ * - Crowns the tower with the real usable Sky Deck (ROOF_Y = 19.2): "H" helipad + executive
+ *   helicopter, BWF badminton court with 2 animated players, glass balustrade, RGB signage
+ *   and sky lounge. (RooftopAttractions is mounted here in deck-local coordinates.)
  * - Uses THREE.InstancedMesh for structural columns & ceiling LED strips (minimal draw calls!)
  * - Disposes shared geometries & materials cleanly on unmount (mobile memory safety)
  */
 export function UpperProductionFloors({
   activeFloor,
   isNight,
+  isSunset = false,
+  isSimulationRunning = true,
   onFocusPoint,
 }: UpperProductionFloorsProps) {
   const showL4 =
@@ -153,6 +162,7 @@ export function UpperProductionFloors({
     : 11.4;
 
   const emissiveBoost = isNight ? 1.6 : 1.05;
+  const roofNeon = isNight ? 2.1 : isSunset ? 1.3 : 0.55;
 
   return (
     <group>
@@ -381,29 +391,234 @@ export function UpperProductionFloors({
       )}
 
       {/* ============================================================
-          CROWN SKY-DECK ROOF SLAB ABOVE FLOOR 5 (Y = 19.2)
+          CROWN SKY-DECK ROOF — HELIPAD + HELICOPTER + BADMINTON COURT
+          (Y = ROOF_Y = 19.2, the real top of the tower)
           ============================================================ */}
       {showRoofCap && (
         <group position={[0, ROOF_Y, 0]}>
+          {/* Structural Roof Slab */}
           <mesh
             position={[0, -0.11, -3.0]}
             geometry={sharedGeos.slab}
             material={sharedMats.floorSlab}
+            receiveShadow
           />
+
+          {/* Front Fascia + Neon Under-Glow */}
+          <mesh position={[0, 0.05, 3.86]} castShadow>
+            <boxGeometry args={[27.25, 0.22, 0.18]} />
+            <meshStandardMaterial
+              color="#1b1f26"
+              metalness={0.58}
+              roughness={0.38}
+            />
+          </mesh>
           <mesh
             position={[0, 0.04, 3.92]}
             geometry={sharedGeos.ledStrip}
             material={sharedMats.cyanGlow}
           />
-          {/* Glowing Helipad Ring on Crown Sky Deck */}
-          <mesh position={[0, 0.04, -3.0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[2.6, 2.95, 32]} />
-            <meshStandardMaterial
-              color="#67e8f9"
-              emissive="#22d3ee"
-              emissiveIntensity={emissiveBoost}
+
+          {/* Panoramic Glass Safety Balustrade (front, rear & both sides) */}
+          {(
+            [
+              [0, 0.6, 3.72, 27.1, 1.05, 0.05],
+              [0, 0.6, -9.68, 27.1, 1.05, 0.05],
+              [-13.56, 0.6, -3.0, 0.05, 1.05, 13.4],
+              [13.56, 0.6, -3.0, 0.05, 1.05, 13.4],
+            ] as [number, number, number, number, number, number][]
+          ).map(([bx, by, bz, bw, bh, bd], bi) => (
+            <mesh key={`roof-glass-${bi}`} position={[bx, by, bz]}>
+              <boxGeometry args={[bw, bh, bd]} />
+              <meshPhysicalMaterial
+                color="#7dd3fc"
+                transparent
+                opacity={0.24}
+                roughness={0.1}
+                metalness={0.12}
+              />
+            </mesh>
+          ))}
+
+          {/* Slim Steel Handrails + Neon Accent Lines */}
+          {(
+            [
+              [0, 1.16, 3.72, 27.2, 0.09, 0.14],
+              [0, 1.16, -9.68, 27.2, 0.09, 0.14],
+              [-13.56, 1.16, -3.0, 0.14, 0.09, 13.5],
+              [13.56, 1.16, -3.0, 0.14, 0.09, 13.5],
+            ] as [number, number, number, number, number, number][]
+          ).map(([hx, hy, hz, hw, hh, hd], hi) => (
+            <mesh key={`roof-rail-${hi}`} position={[hx, hy, hz]}>
+              <boxGeometry args={[hw, hh, hd]} />
+              <meshStandardMaterial
+                color="#334155"
+                metalness={0.82}
+                roughness={0.26}
+              />
+            </mesh>
+          ))}
+          {[-13.5, 13.5].map((nx, ni) => (
+            <mesh key={`roof-neon-side-${ni}`} position={[nx, 0.12, -3.0]}>
+              <boxGeometry args={[0.06, 0.06, 13.3]} />
+              <meshStandardMaterial
+                color="#cffafe"
+                emissive={ni === 0 ? "#00f0ff" : "#ec4899"}
+                emissiveIntensity={roofNeon}
+                toneMapped={!isNight}
+              />
+            </mesh>
+          ))}
+
+          {/* 4 Corner RGB Light Pylons */}
+          {[
+            [-13.3, 3.5, "#22d3ee"],
+            [13.3, 3.5, "#ec4899"],
+            [-13.3, -9.5, "#a855f7"],
+            [13.3, -9.5, "#22c55e"],
+          ].map(([px, pz, glow], pi) => (
+            <group key={`roof-pylon-${pi}`} position={[px as number, 0, pz as number]}>
+              <mesh position={[0, 0.7, 0]} castShadow>
+                <cylinderGeometry args={[0.075, 0.095, 1.4, 10]} />
+                <meshStandardMaterial
+                  color="#1e293b"
+                  metalness={0.8}
+                  roughness={0.3}
+                />
+              </mesh>
+              <mesh position={[0, 1.44, 0]}>
+                <sphereGeometry args={[0.11, 10, 10]} />
+                <meshStandardMaterial
+                  color={glow as string}
+                  emissive={glow as string}
+                  emissiveIntensity={roofNeon}
+                  toneMapped={!isNight}
+                />
+              </mesh>
+            </group>
+          ))}
+
+          {/* Corner Planters with Greenery */}
+          {[
+            [-12.4, 3.0],
+            [12.4, 3.0],
+            [-12.5, -9.1],
+            [12.5, -9.1],
+          ].map(([gx, gz], gi) => (
+            <group key={`roof-planter-${gi}`} position={[gx, 0, gz]}>
+              <mesh position={[0, 0.22, 0]} castShadow>
+                <boxGeometry args={[1.1, 0.44, 0.95]} />
+                <meshStandardMaterial color="#2c3138" roughness={0.66} />
+              </mesh>
+              <mesh position={[0, 0.62, 0]} castShadow>
+                <sphereGeometry args={[0.5, 10, 8]} />
+                <meshStandardMaterial color="#4a6b3c" roughness={0.88} />
+              </mesh>
+            </group>
+          ))}
+
+          {/* Cyberpunk RGB Crown Signage standing on the rear edge */}
+          <group position={[0, 0, -9.45]}>
+            {[-5.4, 5.4].map((lx, li) => (
+              <mesh key={`sign-leg-${li}`} position={[lx, 1.14, 0]} castShadow>
+                <boxGeometry args={[0.16, 2.28, 0.16]} />
+                <meshStandardMaterial
+                  color="#1b1f26"
+                  metalness={0.72}
+                  roughness={0.32}
+                />
+              </mesh>
+            ))}
+            <group position={[0, 2.83, 0]}>
+              <mesh castShadow>
+                <boxGeometry args={[12.4, 1.1, 0.22]} />
+                <meshStandardMaterial
+                  color="#111624"
+                  metalness={0.68}
+                  roughness={0.28}
+                />
+              </mesh>
+              <mesh position={[0, 0.57, 0.1]}>
+                <boxGeometry args={[12.45, 0.06, 0.06]} />
+                <meshStandardMaterial
+                  color="#cffafe"
+                  emissive="#00f0ff"
+                  emissiveIntensity={roofNeon}
+                  toneMapped={!isNight}
+                />
+              </mesh>
+              <mesh position={[0, -0.57, 0.1]}>
+                <boxGeometry args={[12.45, 0.06, 0.06]} />
+                <meshStandardMaterial
+                  color="#f3e8ff"
+                  emissive="#a855f7"
+                  emissiveIntensity={roofNeon}
+                  toneMapped={!isNight}
+                />
+              </mesh>
+              <Text
+                position={[0, 0, 0.14]}
+                fontSize={0.72}
+                color="#e0f2fe"
+                letterSpacing={0.13}
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.014}
+                outlineColor="#0f172a"
+              >
+                FAJREZZZ AI OFFICE
+                <meshStandardMaterial
+                  color="#e0f2fe"
+                  emissive={isNight ? "#38bdf8" : "#0284c7"}
+                  emissiveIntensity={isNight ? 2.0 : 0.5}
+                  toneMapped={!isNight}
+                />
+              </Text>
+            </group>
+          </group>
+
+          {/* Sky Lounge Sofa + Coffee Table (between helipad and court) */}
+          <group position={[-1.3, 0, 2.8]}>
+            <mesh position={[0, 0.24, 0]} castShadow>
+              <boxGeometry args={[2.9, 0.38, 0.85]} />
+              <meshStandardMaterial color="#f4efe6" roughness={0.86} />
+            </mesh>
+            <mesh position={[0, 0.55, -0.31]} castShadow>
+              <boxGeometry args={[2.9, 0.44, 0.2]} />
+              <meshStandardMaterial color="#e6dfd2" roughness={0.86} />
+            </mesh>
+            <group position={[0, 0, -1.05]}>
+              <mesh position={[0, 0.3, 0]} castShadow>
+                <boxGeometry args={[1.5, 0.07, 0.72]} />
+                <meshStandardMaterial
+                  color="#cbd5e1"
+                  metalness={0.35}
+                  roughness={0.35}
+                />
+              </mesh>
+              <mesh position={[0, 0.15, 0]}>
+                <boxGeometry args={[1.24, 0.3, 0.5]} />
+                <meshStandardMaterial color="#94a3b8" roughness={0.5} />
+              </mesh>
+            </group>
+          </group>
+
+          {/* Rooftop Flood Lighting for night visibility */}
+          {isNight && (
+            <pointLight
+              position={[0, 2.8, -2.6]}
+              color="#cffafe"
+              intensity={18}
+              distance={26}
             />
-          </mesh>
+          )}
+
+          {/* Helipad "H" Deck + Executive Helicopter + Badminton Court & Players */}
+          <RooftopAttractions
+            isNight={isNight}
+            isSunset={isSunset}
+            isSimulationRunning={isSimulationRunning}
+          />
         </group>
       )}
     </group>

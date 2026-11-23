@@ -16,7 +16,7 @@ import {
   type TimeSpeed,
   type WeatherMode,
 } from "@/store/SimulatorContext";
-import type { PerformanceMode } from "@/types/office";
+import type { BossFloor, FloorView, PerformanceMode } from "@/types/office";
 
 export function NandaSimulatorHUD() {
   const {
@@ -235,7 +235,7 @@ export function NandaSimulatorHUD() {
                     key={loc.id}
                     type="button"
                     onClick={() => {
-                      const fv =
+                      const fv: FloorView =
                         loc.floor === 1
                           ? "l1"
                           : loc.floor === 2
@@ -243,10 +243,16 @@ export function NandaSimulatorHUD() {
                             : loc.floor === 3
                               ? "l3"
                               : loc.floor === 4
-                                ? "roof"
-                                : "all";
+                                ? "l4"
+                                : loc.floor === 5
+                                  ? "l5"
+                                  : loc.floor === 6
+                                    ? "roof"
+                                    : "all";
                       setActiveFloor(fv);
-                      const targetBossFloor = (loc.floor >= 1 && loc.floor <= 4 ? loc.floor : 1) as 1 | 2 | 3 | 4;
+                      const targetBossFloor: BossFloor = (
+                        loc.floor >= 1 && loc.floor <= 6 ? loc.floor : 1
+                      ) as BossFloor;
                       teleportBoss(loc.position, targetBossFloor, loc.label, loc.yaw);
                       pushSimLog("Teleportasi", `Pindah cepat ke ${loc.label}.`, "system");
                       setActiveSimModal(null);
