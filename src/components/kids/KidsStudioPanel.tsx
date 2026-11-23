@@ -44,7 +44,6 @@ import {
   scheduleSceneTransitionsSfx,
   startAmbientSynthBed,
 } from "@/lib/pipeline/motion-renderer";
-import { getCachedSceneBRoll } from "@/lib/pipeline/scene-broll-client";
 import { speakSceneTracks } from "@/lib/pipeline/browser-divisions";
 import {
   buildScriptSummaryArchive,
@@ -213,8 +212,7 @@ export function KidsStudioPanel() {
     if (!canvas || !renderableEpisode || !activeEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
-    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8, broll);
+    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 2.75);
   }, [renderableEpisode, activeEpisode, stopPlayback]);
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
@@ -229,8 +227,6 @@ export function KidsStudioPanel() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
 
     if (!isMuted) {
       const synth = startAmbientSynthBed(true);
@@ -262,7 +258,7 @@ export function KidsStudioPanel() {
         return;
       }
       setPlayTime(elapsed);
-      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed, broll);
+      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
       rafRef.current = window.requestAnimationFrame(loop);
     };
     rafRef.current = window.requestAnimationFrame(loop);
@@ -991,9 +987,9 @@ export function KidsStudioPanel() {
                       <div className="flex justify-center overflow-hidden rounded-2xl border border-slate-800 bg-black">
                         <canvas
                           ref={canvasRef}
-                          width={activeEpisode.format === "shorts" ? 360 : 640}
-                          height={activeEpisode.format === "shorts" ? 640 : 360}
-                          className="max-h-[420px] w-auto object-contain"
+                          width={activeEpisode.format === "shorts" ? 720 : 1280}
+                          height={activeEpisode.format === "shorts" ? 1280 : 720}
+                          className="max-h-[440px] w-auto object-contain"
                         />
                       </div>
 
