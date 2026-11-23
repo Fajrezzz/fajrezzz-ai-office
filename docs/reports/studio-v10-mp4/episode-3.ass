@@ -1,0 +1,34 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,DejaVu Sans,54,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,400,1
+Style: Accent,DejaVu Sans,54,&H001F5AFF,&H00FFFFFF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,400,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.08,0:00:01.46,Default,,0,0,0,,Angka {\rAccent}76,59{\rDefault} ini katanya
+Dialogue: 0,0:00:01.46,0:00:03.19,Default,,0,0,0,,menunjukkan hidup kita membaik.
+Dialogue: 0,0:00:03.19,0:00:04.42,Default,,0,0,0,,Tapi ia cuma gabungan
+Dialogue: 0,0:00:04.42,0:00:05.97,Default,,0,0,0,,tiga hal. Indeks Pembangunan
+Dialogue: 0,0:00:05.97,0:00:08.49,Default,,0,0,0,,Manusia menggabungkan kesehatan, pendidikan,
+Dialogue: 0,0:00:08.49,0:00:10.15,Default,,0,0,0,,dan pengeluaran. Contohnya, IPM
+Dialogue: 0,0:00:10.15,0:00:11.86,Default,,0,0,0,,Indonesia tahun {\rAccent}2026{\rDefault} mencapai
+Dialogue: 0,0:00:11.86,0:00:13.08,Default,,0,0,0,,{\rAccent}76,59,{\rDefault} meningkat {\rAccent}0,69{\rDefault} poin
+Dialogue: 0,0:00:13.08,0:00:14.98,Default,,0,0,0,,dibanding tahun sebelumnya sebesar
+Dialogue: 0,0:00:14.98,0:00:16.31,Default,,0,0,0,,{\rAccent}75,90.{\rDefault} Yang sering luput,
+Dialogue: 0,0:00:16.31,0:00:17.56,Default,,0,0,0,,umur Harapan Hidup saat
+Dialogue: 0,0:00:17.56,0:00:18.96,Default,,0,0,0,,lahir pada {\rAccent}2026{\rDefault} mencapai
+Dialogue: 0,0:00:18.96,0:00:20.06,Default,,0,0,0,,{\rAccent}74,68{\rDefault} tahun atau naik
+Dialogue: 0,0:00:20.06,0:00:21.17,Default,,0,0,0,,{\rAccent}0,21{\rDefault} tahun dari tahun
+Dialogue: 0,0:00:21.17,0:00:23.06,Default,,0,0,0,,sebelumnya. Jadi intinya, satu
+Dialogue: 0,0:00:23.06,0:00:24.59,Default,,0,0,0,,angka tidak bisa mewakili
+Dialogue: 0,0:00:24.59,0:00:26.14,Default,,0,0,0,,kualitas hidup semua orang.
+Dialogue: 0,0:00:26.14,0:00:27.41,Default,,0,0,0,,Sumber lengkapnya ada di
+Dialogue: 0,0:00:27.41,0:00:28.96,Default,,0,0,0,,deskripsi. Simpan video ini
+Dialogue: 0,0:00:28.96,0:00:30.48,Default,,0,0,0,,kalau menurutmu berguna.

@@ -35,3 +35,6 @@ next-env.d.ts
 
 # Studio v10 runtime history (dev/CLI only, not durable in serverless)
 /.studio-data
+
+# Studio v10 render workdir (per-scene clips)
+/.studio-render

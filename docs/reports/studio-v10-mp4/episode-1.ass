@@ -1,0 +1,33 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,DejaVu Sans,54,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,400,1
+Style: Accent,DejaVu Sans,54,&H001F5AFF,&H00FFFFFF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,400,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.08,0:00:01.61,Default,,0,0,0,,Malam ini bulan kelihatan
+Dialogue: 0,0:00:01.61,0:00:03.12,Default,,0,0,0,,besar sekali. Tapi bulan
+Dialogue: 0,0:00:03.12,0:00:04.66,Default,,0,0,0,,itu tidak membesar sedikit
+Dialogue: 0,0:00:04.66,0:00:06.21,Default,,0,0,0,,pun. Purnama perige membuat
+Dialogue: 0,0:00:06.21,0:00:07.61,Default,,0,0,0,,bulan tampak lebih besar.
+Dialogue: 0,0:00:07.61,0:00:09.44,Default,,0,0,0,,Contohnya, BMKG menyebut supermoon
+Dialogue: 0,0:00:09.44,0:00:11.12,Default,,0,0,0,,atau purnama perige pertama
+Dialogue: 0,0:00:11.12,0:00:12.35,Default,,0,0,0,,tahun {\rAccent}2026{\rDefault} terjadi di
+Dialogue: 0,0:00:12.35,0:00:13.74,Default,,0,0,0,,langit Indonesia pada {\rAccent}24{\rDefault}
+Dialogue: 0,0:00:13.74,0:00:15.15,Default,,0,0,0,,November {\rAccent}2026.{\rDefault} Yang sering
+Dialogue: 0,0:00:15.15,0:00:16.77,Default,,0,0,0,,luput, fenomena ini membuat
+Dialogue: 0,0:00:16.77,0:00:18.19,Default,,0,0,0,,bulan purnama tampak lebih
+Dialogue: 0,0:00:18.19,0:00:20.08,Default,,0,0,0,,besar dibandingkan biasanya karena
+Dialogue: 0,0:00:20.08,0:00:21.48,Default,,0,0,0,,posisinya lebih dekat ke
+Dialogue: 0,0:00:21.48,0:00:23.22,Default,,0,0,0,,bumi. Jadi intinya, jaraknya
+Dialogue: 0,0:00:23.22,0:00:24.51,Default,,0,0,0,,sedang paling dekat dengan
+Dialogue: 0,0:00:24.51,0:00:26.06,Default,,0,0,0,,bumi. Sumber lengkapnya ada
+Dialogue: 0,0:00:26.06,0:00:27.47,Default,,0,0,0,,di deskripsi. Simpan video
+Dialogue: 0,0:00:27.47,0:00:29.28,Default,,0,0,0,,ini kalau menurutmu berguna.

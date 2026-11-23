@@ -6,9 +6,11 @@ Artefak pendukung ada di folder ini: `run.json`, `naskah-1..3.md`, `storyboard-1
 `storyboard-1..3.png`, `perbandingan.md`, `skill-audit.md`.
 
 > Ringkasan satu paragraf: mesin pemilihan topik, naskah, blueprint kreatif, rencana editing,
-> dan audit skill sudah diimplementasikan + diuji (189 tes lulus). **Yang belum ada: file MP4.**
-> Sandbox ini tidak punya `ffmpeg`, `ffprobe`, maupun browser headless, jadi render video tidak
-> dijalankan dan **tidak diklaim berhasil**. Dashboard menampilkan tahap ekspor sebagai `BLOCKED`.
+> audit skill, dan **render MP4 nyata** sudah berjalan. Tiga video 1080×1920/30 fps/H.264 sudah
+> dirender dan diverifikasi `ffprobe` (metadata di `docs/reports/studio-v10-mp4/`). Yang belum:
+> **suara narasi** (TTS diblokir), B-roll AI (butuh API key), dan render otomatis di Vercel
+> (serverless tanpa ffmpeg). Dashboard tetap menampilkan ekspor sebagai `BLOCKED` saat ffmpeg
+> tidak tersedia — itu sengaja.
 
 ---
 
@@ -134,12 +136,16 @@ Trace 14 tahap per run (`run.json`, panel dashboard):
 | voice_generation | **BLOCKED** | TTS butuh jaringan |
 | subtitle | ok | timing kata dari `computeWordTimings` (76/105/79 cue) |
 | remotion_composition | degraded | rencana scene ada, renderer tidak dijalankan |
-| ffmpeg_export | **BLOCKED** | `ffmpeg`/`ffprobe` tidak ada |
+| ffmpeg_export | **BLOCKED** di API / **ok** via `npm run studio:render` | ffmpeg 9.0.2 dipasang lokal, 3 MP4 dihasilkan |
 | quality_control | ok | 6 pemeriksaan episode |
-| final_mp4 | **BLOCKED** | tidak ada file video |
+| final_mp4 | **BLOCKED** di API / **ok** via renderer lokal | 3 file MP4 1080×1920, lihat bagian H |
 
-Total: 18 tahap `ok`, 12 `degraded`, 12 `BLOCKED`. `finalStatus = blocked`.
-**Tidak ada MP4 yang dihasilkan pada sesi ini.**
+Total saat dijalankan tanpa ffmpeg: 18 `ok`, 12 `degraded`, 12 `BLOCKED` → `finalStatus = blocked`.
+**Pembaruan:** setelah `ffmpeg`+`ffprobe` dipasang di sandbox ini, tahap
+`ffmpeg_export` dan `final_mp4` **benar-benar dieksekusi** lewat
+`npm run studio:render` dan menghasilkan 3 MP4 (lihat bagian H & I). Status di
+API tetap `BLOCKED` pada environment tanpa ffmpeg — itu disengaja agar dashboard
+tidak berbohong saat renderer tidak ada.
 
 ## H. Tiga episode percobaan + perbedaannya
 
@@ -161,16 +167,40 @@ Perbedaan terukur (`perbandingan.md`):
 | 2 vs 3 | 0.013 | 0.054 | tidak | 0.04 | berbeda |
 
 Gaya visual, hook style, struktur cerita, tipografi, dan bahasa transisi ketiganya tidak identik.
-**Yang bisa dilihat Bos:** naskah + papan cerita (PNG placeholder warna/ritme, bukan frame video).
-Video belum ada.
+
+**Video nyata sudah dirender** (1080×1920, 30 fps, H.264, sesuai blueprint masing-masing):
+
+| Episode | File | Durasi | Bitrate | Palet/aksen | Ciri visual |
+|---|---|---|---|---|---|
+| 1 · sains | `docs/reports/studio-v10-mp4/episode-1.mp4` | 43,9 s | 1.644 kbps | hitam + aksen oranye | hook teks besar, bar aksen kiri, 6 scene |
+| 2 · ekonomi | `docs/reports/studio-v10-mp4/episode-2.mp4` | 53,5 s | 1.710 kbps | ungu gelap + aksen lime | bar aksen atas, push-in, subtitle padat |
+| 3 · sosial | `docs/reports/studio-v10-mp4/episode-3.mp4` | 49,9 s | 1.769 kbps | warm dark + aksen oranye | bar bawah, drift kamera |
+
+Perbedaan yang bisa dilihat langsung: palet, warna aksen, posisi elemen aksen,
+gerak kamera per scene, transisi (`Mask reveal` vs `Graphic wipe` vs
+`Timeline slide`), dan teks besar per scene diambil dari naskah episode itu.
+
+**Yang belum ada di video:** suara narasi (TTS butuh jaringan, diblokir),
+B-roll AI (butuh API key). Track audio = AAC senyap.
 
 ## I. Metadata video
 
-Tidak ada file video → tidak ada resolusi/fps/codec/bitrate yang bisa diverifikasi.
-Yang bisa dilaporkan hanya **rencana** output: 9:16, 1080×1920, subtitle per kata, safe zone
-TikTok, target 35–55 s. Klaim 4K/120fps/bitrate tertentu **tidak dibuat** karena tidak ada
-encoder yang berjalan. Verifikasi metadata nyata harus dilakukan lewat `ffprobe` di environment
-yang punya ffmpeg (produksi/Bos).
+Diambil dari `ffprobe -print_format json` (bukan perkiraan), tersimpan di
+`docs/reports/studio-v10-mp4/render-report.json`:
+
+| Ep | Resolusi | fps | Codec video | Pixel format | Codec audio | Durasi | Bitrate | Decode check | Faststart |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1080×1920 | 30 | h264 | yuv420p | aac | 43,90 s | 1.644 kbps | bersih | ya |
+| 2 | 1080×1920 | 30 | h264 | yuv420p | aac | 53,50 s | 1.710 kbps | bersih | ya |
+| 3 | 1080×1920 | 30 | h264 | yuv420p | aac | 49,90 s | 1.769 kbps | bersih | ya |
+
+- **Decode check**: `ffmpeg -v error -i <file> -f null -` tanpa keluaran error untuk ketiganya.
+- **Subtitle**: di-burn ke frame (libass), jadi tidak muncul sebagai stream terpisah
+  (`subtitleStreams = 0`). Isi & timing ada di `episode-<n>.ass`.
+- **Audio**: AAC 128 kbps **senyap**. Belum ada narasi suara → belum ada klaim sinkron
+  audio–subtitle.
+- Klaim 4K/60–120fps/bitrate tinggi **tidak dibuat**; semuanya 1080p30 sesuai kemampuan
+  encoder yang tersedia.
 
 ## J. Test lulus/gagal
 
@@ -183,8 +213,9 @@ yang punya ffmpeg (produksi/Bos).
 | `npm run studio:dry-run` | 3 episode, 0 duplikat, QC lulus |
 | `GET /api/studio/autopilot` (dev) | 200, audit 26 skill |
 | `POST /api/studio/autopilot` (dev) | 200, 3 episode, `finalStatus = blocked` |
-| Render MP4 / `ffprobe` | **tidak dijalankan** (biner tidak ada) |
-| Preview 3 video di browser | **tidak dijalankan** (tidak ada video; chromium tidak ada) |
+| Render MP4 / `ffprobe` | **dijalankan** — 3 file MP4, semuanya lolos validasi metadata |
+| `tests/render-metadata-v10.test.ts` | 4 tes lulus (metadata + decode + honesty) |
+| Preview 3 video di browser | belum ada preview in-app; file MP4 dibuka manual oleh Bos |
 
 Suite baru: `tests/topic-intelligence-v10.test.ts` (9), `tests/creative-blueprint-v10.test.ts` (12),
 `tests/studio-pipeline-v10.test.ts` (9).
@@ -205,7 +236,9 @@ Baru:
 - `src/components/dashboard/StudioIntelligencePanel.tsx` — dashboard transparan
 - `scripts/studio-dry-run.ts` — dry-run + artefak bukti (termasuk PNG storyboard)
 - `tests/topic-intelligence-v10.test.ts`, `tests/creative-blueprint-v10.test.ts`,
-  `tests/studio-pipeline-v10.test.ts`
+  `tests/studio-pipeline-v10.test.ts`, `tests/render-metadata-v10.test.ts`
+- `scripts/studio-render.ts` — renderer MP4 nyata (ffmpeg + libass + xfade) + verifikasi ffprobe
+- `docs/reports/studio-v10-mp4/` — 3 MP4, metadata ffprobe, subtitle .ass, frame sampel
 - `docs/reports/studio-v10/*` — laporan ini + bukti run
 
 Diubah:
@@ -226,9 +259,10 @@ Diubah:
 
 ## M. Yang masih belum berfungsi / butuh tambahan
 
-1. **Render MP4 & verifikasi metadata**: butuh environment dengan `ffmpeg`/`ffprobe` +
-   Chromium/Remotion. Di sandbox tidak ada → tidak diklaim. Perlu dijalankan di produksi/Bos
-   (atau CI dengan image ber-ffmpeg).
+1. **Render MP4 & verifikasi metadata**: **sudah jalan di sandbox** setelah `ffmpeg` 9.0.2 +
+   `ffprobe` dipasang lokal (imageio-ffmpeg + ffprobe-static, tidak di-commit ke repo).
+   Yang belum: render di **produksi/Vercel** — serverless tidak menyediakan ffmpeg; perlu
+   worker/CI ber-ffmpeg kalau ingin render otomatis dari dashboard.
 2. **Suara (TTS)** dan **aset visual (image gen)**: butuh API key + jaringan; keduanya BLOCKED.
 3. **Naskah dari LLM**: endpoint produksi memakai LLM bila key tersedia, tetapi sesi ini tidak
    memanggil LLM (tanpa key) → keluarannya kerangka deterministik yang dilabeli.
