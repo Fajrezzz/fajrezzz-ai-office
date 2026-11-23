@@ -4,6 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import {
   callGeminiNative,
+  classifyProviderError,
+  describeErrorClass,
+  isTransientErrorClass,
   getRouterTelemetrySnapshot,
   isModelDeprecated,
   isModelNotFoundError,
@@ -184,7 +187,72 @@ test("v9.4: router mencoba model live SETELAH model kurasi & melewati model mati
 
 test("v9.4: panel telemetry menjelaskan cara memperbaiki model 404", () => {
   const panel = read("src/components/dashboard/AiRouterMonitoringPanel.tsx");
-  assert.match(panel, /Model 404 \/ pensiun/);
+  assert.match(panel, /Nama model sudah tidak tersedia \(404\)/);
   assert.match(panel, /p\.modelEnvVar/);
   assert.match(panel, /Model ini tidak dikenali provider/);
+});
+
+/* ============================================================================
+ * BAGIAN 2 (screenshot 23:12) — "Serius ini jadi error semua api key nya?"
+ * Semua provider tampak merah padahal key sehat: Gemini membalas
+ * 503 "This model is currently experiencing high demand" dan Groq memakai
+ * model live yang valid. Yang salah adalah cara router MENJELASKAN error.
+ * ========================================================================== */
+
+test("v9.4b: kelas error membedakan key rusak vs provider sibuk", () => {
+  assert.equal(classifyProviderError(401, "invalid api key"), "KEY_INVALID");
+  assert.equal(classifyProviderError(403, "permission denied"), "KEY_INVALID");
+  assert.equal(classifyProviderError(429, "rate limit exceeded"), "RATE_LIMIT");
+  assert.equal(
+    classifyProviderError(
+      503,
+      'This model is currently experiencing high demand. Spikes in demand are usually temporary.'
+    ),
+    "OVERLOADED"
+  );
+  assert.equal(classifyProviderError(500, "internal error"), "OVERLOADED");
+  assert.equal(classifyProviderError(404, "model not found"), "MODEL_GONE");
+  assert.equal(classifyProviderError(400, "The model has been decommissioned"), "MODEL_GONE");
+  assert.equal(classifyProviderError(408, "request timeout"), "TIMEOUT");
+  assert.equal(classifyProviderError(200, "Respons AI kosong."), "UNKNOWN");
+});
+
+test("v9.4b: 503 & 429 dianggap transient, 401 & 404 tidak", () => {
+  assert.equal(isTransientErrorClass("OVERLOADED"), true);
+  assert.equal(isTransientErrorClass("RATE_LIMIT"), true);
+  assert.equal(isTransientErrorClass("TIMEOUT"), true);
+  assert.equal(isTransientErrorClass("KEY_INVALID"), false);
+  assert.equal(isTransientErrorClass("MODEL_GONE"), false);
+  assert.match(describeErrorClass("OVERLOADED"), /bukan kerusakan API key/i);
+  assert.match(describeErrorClass("RATE_LIMIT"), /bukan kerusakan API key/i);
+  assert.match(describeErrorClass("KEY_INVALID"), /401\/403/);
+});
+
+test("v9.4b: 503 high demand TIDAK dianggap model pensiun (jangan buang kuota)", () => {
+  assert.equal(
+    isModelNotFoundError(
+      503,
+      "This model is currently experiencing high demand. Spikes in demand are usually temporary."
+    ),
+    false
+  );
+  assert.equal(isModelNotFoundError(429, "rate limit"), false);
+  assert.equal(isModelNotFoundError(500, "model overloaded"), false);
+});
+
+test("v9.4b: cooldown circuit pendek untuk provider sibuk, panjang untuk key ditolak", () => {
+  const source = read("src/lib/ai/llm-provider.ts");
+  assert.match(source, /CIRCUIT_COOLDOWN_TRANSIENT_MS = 8_000/);
+  assert.match(source, /CIRCUIT_COOLDOWN_KEY_INVALID_MS = 5 \* 60_000/);
+  assert.match(source, /isTransientErrorClass\(errorClass\)/);
+  // 503 tidak di-retry di model yang sama
+  assert.match(source, /res\.status === 429 \|\| res\.status === 500 \|\| res\.status === 502/);
+});
+
+test("v9.4b: panel menampilkan status key sehat + penjelasan error provider sibuk", () => {
+  const panel = read("src/components/dashboard/AiRouterMonitoringPanel.tsx");
+  assert.match(panel, /API KEY SEHAT/);
+  assert.match(panel, /Cara baca panel ini/);
+  assert.match(panel, /Provider sibuk:/);
+  assert.match(panel, /bukan kerusakan API key|API key tetap sehat/i);
 });

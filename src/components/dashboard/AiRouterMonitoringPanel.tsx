@@ -50,6 +50,8 @@ interface ProviderTestResponse {
     durationMs: number;
     replyPreview: string | null;
     error: string | null;
+    errorClass?: string | null;
+    errorHint?: string | null;
   }>;
   routingVerification?: {
     reasoningTask: { primaryProvider: string; taskType: string; reason: string };
@@ -420,6 +422,18 @@ export function AiRouterMonitoringPanel() {
         )}
 
         {/* 3 Primary Provider Cards: Gemini, Groq, OpenRouter */}
+        <div className="mt-3 flex items-start gap-1.5 rounded-xl border border-cyan-400/25 bg-cyan-950/20 p-2.5 text-[11px] text-cyan-100">
+          <Activity className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>
+            <strong className="font-bold">Cara baca panel ini:</strong> error{" "}
+            <code className="font-mono font-bold">503</code> /{" "}
+            <code className="font-mono font-bold">429</code> berarti provider sedang sibuk atau
+            kuota gratis habis — <strong>API key tetap sehat</strong>. Hanya{" "}
+            <code className="font-mono font-bold">401/403</code> yang berarti key bermasalah.
+            Router otomatis pindah provider, jadi fitur AI tetap jalan.
+          </span>
+        </div>
+
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {triadProviders.map((p) => (
             <div
@@ -453,6 +467,43 @@ export function AiRouterMonitoringPanel() {
                 Model: {p.activeModel}
               </div>
 
+              {p.configured && (
+                <div
+                  className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    p.lastErrorClass === "KEY_INVALID" || !p.keyHealthy
+                      ? "bg-rose-500/20 text-rose-200"
+                      : "bg-emerald-500/15 text-emerald-300"
+                  }`}
+                >
+                  {p.lastErrorClass === "KEY_INVALID" || !p.keyHealthy ? (
+                    <>
+                      <ShieldAlert className="h-3 w-3" /> KEY DITOLAK
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-3 w-3" /> API KEY SEHAT
+                    </>
+                  )}
+                </div>
+              )}
+
+              {p.lastErrorHuman && p.lastErrorClass && (
+                <div className="mt-2 rounded-lg border border-slate-500/25 bg-slate-900/60 px-2 py-1.5 text-[10px] text-slate-200">
+                  <strong className="font-bold text-white">
+                    {p.lastErrorClass === "OVERLOADED"
+                      ? "Provider sibuk:"
+                      : p.lastErrorClass === "RATE_LIMIT"
+                        ? "Kuota sementara habis:"
+                        : p.lastErrorClass === "MODEL_GONE"
+                          ? "Nama model tidak ada:"
+                          : p.lastErrorClass === "KEY_INVALID"
+                            ? "Key ditolak:"
+                            : "Error:"}
+                  </strong>{" "}
+                  {p.lastErrorHuman}
+                </div>
+              )}
+
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-slate-300">
                 <div>
                   Latency:{" "}
@@ -461,7 +512,7 @@ export function AiRouterMonitoringPanel() {
                   </strong>
                 </div>
                 <div>
-                  Error Rate:{" "}
+                  Error rate (total):{" "}
                   <strong className="text-white">{p.errorRatePct}%</strong>
                 </div>
                 <div>
@@ -495,11 +546,12 @@ export function AiRouterMonitoringPanel() {
                 <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-400/35 bg-amber-950/35 px-2 py-1.5 text-[10px] text-amber-200">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   <span className="min-w-0">
-                    <strong className="font-bold">Model 404 / pensiun:</strong>{" "}
+                    <strong className="font-bold">Nama model sudah tidak tersedia (404):</strong>{" "}
                     <span className="font-mono break-all">{p.deprecatedModels.join(", ")}</span>
                     <br />
-                    Router otomatis pindah ke model lain. Kalau semua kena 404, ganti
-                    model tanpa deploy: set{" "}
+                    Ini <strong>bukan</strong> masalah API key — key-nya tetap dipakai untuk
+                    model pengganti. Router otomatis pindah model. Kalau perlu ganti permanen,
+                    set{" "}
                     <code className="font-mono font-bold">{p.modelEnvVar}</code> di Vercel
                     (contoh: <code className="font-mono">gemini-flash-latest</code>).
                   </span>
@@ -570,6 +622,11 @@ export function AiRouterMonitoringPanel() {
                     <div className="mt-0.5 truncate font-mono text-[10px] opacity-85">
                       {r.model ?? r.error ?? "–"}
                     </div>
+                    {!r.ok && r.errorHint && (
+                      <div className="mt-1 rounded border border-white/15 bg-black/25 px-1.5 py-1 text-[10px] font-medium opacity-95">
+                        {r.errorHint}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

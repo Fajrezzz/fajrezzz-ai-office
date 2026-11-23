@@ -135,6 +135,14 @@ export interface ProviderHealthMetrics {
   lastCheckedAt: string | null;
   rateLimitRemaining: string | null;
   rateLimitReset: string | null;
+  /** Kelas error terakhir (KEY_INVALID / OVERLOADED / MODEL_GONE / ...). */
+  lastErrorClass: ProviderErrorClass | null;
+  /** Penjelasan awam untuk kelas error di atas. */
+  lastErrorHuman: string | null;
+  /** true kalau provider tidak pernah menolak key (401/403). */
+  keyHealthy: boolean;
+  /** true kalau error terakhir hanya transient (provider sibuk / rate limit). */
+  transientOnly: boolean;
   /** Model yang dibalas 404 oleh provider (di-skip sementara, 15 menit). */
   deprecatedModels: string[];
   /** Env var untuk mengganti model tanpa deploy (GEMINI_MODEL / GROQ_MODEL / OPENROUTER_MODEL). */
@@ -197,7 +205,9 @@ const PROVIDER_TARGETS: Record<LlmProviderId, ProviderTarget> = {
     label: "Groq Cloud",
     envVar: "GROQ_API_KEY",
     endpoint: "https://api.groq.com/openai/v1/chat/completions",
-    models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+    // v9.4b: llama-3.3/3.1 sudah decommissioned di Groq (lihat telemetry Bos),
+    // jadi model live yang terbukti jalan didahulukan. Bisa dioverride GROQ_MODEL.
+    models: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "llama-3.3-70b-versatile"],
     role: "Primary: Fast Low-Latency, Classification, Summarization & Text Processing",
   },
   openrouter: {
@@ -218,7 +228,7 @@ const FREE_TIER_SUMMARIES: Record<LlmProviderId, string> = {
   gemini:
     "Primary reasoning/research/planning (Gemini 2.5 Flash & Flash-Lite Free Tier)",
   groq:
-    "Primary ultra-fast latency/classification/summary (Llama 3.3 70B & 3.1 8B Free Tier)",
+    "Primary ultra-fast latency/classification/summary (model live Groq, mis. Qwen / GPT-OSS 120B free tier)",
   openrouter:
     "Fallback & alternative via https://openrouter.ai/api/v1 (hanya model :free secara default)",
 };
@@ -343,12 +353,75 @@ export function resetDeprecatedModels(): void {
   DEPRECATED_MODELS.clear();
 }
 
+/**
+ * Jenis kegagalan provider — dipakai untuk membedakan "key rusak" dari
+ * "provider sedang sibuk". Tanpa ini panel telemetry terlihat seperti semua
+ * API key mati padahal cuma Google yang membalas 503 high demand.
+ */
+export type ProviderErrorClass =
+  | "MODEL_GONE"
+  | "KEY_INVALID"
+  | "RATE_LIMIT"
+  | "OVERLOADED"
+  | "TIMEOUT"
+  | "UNKNOWN";
+
+export function classifyProviderError(
+  status: number | undefined,
+  message: string
+): ProviderErrorClass {
+  const msg = message || "";
+  if (status === 401 || status === 403) return "KEY_INVALID";
+  if (status === 429) return "RATE_LIMIT";
+  if (status === 404) return "MODEL_GONE";
+  if (status === 408) return "TIMEOUT";
+  if (typeof status === "number" && status >= 500) return "OVERLOADED";
+
+  if (/\b(api[ _-]?key|unauthori[sz]ed|invalid key|permission denied)\b/i.test(msg)) {
+    return "KEY_INVALID";
+  }
+  if (/\b(rate limit|too many requests|quota|resource_exhausted)\b/i.test(msg)) {
+    return "RATE_LIMIT";
+  }
+  if (/\b(timeout|timed out|aborted|econnreset|socket hang up)\b/i.test(msg)) {
+    return "TIMEOUT";
+  }
+  if (/(model)/i.test(msg) &&
+      /(not found|does not exist|no longer|decommission|not supported|unsupported|deprecated)/i.test(msg)) {
+    return "MODEL_GONE";
+  }
+  if (/\b(high demand|overloaded|over capacity|service unavailable|temporarily unavailable)\b/i.test(msg)) {
+    return "OVERLOADED";
+  }
+  return "UNKNOWN";
+}
+
+/** Error yang wajar terjadi sesaat (bukan tanda API key rusak). */
+export function isTransientErrorClass(cls: ProviderErrorClass): boolean {
+  return cls === "OVERLOADED" || cls === "RATE_LIMIT" || cls === "TIMEOUT";
+}
+
+/** Kalimat manusiawi untuk panel telemetry. */
+export function describeErrorClass(cls: ProviderErrorClass): string {
+  switch (cls) {
+    case "KEY_INVALID":
+      return "API key ditolak provider (401/403) — key salah, sudah dicabut, atau beda project.";
+    case "MODEL_GONE":
+      return "Nama model sudah tidak tersedia di provider — router pindah model / set env model.";
+    case "RATE_LIMIT":
+      return "Rate limit / kuota gratis habis sementara — bukan kerusakan API key.";
+    case "OVERLOADED":
+      return "Server provider kelebihan beban (5xx, mis. high demand) — bukan kerusakan API key.";
+    case "TIMEOUT":
+      return "Provider tidak merespons tepat waktu — jaringan/antrean, bukan kerusakan API key.";
+    default:
+      return "Error tak terduga dari provider.";
+  }
+}
+
 /** Pesan provider yang menandakan model tidak ada / sudah dipensiunkan. */
 export function isModelNotFoundError(status: number | undefined, message: string): boolean {
-  if (status === 404) return true;
-  return /(model).*(not found|does not exist|is not supported|deprecated|no longer available|not available)/i.test(
-    message
-  );
+  return classifyProviderError(status, message) === "MODEL_GONE";
 }
 
 /**
@@ -497,7 +570,7 @@ const DISCOVERY_ENDPOINTS: Record<LlmProviderId, string> = {
 /** Urutan prioritas model murah/cepat per provider saat discovery berhasil. */
 const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
   gemini: [/flash-latest/i, /gemini-2\.5-flash-lite/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /flash/i],
-  groq: [/llama-3\.3-70b/i, /gpt-oss-120b/i, /gpt-oss-20b/i, /llama-3\.1-8b/i, /qwen/i, /llama/i],
+  groq: [/gpt-oss-120b/i, /qwen3?/i, /qwen/i, /llama-3\.3-70b/i, /llama-3\.1-8b/i, /llama/i],
   openrouter: [/llama-3\.3-70b[^:]*:free/i, /gemma-3[^:]*:free/i, /qwen[^:]*:free/i, /:free/i],
 };
 
@@ -670,6 +743,15 @@ export function classifyAiTask(options: {
 const MAX_CONCURRENT_REQUESTS = 3;
 const CIRCUIT_FAILURE_THRESHOLD = 3;
 const CIRCUIT_COOLDOWN_MS = 45_000;
+/**
+ * v9.4 FIX — cooldown dibedakan per JENIS error:
+ *  - provider sibuk / rate limit / timeout = gangguan sesaat → 8 detik saja,
+ *    supaya Gemini tidak "dikunci" 45 detik hanya karena 503 high demand.
+ *  - key ditolak (401/403) = percuma diulang cepat → 5 menit.
+ */
+const CIRCUIT_COOLDOWN_TRANSIENT_MS = 8_000;
+const CIRCUIT_COOLDOWN_KEY_INVALID_MS = 5 * 60_000;
+const CIRCUIT_COOLDOWN_MODEL_GONE_MS = 12_000;
 const CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHE_ENTRIES = 64;
 const MAX_SAFE_TOKEN_BUDGET = 4096;
@@ -692,6 +774,8 @@ interface InternalProviderState {
   lastCheckedAt: string | null;
   rateLimitRemaining: string | null;
   rateLimitReset: string | null;
+  lastErrorClass: ProviderErrorClass | null;
+  everRejectedKey: boolean;
 }
 
 interface CacheRecord {
@@ -724,6 +808,8 @@ function createInitialProviderState(defaultModel: string): InternalProviderState
     lastCheckedAt: null,
     rateLimitRemaining: null,
     rateLimitReset: null,
+    lastErrorClass: null,
+    everRejectedKey: false,
   };
 }
 
@@ -823,19 +909,33 @@ function recordProviderFailure(
   provider: LlmProviderId,
   durationMs: number,
   errorMsg: string,
-  isRateLimit: boolean
+  isRateLimit: boolean,
+  status?: number
 ): void {
   const st = providerStates[provider];
+  const safeMsg = sanitizeErrorMessage(errorMsg);
+  const errorClass = classifyProviderError(status, safeMsg);
+
   st.failureCount += 1;
   st.consecutiveFailures += 1;
   st.lastLatencyMs = durationMs;
-  if (isRateLimit) st.rateLimitHits += 1;
-  st.lastError = sanitizeErrorMessage(errorMsg);
+  st.lastErrorClass = errorClass;
+  if (isRateLimit || errorClass === "RATE_LIMIT") st.rateLimitHits += 1;
+  if (errorClass === "KEY_INVALID") st.everRejectedKey = true;
+  st.lastError = safeMsg;
   st.lastCheckedAt = new Date().toISOString();
 
   if (st.consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
     st.circuitState = "OPEN";
-    st.circuitOpenedUntilMs = Date.now() + CIRCUIT_COOLDOWN_MS;
+    const cooldown =
+      errorClass === "KEY_INVALID"
+        ? CIRCUIT_COOLDOWN_KEY_INVALID_MS
+        : errorClass === "MODEL_GONE"
+          ? CIRCUIT_COOLDOWN_MODEL_GONE_MS
+          : isTransientErrorClass(errorClass)
+            ? CIRCUIT_COOLDOWN_TRANSIENT_MS
+            : CIRCUIT_COOLDOWN_MS;
+    st.circuitOpenedUntilMs = Date.now() + cooldown;
   }
 }
 
@@ -882,6 +982,13 @@ export function getRouterTelemetrySnapshot(): RouterTelemetrySnapshot {
       lastCheckedAt: st.lastCheckedAt,
       rateLimitRemaining: st.rateLimitRemaining,
       rateLimitReset: st.rateLimitReset,
+      lastErrorClass: st.lastErrorClass,
+      lastErrorHuman: st.lastErrorClass ? describeErrorClass(st.lastErrorClass) : null,
+      keyHealthy: !st.everRejectedKey,
+      transientOnly:
+        st.failureCount > 0 &&
+        st.successCount === 0 &&
+        (st.lastErrorClass === null || isTransientErrorClass(st.lastErrorClass)),
       deprecatedModels: getDeprecatedModels(id).map((entry) => entry.split(":").slice(1).join(":")),
       modelEnvVar: MODEL_ENV[id],
       preferredModels: resolveProviderModels(id),
@@ -1400,7 +1507,8 @@ export async function callCentralAIRouter<T = unknown>(
                   target.provider,
                   totalDurationMs,
                   `HTTP ${res.status}: ${shortErr} · native ${native.status}: ${nativeErr}`,
-                  false
+                  false,
+                  native.status || res.status
                 );
                 attempts.push({
                   provider: target.provider,
@@ -1421,7 +1529,8 @@ export async function callCentralAIRouter<T = unknown>(
                 target.provider,
                 durationMs,
                 `HTTP ${res.status}: ${shortErr}`,
-                isRateLimit
+                isRateLimit,
+                res.status
               );
 
               attempts.push({
@@ -1434,8 +1543,14 @@ export async function callCentralAIRouter<T = unknown>(
                 error: `HTTP ${res.status}: ${shortErr}`,
               });
 
-              // Bounded exponential backoff retry only on transient 5xx or 429
-              if ((res.status === 429 || res.status >= 500) && retry < maxRetries) {
+              /*
+               * Retry hanya untuk gangguan yang benar-benar sesaat.
+               * 503 "high demand" TIDAK diulang di model yang sama — langsung
+               * pindah model/provider supaya Bos tidak menunggu 2x timeout.
+               */
+              const retryable =
+                res.status === 429 || res.status === 500 || res.status === 502;
+              if (retryable && retry < maxRetries) {
                 const retryAfterSec = Number(res.headers?.get?.("retry-after") || "0");
                 const backoffMs =
                   retryAfterSec > 0
@@ -1463,7 +1578,8 @@ export async function callCentralAIRouter<T = unknown>(
                 target.provider,
                 durationMs,
                 "Respons AI kosong.",
-                false
+                false,
+                res.status
               );
               attempts.push({
                 provider: target.provider,
@@ -1483,7 +1599,8 @@ export async function callCentralAIRouter<T = unknown>(
                 target.provider,
                 durationMs,
                 `JSON tidak valid: ${lastParseError}`,
-                false
+                false,
+                res.status
               );
               attempts.push({
                 provider: target.provider,

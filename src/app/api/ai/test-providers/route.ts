@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import {
   callCentralAIRouter,
   classifyAiTask,
+  classifyProviderError,
+  describeErrorClass,
   getConfiguredProvidersStatus,
   isProviderConfigured,
   summarizeProviderFailures,
@@ -20,6 +22,9 @@ interface SingleProviderProbeResult {
   durationMs: number;
   replyPreview: string | null;
   error: string | null;
+  /** Kelas error (KEY_INVALID / OVERLOADED / MODEL_GONE / ...) untuk menjelaskan ke Bos. */
+  errorClass?: string | null;
+  errorHint?: string | null;
   attempts?: ProviderAttempt[];
 }
 
@@ -98,6 +103,8 @@ export async function POST(request: Request) {
         error: null,
       });
     } else {
+      const lastFailure = [...res.attempts].reverse().find((a) => !a.ok);
+      const errorClass = classifyProviderError(lastFailure?.status, lastFailure?.error ?? res.error);
       results.push({
         provider,
         configured: true,
@@ -107,6 +114,8 @@ export async function POST(request: Request) {
         durationMs: Date.now() - start,
         replyPreview: null,
         error: res.error,
+        errorClass,
+        errorHint: describeErrorClass(errorClass),
         attempts: res.attempts,
       });
     }

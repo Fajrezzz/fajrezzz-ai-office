@@ -192,3 +192,30 @@ Router v9.4 menangani ini berlapis, tanpa perlu ubah kode:
 Cara cek cepat: buka panel **Telemetry → AI Router**, lihat kartu provider. Kalau ada
 tulisan *Model 404 / pensiun*, nama model itulah yang harus diganti lewat env di atas.
 Dijaga `tests/ai-model-recovery-v94.test.ts` (11 tes).
+
+---
+
+## 10. "Error Rate 100%" belum tentu API key rusak
+
+Panel telemetry bisa terlihat merah padahal key sehat. Baca **kelas error**-nya, bukan angkanya:
+
+| Kelas | Arti | Perlu apa? |
+| --- | --- | --- |
+| `KEY_INVALID` (401/403) | Key ditolak provider | Copy ulang key / revoke lalu buat baru |
+| `OVERLOADED` (5xx, mis. `503 high demand`) | Server provider kelebihan beban | **Tidak ada.** Router pindah ke provider lain |
+| `RATE_LIMIT` (429) | Kuota gratis habis sementara | Tunggu / pasang key kedua |
+| `MODEL_GONE` (404) | Nama model sudah dipensiunkan | Router ganti model otomatis; bisa set `GEMINI_MODEL` / `GROQ_MODEL` |
+| `TIMEOUT` | Provider tidak menjawab tepat waktu | Coba lagi |
+
+Kartu provider sekarang punya badge **API KEY SEHAT** / **KEY DITOLAK** dan kalimat penjelas,
+jadi tidak lagi menyimpulkan "semua API key mati" hanya karena satu provider sibuk.
+
+Tambahan v9.4b:
+- `Error rate (total)` diberi label supaya jelas itu angka kumulatif sejak server hidup.
+- Circuit breaker membedakan penyebab: provider sibuk hanya dikunci **8 detik**
+  (dulu 45 detik), key ditolak dikunci 5 menit, nama model mati 12 detik.
+- HTTP 503 / 5xx tidak lagi mengulang model yang sama (langsung pindah model/provider),
+  sehingga request tidak menunggu dua kali timeout.
+- Hasil **Tes Live Provider** kini menyertakan kelas error + saran perbaikan di bawah nama model.
+
+Dijaga `tests/ai-model-recovery-v94.test.ts` (16 tes).
