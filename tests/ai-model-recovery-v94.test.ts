@@ -359,3 +359,59 @@ test("v9.4c: panel punya badge kuota harian & contoh model per provider", () => 
   assert.match(panel, /function freeModelsPerDay/);
   assert.match(panel, /1\.000 req\/hari/);
 });
+
+/* ============================================================================
+ * v9.4d — "Gemini masih sama aja".
+ * Karena menebak nama model tidak menyelesaikan apa pun, jalur Gemini diubah:
+ * endpoint NATIVE dipakai lebih dulu, dan sebab asli error ditampilkan ke Bos
+ * (plus halaman Katalog Model untuk melihat model yang benar-benar terbuka).
+ * ========================================================================== */
+
+test("v9.4d: Gemini memakai endpoint native lebih dulu, compat jadi cadangan", () => {
+  const source = read("src/lib/ai/llm-provider.ts");
+  const nativeIdx = source.indexOf('if (target.provider === "gemini" && apiKey && retry === 0) {');
+  const bodyIdx = source.indexOf("const bodyPayload: Record<string, unknown> = {");
+  assert.ok(nativeIdx > 0, "blok native-first tidak ditemukan");
+  assert.ok(nativeIdx < bodyIdx, "native harus dicoba sebelum request compat");
+  // model yang 404 di jalur native tidak dibuang kuotanya di jalur compat
+  assert.match(source, /if \(nativeClass === "MODEL_GONE"\)/);
+});
+
+test("v9.4d: hint khusus untuk model yang ditutup bagi project baru", () => {
+  const retired = describeProviderError(
+    404,
+    '{"error":{"code":404,"message":"This model models/gemini-2.5-flash-lite is no longer available to new users."}}'
+  );
+  assert.equal(retired.errorClass, "MODEL_GONE");
+  assert.match(retired.hint, /project\/akun BARU/i);
+  assert.match(retired.hint, /GEMINI_MODEL/);
+  assert.match(retired.hint, /model-catalog/);
+});
+
+test("v9.4d: halaman katalog model tersedia & tidak pernah membocorkan key", () => {
+  const route = read("src/app/api/ai/model-catalog/route.ts");
+  assert.match(route, /generativelanguage\.googleapis\.com\/v1beta\/models/);
+  assert.match(route, /keyPresent/);
+  assert.match(route, /sanitizeErrorMessage/);
+  assert.match(route, /format === "json"/);
+  // key hanya dibaca dari env untuk request keluar, tidak dimasukkan ke payload
+  assert.ok(!/apiKey:\s*apiKey/.test(route), "payload tidak boleh memuat apiKey");
+  assert.ok(!/key:\s*apiKey[,}]/.test(route), "payload tidak boleh memuat key");
+});
+
+test("v9.4d: Tes Live Provider menampilkan error mentah (disanitasi)", () => {
+  const route = read("src/app/api/ai/test-providers/route.ts");
+  assert.match(route, /rawError/);
+  assert.match(route, /sanitizeErrorMessage\(/);
+  const panel = read("src/components/dashboard/AiRouterMonitoringPanel.tsx");
+  assert.match(panel, /r\.rawError/);
+  assert.match(panel, /\/api\/ai\/model-catalog\?provider=/);
+});
+
+test("v9.4d: katalog menguji jalur native di v1beta DAN v1", () => {
+  const route = read("src/app/api/ai/model-catalog/route.ts");
+  assert.match(route, /probeNativeVersion/);
+  assert.match(route, /"v1beta"/);
+  assert.match(route, /"v1"/);
+  assert.match(route, /probeNativeVersion\(model, apiKey, "v1"\)/);
+});

@@ -76,6 +76,7 @@ interface ProviderTestResponse {
     error: string | null;
     errorClass?: string | null;
     errorHint?: string | null;
+    rawError?: string | null;
   }>;
   routingVerification?: {
     reasoningTask: { primaryProvider: string; taskType: string; reason: string };
@@ -594,6 +595,15 @@ export function AiRouterMonitoringPanel() {
                 </div>
               )}
 
+              <a
+                href={`/api/ai/model-catalog?provider=${p.provider}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-950/40 px-2 py-0.5 text-[10px] font-bold text-cyan-200"
+              >
+                <FlaskConical className="h-3 w-3" /> Cek katalog model {p.provider}
+              </a>
+
               {p.lastError && (
                 <div
                   className="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/30 px-2 py-1 text-[10px] text-rose-200"
@@ -667,6 +677,15 @@ export function AiRouterMonitoringPanel() {
                     {!r.ok && r.errorHint && (
                       <div className="mt-1 rounded border border-white/15 bg-black/25 px-1.5 py-1 text-[10px] font-medium opacity-95">
                         {r.errorHint}
+                      </div>
+                    )}
+                    {/* v9.4d — sebab asli dari provider, biar tidak menebak lagi */}
+                    {!r.ok && r.rawError && (
+                      <div
+                        className="mt-1 max-h-20 overflow-y-auto rounded border border-white/10 bg-black/40 px-1.5 py-1 font-mono text-[9px] leading-snug opacity-80"
+                        title={r.rawError}
+                      >
+                        {r.rawError}
                       </div>
                     )}
                   </div>

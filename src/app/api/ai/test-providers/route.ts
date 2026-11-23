@@ -6,6 +6,7 @@ import {
   describeProviderError,
   getConfiguredProvidersStatus,
   isProviderConfigured,
+  sanitizeErrorMessage,
   summarizeProviderFailures,
   type LlmProviderId,
   type ProviderAttempt,
@@ -25,6 +26,8 @@ interface SingleProviderProbeResult {
   /** Kelas error (KEY_INVALID / OVERLOADED / MODEL_GONE / ...) untuk menjelaskan ke Bos. */
   errorClass?: string | null;
   errorHint?: string | null;
+  /** v9.4d — pesan mentah (sudah disanitasi) supaya Bos & agent bisa melihat sebab asli. */
+  rawError?: string | null;
   attempts?: ProviderAttempt[];
 }
 
@@ -123,6 +126,9 @@ export async function POST(request: Request) {
         error: res.error,
         errorClass,
         errorHint: detail.hint,
+        rawError: sanitizeErrorMessage(
+          [lastFailure?.error, res.error].filter(Boolean).join(" | ") || "gagal tanpa pesan"
+        ),
         attempts: res.attempts,
       });
     }

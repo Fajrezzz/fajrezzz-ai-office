@@ -462,6 +462,20 @@ export function describeProviderError(
   message: string
 ): { errorClass: ProviderErrorClass; hint: string } {
   const errorClass = classifyProviderError(status, message);
+  /*
+   * v9.4d — Google menutup model lama untuk project BARU tanpa menghapusnya:
+   * "This model models/gemini-2.5-flash-lite is no longer available to new users."
+   * Itu bukan salah ketik model, jadi saran "ganti nama model" menyesatkan.
+   */
+  if (/no longer available to new users/i.test(message || "")) {
+    return {
+      errorClass,
+      hint:
+        "Model ini ditutup untuk project/akun BARU oleh Google (bukan key rusak, bukan model salah ketik). " +
+        "Router harus memakai model yang lebih baru — buka /api/ai/model-catalog?provider=gemini untuk melihat " +
+        "daftar model yang benar-benar terbuka untuk key ini, lalu set GEMINI_MODEL.",
+    };
+  }
   if (errorClass === "RATE_LIMIT" && isDailyFreeQuotaError(message)) {
     return {
       errorClass,
@@ -1534,6 +1548,76 @@ export async function callCentralAIRouter<T = unknown>(
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
           try {
+            /*
+             * v9.4d — Gemini dicoba lewat endpoint NATIVE dulu (`:generateContent`).
+             *
+             * Alasannya dari telemetry Bos: model yang sama bisa dibalas 404 oleh
+             * lapisan kompatibilitas OpenAI padahal hidup di endpoint native, dan
+             * pesan "models/gemini-2.5-flash-lite is no longer available to new
+             * users" hanya muncul jelas di jalur native. Native = sumber kebenaran,
+             * jadi dipakai lebih dulu; jalur compat tetap jadi cadangan kalau
+             * request native ditolak karena bentuk request (400) dsb.
+             */
+            if (target.provider === "gemini" && apiKey && retry === 0) {
+              const native = await callGeminiNative(
+                {
+                  model,
+                  systemPrompt,
+                  userPrompt,
+                  temperature,
+                  maxTokens: safeMaxTokens,
+                  expectJson,
+                  apiKey,
+                },
+                fetchImpl,
+                Math.min(timeoutMs, 12_000)
+              );
+              const nativeParse = native.ok
+                ? parseModelOutput<T>(native.rawText, Boolean(expectJson))
+                : { ok: false as const, error: native.error ?? "Gemini native gagal" };
+
+              if (native.ok && nativeParse.ok) {
+                return finalizeSuccess({
+                  provider: target.provider,
+                  model: `${model} (native)`,
+                  rawText: native.rawText,
+                  parsed: nativeParse.parsed,
+                  status: native.status,
+                  durationMs: Date.now() - start,
+                  usage: native.usage,
+                });
+              }
+
+              const nativeMsg = !native.ok
+                ? native.error ?? "Gemini native gagal"
+                : !nativeParse.ok
+                  ? nativeParse.error
+                  : "Gemini native gagal";
+              const nativeClass = classifyProviderError(native.status, nativeMsg);
+
+              if (nativeClass === "MODEL_GONE") {
+                // Model ini memang pensiun di mata Google → jangan buang kuota.
+                markModelDeprecated(target.provider, model);
+                recordProviderFailure(
+                  target.provider,
+                  Date.now() - start,
+                  `HTTP ${native.status}: ${nativeMsg}`,
+                  false,
+                  native.status
+                );
+                attempts.push({
+                  provider: target.provider,
+                  model,
+                  ok: false,
+                  status: native.status,
+                  durationMs: Date.now() - start,
+                  error: `native HTTP ${native.status}: ${nativeMsg}`,
+                });
+                break;
+              }
+              // Bukan 404 → bentuk request kita mungkin ditolak; lanjut ke jalur compat.
+            }
+
             const bodyPayload: Record<string, unknown> = {
               model,
               temperature,

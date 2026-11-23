@@ -251,3 +251,45 @@ Provider yang circuit-nya terbuka karena kuota harian **tidak dikunci sehari pen
 supaya otomatis pulih setelah kuota reset tanpa perlu redeploy.
 
 Dijaga `tests/ai-model-recovery-v94.test.ts` (24 tes, 8 di antaranya v9.4c).
+
+---
+
+## 12. Gemini "masih sama aja" — diagnosa, bukan tebakan (v9.4d)
+
+Kalau `gemini-2.5-flash` dibalas
+
+> `This model models/gemini-2.5-flash-lite is no longer available to new users`
+
+itu artinya Google **menutup model lama untuk project/akun baru** (modelnya masih terdaftar,
+tapi tidak dibuka untuk key baru). Mengetik ulang nama model yang sama tidak akan menolong.
+
+### Cara membaca keadaan sebenarnya
+
+1. **Telemetry → AI Router → kartu Gemini → "Cek katalog model gemini"** (atau buka
+   `/api/ai/model-catalog?provider=gemini`). Halaman itu menampilkan:
+   - daftar model yang **benar-benar** dikembalikan `GET /v1beta/models` untuk key tersebut,
+   - hasil uji per model lewat jalur **native** (`:generateContent`) dan **compat**
+     (`/v1beta/openai/chat/completions`),
+   - status router sesaat (circuit, kelas error terakhir, kuota harian).
+   API key **tidak pernah** ditampilkan di halaman ini.
+2. **Tes Live Provider** sekarang menampilkan *raw error* (sudah disanitasi) di bawah saran
+   perbaikan, jadi sebab aslinya kelihatan, bukan cuma kesimpulan.
+
+### Yang diubah di kode
+
+| Sebelum | Sesudah |
+| --- | --- |
+| Compat OpenAI dulu; native hanya penyelamat setelah compat 404 | **Native `:generateContent` dulu**, compat cadangan kalau request native ditolak (400 dsb) |
+| Semua 404 dianggap "nama model salah ketik" | Pesan `no longer available to new users` dapat penjelasan sendiri: model ditutup untuk project baru |
+| Sebab asli error tidak terlihat di panel | `rawError` ditampilkan (disanitasi) |
+| Tidak ada cara melihat daftar model yang terbuka | Halaman `/api/ai/model-catalog?provider=gemini\|groq\|openrouter` |
+
+Setelah daftar model terlihat, ganti permanen tanpa deploy lewat env:
+
+```
+GEMINI_MODEL=gemini-…      # salah satu id dari tabel 1 pada halaman katalog
+GROQ_MODEL=openai/gpt-oss-120b
+OPENROUTER_MODEL=nama-model:free
+```
+
+Dijaga `tests/ai-model-recovery-v94.test.ts` (28 tes; 4 di antaranya v9.4d).
