@@ -25,6 +25,7 @@ import {
   TEAM_DIVISIONS,
 } from "@/lib/config/team-roster";
 import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
+import { AiRouterMonitoringPanel } from "@/components/dashboard/AiRouterMonitoringPanel";
 import { useAgency } from "@/store/AgencyContext";
 import { useOffice } from "@/store/OfficeContext";
 import { PIPELINE_DIVISIONS, type RealEpisode } from "@/types/pipeline";
@@ -418,6 +419,9 @@ export function RealResultsDashboard({ compact = false }: { compact?: boolean })
           </div>
         </div>
       </div>
+
+      {/* CENTRAL AI ROUTER MONITORING (GEMINI + GROQ + OPENROUTER) & AUTONOMOUS AGENT ENGINE */}
+      <AiRouterMonitoringPanel />
 
       {/* LIVE RENDERING & VIDEO PROGRESS STATUS */}
       <div className="rounded-2xl border border-fuchsia-400/25 bg-slate-900/80 p-4">

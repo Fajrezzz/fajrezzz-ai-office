@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { callFreeTierLLM } from "@/lib/ai/llm-provider";
+import { callFreeTierLLM, type AiTaskType, type LlmProviderId } from "@/lib/ai/llm-provider";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
       expectJson?: boolean;
       temperature?: number;
       maxTokens?: number;
+      taskType?: AiTaskType;
+      preferredProvider?: LlmProviderId;
     };
 
     const systemPrompt = body.systemPrompt?.trim() ?? "";
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
     }
 
     const result = await callFreeTierLLM({
+      taskType: body.taskType ?? "auto",
+      preferredProvider: body.preferredProvider,
       systemPrompt:
         systemPrompt ||
         "Anda adalah asisten produksi konten profesional berbahasa Indonesia. Balas hanya dalam JSON valid.",

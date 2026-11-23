@@ -80,6 +80,7 @@ ${recentMemory.length > 0 ? recentMemory.map((m, i) => `  ${i + 1}. ${m}`).join(
 Sekarang pikirkan secara mandiri apa yang paling penting kamu kerjakan detik ini, putuskan posisimu di kantor, dan hasilkan 1 output kerja nyata yang konkret!`;
 
     const result = await callFreeTierLLM<Partial<AgentThinkDecision>>({
+      taskType: "agent_decision",
       systemPrompt,
       userPrompt,
       expectJson: true,
