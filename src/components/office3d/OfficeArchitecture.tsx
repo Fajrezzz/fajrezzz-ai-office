@@ -1334,11 +1334,11 @@ export function OfficeArchitecture({
             <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
+          {/* v9.4 — pot di ujung promenade dikurangi: dari 2 jadi 1 (Bos: "potnya hilangin 1") */}
           <IndoorPlanter position={[-6.4, FLOOR_2_Y, 2.5]} />
-          <IndoorPlanter position={[6.4, FLOOR_2_Y, 2.5]} />
 
           {/* Compact High-Tech Server Cabinet tucked cleanly behind West Coffee Bar */}
-          <group position={[-13.2, FLOOR_2_Y + 1.15, -6.9]}>
+          <group position={[-17.3, FLOOR_2_Y + 1.15, -8.5]}>
             <mesh castShadow>
               <boxGeometry args={[0.72, 2.2, 0.92]} />
               <meshStandardMaterial
@@ -1375,8 +1375,10 @@ export function OfficeArchitecture({
             </group>
           ))}
 
-          {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -12.2) */}
-          <group position={[-12.2, FLOOR_2_Y, -4.6]}>
+          {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -17.6)
+              v9.4 — Bos: "meja/tempat ngopi masih bisa didekatkan ke tembok".
+              Dulunya bar berdiri di tengah ruang (X = -12.2) → sekarang menempel dinding. */}
+          <group position={[-17.6, FLOOR_2_Y, -4.6]}>
             <mesh position={[-0.2, 0.54, 0]} castShadow receiveShadow>
               <boxGeometry args={[1.1, 1.06, 4.8]} />
               <meshStandardMaterial color="#875d39" roughness={0.48} />
@@ -1437,8 +1439,8 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* East Wing Espresso & Collaboration Bar (X = 12.2) */}
-          <group position={[12.2, FLOOR_2_Y, -4.6]}>
+          {/* East Wing Espresso & Collaboration Bar (X = 17.6) — menempel dinding (v9.4) */}
+          <group position={[17.6, FLOOR_2_Y, -4.6]}>
             <mesh position={[0.2, 0.54, 0]} castShadow receiveShadow>
               <boxGeometry args={[1.1, 1.06, 4.8]} />
               <meshStandardMaterial color="#875d39" roughness={0.48} />
@@ -1656,21 +1658,27 @@ export function OfficeArchitecture({
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>
 
-          <IndoorPlanter position={[-12.6, FLOOR_2_Y, 2.4]} />
-          <IndoorPlanter position={[12.6, FLOOR_2_Y, 2.4]} />
+          {/* v9.4 — 2 pot ini dulu berdiri tepat di area pod yang sekarang digeser
+              ke sisi; dipindah ke ujung lain sudah tidak perlu → dihapus saja. */}
 
-          {/* Balkon Tengah: 1 armchair tambahan (agen duduk ngopi di wp-seat-09) */}
+          {/* Balkon Tengah: 1 armchair (agen duduk ngopi di wp-seat-09).
+              v9.4 — sebelumnya base & dudukan terpisah 0,3 m sehingga kursi tampak
+              melayang/mau jatuh; sekarang disambung tiang penyangga penuh. */}
           <group position={[-1.6, FLOOR_2_Y, 4.5]}>
-            <mesh position={[0, 0.04, 0]}>
-              <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
+            <mesh position={[0, 0.02, 0]} receiveShadow>
+              <cylinderGeometry args={[0.3, 0.32, 0.04, 14]} />
               <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
             </mesh>
-            <mesh position={[0, 0.44, 0]} castShadow>
+            <mesh position={[0, 0.2, 0]} castShadow>
+              <cylinderGeometry args={[0.16, 0.19, 0.36, 12]} />
+              <meshStandardMaterial color="#2b3542" metalness={0.55} roughness={0.42} />
+            </mesh>
+            <mesh position={[0, 0.42, 0]} castShadow>
               <boxGeometry args={[0.52, 0.1, 0.5]} />
               <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
             </mesh>
-            <mesh position={[0, 0.72, -0.22]} castShadow>
-              <boxGeometry args={[0.52, 0.48, 0.09]} />
+            <mesh position={[0, 0.68, -0.22]} castShadow>
+              <boxGeometry args={[0.52, 0.44, 0.09]} />
               <meshStandardMaterial color="#3c4a58" roughness={0.75} />
             </mesh>
           </group>
@@ -2035,46 +2043,52 @@ export function OfficeArchitecture({
             <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
-          <IndoorPlanter position={[-12.4, FLOOR_3_Y, 2.2]} />
-          <IndoorPlanter position={[0.4, FLOOR_3_Y, 2.2]} />
+          {/* v9.4 — pot L3 yang berdiri di jalur dek (lihat screenshot Bos) DIHAPUS */}
 
-          {/* ===== L3 STAFF COFFEE DECK (KIRI) — 6 armchair asli, agen DUDUK saat ngopi ===== */}
-          {[-15.0, -12.5, -10.0, -7.5, -5.0, -2.5].map((sx, si) => (
-            <group key={`l3-staff-seat-${si}`} position={[sx, FLOOR_3_Y, 3.2]}>
-              {/* base */}
-              <mesh position={[0, 0.04, 0]}>
-                <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
-                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
-              </mesh>
-              {/* seat */}
-              <mesh position={[0, 0.44, 0]} castShadow>
-                <boxGeometry args={[0.52, 0.1, 0.5]} />
-                <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
-              </mesh>
-              {/* backrest (menghadap -Z) */}
-              <mesh position={[0, 0.72, 0.22]} castShadow>
-                <boxGeometry args={[0.52, 0.48, 0.09]} />
-                <meshStandardMaterial color="#3c4a58" roughness={0.75} />
-              </mesh>
-              {/* sandaran tangan */}
-              {[-0.28, 0.28].map((ax, ai) => (
-                <mesh key={ai} position={[ax, 0.6, 0]}>
-                  <boxGeometry args={[0.07, 0.1, 0.44]} />
-                  <meshStandardMaterial color="#2b3542" roughness={0.65} />
+          {/* ===== L3 STAFF COFFEE DECK (KIRI) — pouf rendah yang menapak lantai =====
+              v9.4: 6 armchair lama punya celah 0,3 m antara base & dudukan sehingga
+              tampak "mau jatuh / melayang". Sekarang diganti pouf modular kuning–abu
+              (referensi sofa modular kantor) yang duduk penuh di lantai. */}
+          {[-15.0, -12.5, -10.0, -7.5, -5.0, -2.5].map((sx, si) => {
+            const accent = si % 2 === 0;
+            return (
+              <group key={`l3-staff-seat-${si}`} position={[sx, FLOOR_3_Y, 3.2]}>
+                {/* alas kayu penuh di lantai */}
+                <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.66, 0.08, 0.62]} />
+                  <meshStandardMaterial color="#2a2f38" roughness={0.7} metalness={0.12} />
                 </mesh>
-              ))}
-            </group>
-          ))}
-          {/* 2 meja kopi rendah */}
+                {/* dudukan empuk — tepat di atas alas, tanpa celah */}
+                <mesh position={[0, 0.22, 0]} castShadow>
+                  <boxGeometry args={[0.62, 0.28, 0.58]} />
+                  <meshStandardMaterial color={accent ? "#e6c34a" : "#5b6472"} roughness={0.86} />
+                </mesh>
+                {/* sandaran rendah */}
+                <mesh position={[0, 0.46, 0.24]} castShadow>
+                  <boxGeometry args={[0.62, 0.2, 0.1]} />
+                  <meshStandardMaterial color={accent ? "#d4b03c" : "#4a5260"} roughness={0.88} />
+                </mesh>
+              </group>
+            );
+          })}
+          {/* 2 meja kopi bulat putih (referensi modular sofa: meja kecil, bukan meja panjang) */}
           {[-13.75, -8.75].map((tx, ti) => (
             <group key={`l3-staff-table-${ti}`} position={[tx, FLOOR_3_Y, 2.1]}>
-              <mesh position={[0, 0.4, 0]} castShadow>
-                <boxGeometry args={[1.9, 0.07, 0.8]} />
-                <meshStandardMaterial color="#8a6a4a" roughness={0.5} />
+              <mesh position={[0, 0.02, 0]}>
+                <cylinderGeometry args={[0.26, 0.28, 0.04, 16]} />
+                <meshStandardMaterial color="#2a2f38" metalness={0.55} roughness={0.4} />
               </mesh>
-              <mesh position={[0, 0.2, 0]}>
-                <boxGeometry args={[0.16, 0.4, 0.16]} />
-                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
+              <mesh position={[0, 0.22, 0]}>
+                <cylinderGeometry args={[0.035, 0.045, 0.4, 10]} />
+                <meshStandardMaterial color="#2a2f38" metalness={0.55} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0.44, 0]} castShadow receiveShadow>
+                <cylinderGeometry args={[0.46, 0.46, 0.05, 22]} />
+                <meshStandardMaterial color="#f5f3ee" roughness={0.32} />
+              </mesh>
+              <mesh position={[0.22, 0.5, 0.1]}>
+                <cylinderGeometry args={[0.045, 0.04, 0.09, 12]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.28} />
               </mesh>
             </group>
           ))}

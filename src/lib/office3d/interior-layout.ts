@@ -47,8 +47,9 @@ export const RESERVED_ZONES: Array<{
   { label: "ws-04", floor: 2, x: [-7.2, -4.8], z: [-1.8, 0.6] },
   { label: "ws-05", floor: 2, x: [4.8, 7.2], z: [-1.8, 0.6] },
   // L2 — coffee bar kiri & kanan + kursi
-  { label: "coffee-bar-west", floor: 2, x: [-13.6, -10.4], z: [-7.2, -2.0] },
-  { label: "coffee-bar-east", floor: 2, x: [10.4, 13.6], z: [-7.2, -2.0] },
+  // v9.4 — coffee bar dipindah menempel dinding samping (x = ±17.6)
+  { label: "coffee-bar-west", floor: 2, x: [-18.5, -16.6], z: [-7.2, -2.0] },
+  { label: "coffee-bar-east", floor: 2, x: [16.6, 18.5], z: [-7.2, -2.0] },
   // L2 — balkon (kursi & meja), tidak boleh terhalang
   { label: "balcony", floor: 2, x: [-18.0, 18.0], z: [4.2, 5.6] },
   // L3 — 4 meja kerja
@@ -64,8 +65,9 @@ export const RESERVED_ZONES: Array<{
 ];
 
 export const FLOOR_TWO_FURNITURE: FurniturePlacement[] = [
-  { kind: "huddle_pod", floor: 2, position: [-5.4, 2.6], footprint: { w: 3.0, d: 3.0 } },
-  { kind: "huddle_pod", floor: 2, position: [5.4, 2.6], footprint: { w: 3.0, d: 3.0 } },
+  // v9.4 — pod ngopi/idle digeser ke sisi (dulu ±5.4 = menggantung di tengah promenade)
+  { kind: "huddle_pod", floor: 2, position: [-13.8, 2.6], footprint: { w: 3.0, d: 3.0 } },
+  { kind: "huddle_pod", floor: 2, position: [13.8, 2.6], footprint: { w: 3.0, d: 3.0 } },
   {
     kind: "standup_table",
     floor: 2,
@@ -112,10 +114,11 @@ export const FLOOR_THREE_FURNITURE: FurniturePlacement[] = [
   {
     kind: "sofa_lounge",
     floor: 3,
-    // Menghadap ruang tengah (-Z), bukan menghadap dinding
+    // v9.4 — sectional modular (abu + kuning) menghadap ruang tengah (-Z),
+    // punggung sofa menempel dinding kaca depan.
     position: [8.6, 2.7],
     rotationY: 0,
-    footprint: { w: 5.0, d: 3.8 },
+    footprint: { w: 5.6, d: 3.4 },
   },
   {
     kind: "bookshelf",
@@ -124,9 +127,9 @@ export const FLOOR_THREE_FURNITURE: FurniturePlacement[] = [
     rotationY: -Math.PI / 2,
     footprint: { w: 0.6, d: 2.4 },
   },
-  // Planter di sudut/lantai dekat dinding — tidak lagi di tengah jalur orang
-  { kind: "planter", floor: 3, position: [-17.2, 1.1], footprint: { w: 0.9, d: 0.9 } },
-  { kind: "planter", floor: 3, position: [14.2, 3.9], footprint: { w: 0.9, d: 0.9 } },
+  // v9.4 — pot L3 yang berdiri di sudut jalur dek (keluhan Bos di screenshot)
+  // dipindah ke sudut belakang yang benar-benar mati, dan pot kedua dihapus.
+  { kind: "planter", floor: 3, position: [-17.4, -8.4], footprint: { w: 0.9, d: 0.9 } },
   { kind: "rug", floor: 3, position: [-5.6, -0.2], footprint: { w: 3.6, d: 3.6 } },
 ];
 
@@ -189,11 +192,11 @@ export interface SeatWithChair {
 }
 
 export const INTERIOR_SEATS: SeatWithChair[] = [
-  // Pod L2
-  { id: "l2-pod-w-n", floor: 2, position: [-5.4, 1.55], facingYaw: Math.PI, chair: "huddle-w-south-chair" },
-  { id: "l2-pod-w-s", floor: 2, position: [-5.4, 3.65], facingYaw: 0, chair: "huddle-w-north-chair" },
-  { id: "l2-pod-e-n", floor: 2, position: [5.4, 1.55], facingYaw: Math.PI, chair: "huddle-e-south-chair" },
-  { id: "l2-pod-e-s", floor: 2, position: [5.4, 3.65], facingYaw: 0, chair: "huddle-e-north-chair" },
+  // Pod L2 (ikut bergeser ke sisi saat pod dipindah di v9.4)
+  { id: "l2-pod-w-n", floor: 2, position: [-13.8, 1.55], facingYaw: Math.PI, chair: "huddle-w-south-chair" },
+  { id: "l2-pod-w-s", floor: 2, position: [-13.8, 3.65], facingYaw: 0, chair: "huddle-w-north-chair" },
+  { id: "l2-pod-e-n", floor: 2, position: [13.8, 1.55], facingYaw: Math.PI, chair: "huddle-e-south-chair" },
+  { id: "l2-pod-e-s", floor: 2, position: [13.8, 3.65], facingYaw: 0, chair: "huddle-e-north-chair" },
   // Pod L3
   { id: "l3-pod-n", floor: 3, position: [-5.6, -1.25], facingYaw: Math.PI, chair: "huddle-l3-south-chair" },
   { id: "l3-pod-s", floor: 3, position: [-5.6, 0.85], facingYaw: 0, chair: "huddle-l3-north-chair" },

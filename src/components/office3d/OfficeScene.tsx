@@ -231,7 +231,7 @@ function FreeRoamCameraRig() {
       } else if (bz > 6.5) {
         setCurrentLocationName("Halaman Depan & Parkir VIP");
       } else if (bx > 11) {
-        setCurrentLocationName("Lantai 1 · Gym & Arcade");
+        setCurrentLocationName("Lantai 1 · Arcade & Racing Sim");
       } else {
         setCurrentLocationName("Lantai 1 · Lobi Utama");
       }

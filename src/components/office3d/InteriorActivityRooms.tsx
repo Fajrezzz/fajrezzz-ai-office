@@ -23,7 +23,7 @@ const FACADE_WIDTH = 38.2;
  * Clean Nanverse-Style Architectural Edge Lighting & L1 East Wellness Wing:
  * - Warm champagne-gold & architectural white building edge lighting (0 extra lights)
  * - L1 West/Center: Open Grand Main Lobby
- * - L1 East Wing (X=+14.2): Executive Gym + Racing Simulator
+ * - L1 East Wing (X=+14.2): Racing Simulator saja (v9.4 — area kebugaran dihapus)
  * - L3 East Wing: Kept clean & spacious (Billiard table & blue cinema screen removed)
  * - Rooftop: Clean unobstructed deck (Pergola seating removed)
  */
@@ -155,55 +155,82 @@ export function InteriorActivityRooms({
       {/* ===================== RGB FACADE DEPAN (TERANG) ===================== */}
       {showRoof && <FacadeRgbLighting isNight={isNight} />}
 
-      {/* L1 EAST WING (X=+14.2): EXECUTIVE GYM & FITNESS AREA */}
+      {/*
+       * L1 EAST WING (X=+14.2): ARCADE & RACING SIMULATOR
+       * v9.4 — Bos minta seluruh alat latihan beban DIHAPUS TOTAL.
+       * Yang tersisa hanya rig simulator balap, sekarang diletakkan di tengah
+       * sayap supaya tidak terlihat seperti sisa furnitur yang menggantung.
+       */}
       {showL1 && (
         <group position={[14.2, FLOOR_1_Y, -4.2]}>
-          {/* Treadmill */}
-          <group position={[-1.4, 0, 0.4]}>
-            <mesh position={[0, 0.1, 0]} castShadow>
-              <boxGeometry args={[0.82, 0.14, 1.8]} />
-              <meshStandardMaterial color="#1e293b" roughness={0.6} />
-            </mesh>
-            <mesh position={[0, 0.72, -0.78]} rotation={[0.25, 0, 0]}>
-              <boxGeometry args={[0.78, 1.15, 0.1]} />
-              <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.3} />
-            </mesh>
-          </group>
-          {/* Weight Bench & Barbell */}
-          <group position={[0.2, 0, 0.5]}>
-            <mesh position={[0, 0.42, 0]} castShadow>
-              <boxGeometry args={[0.45, 0.12, 1.35]} />
-              <meshStandardMaterial color="#1f2937" roughness={0.65} />
-            </mesh>
-            <mesh position={[0, 0.92, -0.35]} rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.025, 0.025, 1.55, 8]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
-            </mesh>
-            {[-0.68, 0.68].map((bx, bi) => (
-              <mesh key={bi} position={[bx, 0.92, -0.35]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.18, 0.18, 0.06, 12]} />
-                <meshStandardMaterial color="#111827" roughness={0.5} />
-              </mesh>
-            ))}
-          </group>
-          {/* F1 Racing Simulator Cockpit */}
-          <group position={[1.8, 0, 1.25]}>
-            <mesh position={[0, 0.22, 0]} castShadow>
-              <boxGeometry args={[0.78, 0.28, 1.5]} />
+          {/* Platform rig — semua komponen menapak di lantai, tidak melayang */}
+          <mesh position={[0, 0.05, 0.9]} receiveShadow>
+            <boxGeometry args={[1.9, 0.1, 2.6]} />
+            <meshStandardMaterial color="#161b23" roughness={0.72} metalness={0.18} />
+          </mesh>
+          {/* F1 Racing Simulator Cockpit (menghadap -Z ke layar) */}
+          <group position={[0, 0, 0.9]}>
+            {/* Rangka dudukan */}
+            <mesh position={[0, 0.26, 0.15]} castShadow>
+              <boxGeometry args={[0.78, 0.24, 1.45]} />
               <meshStandardMaterial color="#111827" metalness={0.65} roughness={0.3} />
             </mesh>
-            <mesh position={[0, 0.65, 0.42]} rotation={[-0.25, 0, 0]} castShadow>
-              <boxGeometry args={[0.55, 0.72, 0.14]} />
-              <meshStandardMaterial color="#dc2626" roughness={0.55} />
+            {/* Bantalan duduk */}
+            <mesh position={[0, 0.42, 0.3]} castShadow>
+              <boxGeometry args={[0.6, 0.14, 0.66]} />
+              <meshStandardMaterial color="#dc2626" roughness={0.62} />
             </mesh>
-            <mesh position={[0, 0.95, -0.62]}>
-              <boxGeometry args={[1.15, 0.56, 0.05]} />
-              <meshStandardMaterial
-                color="#0f172a"
-                emissive="#38bdf8"
-                emissiveIntensity={isNight ? 1.1 : 0.35}
-              />
+            {/* Sandaran + headrest (menempel ke rangka, tidak menggantung) */}
+            <mesh position={[0, 0.72, 0.68]} rotation={[-0.22, 0, 0]} castShadow>
+              <boxGeometry args={[0.6, 0.64, 0.14]} />
+              <meshStandardMaterial color="#b91c1c" roughness={0.6} />
             </mesh>
+            <mesh position={[0, 1.02, 0.76]} rotation={[-0.22, 0, 0]} castShadow>
+              <boxGeometry args={[0.38, 0.2, 0.12]} />
+              <meshStandardMaterial color="#7f1d1d" roughness={0.66} />
+            </mesh>
+            {/* Kolom setir + roda setir */}
+            <mesh position={[0, 0.5, -0.3]} rotation={[0.62, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.035, 0.045, 0.6, 10]} />
+              <meshStandardMaterial color="#334155" metalness={0.75} roughness={0.28} />
+            </mesh>
+            <mesh position={[0, 0.66, -0.52]} rotation={[-0.62, 0, 0]}>
+              <torusGeometry args={[0.17, 0.028, 10, 24]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.5} />
+            </mesh>
+            {/* Pedal box */}
+            <mesh position={[0, 0.16, -0.5]} castShadow>
+              <boxGeometry args={[0.46, 0.12, 0.34]} />
+              <meshStandardMaterial color="#1b2430" metalness={0.5} roughness={0.45} />
+            </mesh>
+            {[-0.11, 0.11].map((px2, pi) => (
+              <mesh key={`pedal-${pi}`} position={[px2, 0.24, -0.55]} rotation={[0.3, 0, 0]}>
+                <boxGeometry args={[0.12, 0.03, 0.2]} />
+                <meshStandardMaterial color="#94a3b8" metalness={0.82} roughness={0.25} />
+              </mesh>
+            ))}
+            {/* Triple-monitor rig */}
+            {[-0.62, 0, 0.62].map((mx, mi) => (
+              <mesh
+                key={`sim-screen-${mi}`}
+                position={[mx, 0.95, -0.95 - Math.abs(mx) * 0.12]}
+                rotation={[0, -mx * 0.32, 0]}
+              >
+                <boxGeometry args={[0.62, 1.02, 0.05]} />
+                <meshStandardMaterial
+                  color="#0b1220"
+                  emissive="#38bdf8"
+                  emissiveIntensity={isNight ? 1.15 : 0.42}
+                  roughness={0.3}
+                />
+              </mesh>
+            ))}
+            {[-0.9, 0.9].map((px2, pi) => (
+              <mesh key={`sim-post-${pi}`} position={[px2, 0.5, -0.95]} castShadow>
+                <boxGeometry args={[0.06, 1.0, 0.06]} />
+                <meshStandardMaterial color="#1f2937" metalness={0.6} roughness={0.35} />
+              </mesh>
+            ))}
           </group>
           {/* Cyberpunk Cyan Ceiling Neon Bar */}
           <mesh position={[0.4, 3.25, 0]}>

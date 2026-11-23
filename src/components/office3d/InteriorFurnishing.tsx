@@ -225,150 +225,150 @@ export function HuddlePod({
   );
 }
 
-/** Sofa lounge + meja kopi + lampu lantai + tanaman besar. */
+/**
+ * Lounge modular (v9.4) — mengikuti referensi sofa modular kantor dari Bos:
+ * modul duduk rendah abu-abu dengan aksen kuning, bentuk L (sectional),
+ * dua meja kopi bulat kecil bertopang putih, plus pouf kuning/abu.
+ *
+ * Kenapa diganti: set lama punya armchair yang dasarnya melayang 0,34 m di atas
+ * lantai (terlihat "mau jatuh") dan meja kopi persegi besar. Sekarang semua
+ * komponen menapak lantai lewat alas kayu, tanpa bagian menggantung.
+ */
 export function LoungeSofaSet({
   position,
   rotationY = 0,
-  accent = "#a855f7",
+  accent = "#e6c34a",
 }: {
   position: Vec3;
   rotationY?: number;
   accent?: string;
 }) {
-  const SEAT = "#3f4a5a";
-  const SEAT_LIGHT = "#4b5768";
+  const SEAT = "#4a5160";
+  const SEAT_LIGHT = "#5b6472";
+  const PLINTH = "#23272e";
+  const YELLOW = accent;
+
+  /** Satu modul duduk: alas kayu + bantalan empuk (+ sandaran bila `back`). */
+  const Module = ({
+    x,
+    z,
+    color,
+    back = false,
+    backSide = 1,
+  }: {
+    x: number;
+    z: number;
+    color: string;
+    back?: boolean;
+    backSide?: 1 | -1;
+  }) => (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.045, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.9, 0.09, 0.9]} />
+        <meshStandardMaterial color={PLINTH} roughness={0.7} metalness={0.14} />
+      </mesh>
+      <mesh position={[0, 0.26, 0]} castShadow>
+        <boxGeometry args={[0.92, 0.34, 0.92]} />
+        <meshStandardMaterial color={color} roughness={0.88} />
+      </mesh>
+      {back && (
+        <mesh position={[0, 0.55, backSide * 0.39]} castShadow>
+          <boxGeometry args={[0.92, 0.34, 0.16]} />
+          <meshStandardMaterial color={SEAT_LIGHT} roughness={0.9} />
+        </mesh>
+      )}
+    </group>
+  );
+
+  /** Pouf kecil (bisa dipakai sebagai dudukan tambahan / sandaran kaki). */
+  const Pouf = ({ x, z, color }: { x: number; z: number; color: string }) => (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.62, 0.08, 0.62]} />
+        <meshStandardMaterial color={PLINTH} roughness={0.7} metalness={0.14} />
+      </mesh>
+      <mesh position={[0, 0.24, 0]} castShadow>
+        <boxGeometry args={[0.64, 0.34, 0.64]} />
+        <meshStandardMaterial color={color} roughness={0.9} />
+      </mesh>
+    </group>
+  );
+
+  /** Meja kopi bulat: alas + tiang + top putih tipis. */
+  const RoundTable = ({ x, z, r }: { x: number; z: number; r: number }) => (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[r * 0.5, r * 0.56, 0.04, 16]} />
+        <meshStandardMaterial color={PLINTH} metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[0.035, 0.045, 0.36, 10]} />
+        <meshStandardMaterial color={PLINTH} metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[r, r, 0.05, 22]} />
+        <meshStandardMaterial color="#f5f3ee" roughness={0.32} />
+      </mesh>
+      {/* cangkir kecil + buku tipis di atas meja */}
+      <mesh position={[r * 0.42, 0.46, r * 0.2]}>
+        <cylinderGeometry args={[0.045, 0.04, 0.09, 12]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.28} />
+      </mesh>
+      <mesh position={[-r * 0.4, 0.44, -r * 0.15]} rotation={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[0.26, 0.03, 0.2]} />
+        <meshStandardMaterial color="#e11d48" roughness={0.75} />
+      </mesh>
+    </group>
+  );
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <Rug position={[0, 0.008, 0.15]} size={[5.0, 3.8]} color="#241d2f" />
+      <Rug position={[0.35, 0.008, -0.35]} size={[5.0, 3.8]} color="#20242b" />
 
-      {/* ---------- SOFA 3 dudukan (menghadap -Z) ---------- */}
-      <group position={[0, 0, -0.55]}>
-        {/* Kaki pendek */}
-        {[
-          [-1.2, -0.35],
-          [1.2, -0.35],
-          [-1.2, 0.35],
-          [1.2, 0.35],
-        ].map(([lx, lz], i) => (
-          <mesh key={`sofa-leg-${i}`} position={[lx, 0.12, lz]} castShadow>
-            <cylinderGeometry args={[0.03, 0.04, 0.24, 8]} />
-            <meshStandardMaterial color="#231a12" roughness={0.6} />
-          </mesh>
-        ))}
-        {/* Rangka dudukan menerus (bukan 3 kotak terpisah) */}
-        <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
-          <boxGeometry args={[2.75, 0.24, 0.98]} />
-          <meshStandardMaterial color="#2b3442" roughness={0.85} />
-        </mesh>
-        {/* Bantal dudukan: 3 panel rapat dengan garis pemisah tipis */}
-        {[-0.9, 0, 0.9].map((sx, i) => (
-          <mesh key={`sofa-cushion-${i}`} position={[sx, 0.48, 0]} castShadow>
-            <boxGeometry args={[0.87, 0.13, 0.9]} />
-            <meshStandardMaterial color={SEAT} roughness={0.88} />
-          </mesh>
-        ))}
-        {/* Sandaran miring dengan 3 bantal punggung */}
-        <mesh position={[0, 0.72, 0.44]} rotation={[-0.14, 0, 0]} castShadow>
-          <boxGeometry args={[2.78, 0.72, 0.16]} />
-          <meshStandardMaterial color={SEAT_LIGHT} roughness={0.86} />
-        </mesh>
-        {[-0.9, 0, 0.9].map((sx, i) => (
-          <mesh
-            key={`sofa-back-${i}`}
-            position={[sx, 0.74, 0.34]}
-            rotation={[-0.14, 0, 0]}
-            castShadow
-          >
-            <boxGeometry args={[0.82, 0.56, 0.12]} />
-            <meshStandardMaterial color="#556277" roughness={0.9} />
-          </mesh>
-        ))}
-        {/* Sandaran tangan */}
-        {[-1.44, 1.44].map((ax, i) => (
-          <mesh key={`sofa-arm-${i}`} position={[ax, 0.55, 0]} castShadow>
-            <boxGeometry args={[0.16, 0.44, 1.0]} />
-            <meshStandardMaterial color="#2b3442" roughness={0.86} />
-          </mesh>
-        ))}
-        {/* Bantal aksen */}
-        <mesh position={[-0.75, 0.66, 0.2]} rotation={[-0.2, 0.3, 0.1]} castShadow>
-          <boxGeometry args={[0.34, 0.34, 0.12]} />
-          <meshStandardMaterial color={accent} roughness={0.8} />
-        </mesh>
-      </group>
+      {/* ---------- Baris punggung: 3 modul menghadap -Z (ke tengah ruang) ---------- */}
+      {[-1.0, 0, 1.0].map((mx, mi) => (
+        <Module
+          key={`lounge-back-${mi}`}
+          x={mx}
+          z={0.55}
+          color={mi === 1 ? YELLOW : SEAT}
+          back
+        />
+      ))}
 
-      {/* ---------- ARMCHAIR tunggal menghadap sofa ---------- */}
-      <group position={[-1.95, 0, 1.15]} rotation={[0, 0.7, 0]}>
-        <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.82, 0.26, 0.8]} />
-          <meshStandardMaterial color="#2b3442" roughness={0.86} />
-        </mesh>
-        <mesh position={[0, 0.49, 0]} castShadow>
-          <boxGeometry args={[0.74, 0.12, 0.74]} />
-          <meshStandardMaterial color={SEAT} roughness={0.88} />
-        </mesh>
-        <mesh position={[0, 0.74, 0.36]} rotation={[-0.16, 0, 0]} castShadow>
-          <boxGeometry args={[0.78, 0.6, 0.14]} />
-          <meshStandardMaterial color={SEAT_LIGHT} roughness={0.88} />
-        </mesh>
-        {[-0.42, 0.42].map((ax, i) => (
-          <mesh key={`ac-arm-${i}`} position={[ax, 0.56, 0]} castShadow>
-            <boxGeometry args={[0.12, 0.4, 0.78]} />
-            <meshStandardMaterial color="#2b3442" roughness={0.86} />
-          </mesh>
-        ))}
-      </group>
+      {/* ---------- Sayap L di ujung kanan: 2 modul menghadap -X ---------- */}
+      <Module x={1.95} z={-0.45} color={SEAT} back backSide={-1} />
+      <Module x={1.95} z={-1.4} color={SEAT} />
 
-      {/* ---------- Meja kopi ---------- */}
-      <group position={[0.15, 0, 0.95]}>
-        <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
-          <boxGeometry args={[1.45, 0.07, 0.78]} />
-          <meshStandardMaterial color={WOOD} roughness={0.5} />
-        </mesh>
-        {[
-          [-0.55, -0.28],
-          [0.55, -0.28],
-          [-0.55, 0.28],
-          [0.55, 0.28],
-        ].map(([lx, lz], i) => (
-          <mesh key={`ct-leg-${i}`} position={[lx, 0.2, lz]}>
-            <boxGeometry args={[0.06, 0.4, 0.06]} />
-            <meshStandardMaterial color={DARK_STEEL} metalness={0.6} roughness={0.35} />
-          </mesh>
-        ))}
-        <mesh position={[-0.28, 0.455, 0.02]} rotation={[0, 0.28, 0]} castShadow>
-          <boxGeometry args={[0.32, 0.025, 0.24]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.6} />
-        </mesh>
-        <mesh position={[0.3, 0.47, -0.05]} castShadow>
-          <cylinderGeometry args={[0.048, 0.042, 0.1, 12]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.28} />
-        </mesh>
-      </group>
+      {/* ---------- Meja kopi bulat kecil (referensi) ---------- */}
+      <RoundTable x={-0.4} z={-0.7} r={0.5} />
+      <RoundTable x={1.0} z={-1.75} r={0.3} />
 
-      {/* ---------- Lampu lantai ---------- */}
-      <group position={[2.15, 0, 0.55]}>
+      {/* ---------- Pouf aksen kuning & abu ---------- */}
+      <Pouf x={-1.75} z={-1.15} color={YELLOW} />
+      <Pouf x={-2.3} z={0.4} color="#5b6472" />
+      <Pouf x={2.85} z={-0.4} color={YELLOW} />
+
+      {/* ---------- Lampu lantai ramping (kaki menapak lantai) ---------- */}
+      <group position={[-2.15, 0, 0.15]}>
         <mesh position={[0, 0.02, 0]}>
           <cylinderGeometry args={[0.19, 0.21, 0.04, 16]} />
-          <meshStandardMaterial color={DARK_STEEL} metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial color={PLINTH} metalness={0.7} roughness={0.3} />
         </mesh>
         <mesh position={[0, 0.85, 0]}>
           <cylinderGeometry args={[0.022, 0.022, 1.7, 10]} />
-          <meshStandardMaterial color={DARK_STEEL} metalness={0.75} roughness={0.28} />
+          <meshStandardMaterial color={PLINTH} metalness={0.75} roughness={0.28} />
         </mesh>
         <mesh position={[0, 1.78, 0]}>
           <sphereGeometry args={[0.16, 16, 14]} />
           <meshStandardMaterial
             color="#fff5db"
-            emissive={accent}
-            emissiveIntensity={1.6}
+            emissive="#f7e6b0"
+            emissiveIntensity={1.2}
             toneMapped={false}
           />
         </mesh>
       </group>
-
-      {/* Tanaman di sudut (menempel dinding, bukan di tengah ruangan) */}
-      <PotPlant position={[2.05, 0, -1.45]} scale={1.15} />
     </group>
   );
 }

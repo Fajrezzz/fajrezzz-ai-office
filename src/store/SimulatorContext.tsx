@@ -165,7 +165,7 @@ export const TELEPORT_LOCATIONS: {
   yaw: number;
 }[] = [
   { id: "tp-lobi", label: "Lobi Utama & Resepsionis (L1)", zone: "Lobi Utama L1", floor: 1, position: [0, 0.18, 1.8], yaw: Math.PI },
-  { id: "tp-gym", label: "Gym & Arcade (L1 Kanan)", zone: "Gym & Arcade L1", floor: 1, position: [14.2, 0.18, -3.2], yaw: Math.PI },
+  { id: "tp-gym", label: "Arcade & Racing Sim (L1 Kanan)", zone: "Arcade & Racing L1", floor: 1, position: [14.2, 0.18, -3.2], yaw: Math.PI },
   { id: "tp-ops", label: "Ruang Operasional AI (L2)", zone: "Operasional 7 Divisi L2", floor: 2, position: [0, 3.9, 2.2], yaw: Math.PI },
   { id: "tp-balcony", label: "Balkon & Kafe Santai (L2)", zone: "Balkon Lantai 2", floor: 2, position: [0, 3.9, 5.2], yaw: 0 },
   { id: "tp-ceo", label: "Kamar CEO & Lounge (L3)", zone: "Kamar CEO & Lounge L3", floor: 3, position: [0, 7.8, 1.5], yaw: Math.PI },
@@ -456,7 +456,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
       } else if (by > 2.8) {
         setCurrentLocationName(bz > 4.2 ? "L2 · Balkon Cyberpunk" : "L2 · Ruang Operasional AI");
       } else if (bz < 4.0) {
-        if (bx > 11) setCurrentLocationName("L1 · Gym & Arcade");
+        if (bx > 11) setCurrentLocationName("L1 · Arcade & Racing Sim");
         else setCurrentLocationName("L1 · Lobi Utama");
       } else if (bz < 18.5) {
         setCurrentLocationName(bx < 3 ? "Halaman · Kolam & Bot Trading" : "Halaman · Parkir Porsche & Air Mancur");
@@ -526,8 +526,8 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
         ? "Berjaga pintu utama"
         : e.role.includes("MT5")
           ? "Memantau 18 akun MT5"
-          : e.role.includes("Gym")
-            ? "Menjaga area Gym & Arcade"
+          : e.role.includes("Arcade") || e.role.includes("Gym")
+            ? "Menjaga area Arcade & Racing"
             : "Aktif bertugas",
     }));
     return [...core, ...extras];
