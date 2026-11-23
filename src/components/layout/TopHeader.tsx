@@ -1,23 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Cpu, Menu, Sparkles } from "lucide-react";
+import React from "react";
+import { Menu, Sparkles } from "lucide-react";
 import { useOffice } from "@/store/OfficeContext";
 import type { NavSection } from "@/types/office";
 
 const SECTION_TITLES: Record<NavSection, string> = {
-  dashboard: "📱 Komando Bos & Pipeline 7 Divisi",
+  dashboard: "📱 Komando Bos & Agensi AI",
   office: "🏢 Kantor 3D & Bos FAJREZ",
-  studio: "📊 Hasil Nyata, YPP & KPI Tim",
-  agents: "👥 Tim 7 Divisi AI & Log Kerja",
-  tasks: "👥 Tim 7 Divisi AI & Log Kerja",
-  activity: "👥 Tim 7 Divisi AI & Log Kerja",
+  studio: "📱 Komando Bos & Agensi AI",
+  agents: "👥 Tim 10 Divisi AI & Aktivitas",
+  tasks: "👥 Tim 10 Divisi AI & Aktivitas",
+  activity: "👥 Tim 10 Divisi AI & Aktivitas",
 };
-
-interface AiStatusSummary {
-  activeLabel: string;
-  pricingNotice: string;
-}
 
 export function TopHeader({
   onOpenMobileMenu,
@@ -25,25 +20,6 @@ export function TopHeader({
   onOpenMobileMenu: () => void;
 }) {
   const { activeSection } = useOffice();
-  const [aiStatus, setAiStatus] = useState<AiStatusSummary | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/ai/status")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (active && data?.ok) {
-          setAiStatus({
-            activeLabel: String(data.activeLabel || "Pollinations Free (Rp 0)"),
-            pricingNotice: String(data.pricingNotice || ""),
-          });
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-slate-800/90 bg-[#050b1c]/90 px-4 backdrop-blur-xl sm:px-6">
@@ -61,16 +37,9 @@ export function TopHeader({
         </h1>
       </div>
 
-      <div
-        title={aiStatus?.pricingNotice || "AI Gratis Rp 0 langsung aktif tanpa API key"}
-        className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/45 bg-emerald-500/15 px-3 py-1 text-[11px] font-bold text-emerald-200"
-      >
-        {aiStatus ? (
-          <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-        ) : (
-          <Cpu className="h-3.5 w-3.5 animate-pulse text-cyan-300" />
-        )}
-        <span>{aiStatus ? `AI Gratis Rp 0 · ${aiStatus.activeLabel}` : "AI Gratis Rp 0"}</span>
+      <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-bold text-emerald-300">
+        <Sparkles className="h-3.5 w-3.5" />
+        <span>100% Gratis Rp 0</span>
       </div>
     </header>
   );

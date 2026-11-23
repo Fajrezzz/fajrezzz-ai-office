@@ -1,236 +1,332 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Check,
   CheckCircle2,
-  Copy,
-  Download,
   ExternalLink,
-  ImageDown,
-  Lock,
+  HelpCircle,
+  Loader2,
+  PlayCircle,
+  Rocket,
   ShieldCheck,
+  UploadCloud,
   X,
 } from "lucide-react";
-import { hasBossOriginalElement, type RealEpisode } from "@/types/pipeline";
+import type { KidsEpisode, VideoFormat } from "@/lib/kids-studio/episode-brain";
+import {
+  authorizeYouTubeUpload,
+  getSavedYouTubeClientId,
+  renderEpisodeToVideoBlob,
+  saveYouTubeClientId,
+  uploadEpisodeDirectlyToYouTube,
+  type YouTubePrivacyStatus,
+  type YouTubeUploadResult,
+} from "@/lib/kids-studio/youtube-upload";
 
 interface YouTubeUploadModalProps {
   open: boolean;
   onClose: () => void;
-  episode: RealEpisode;
-  videoBlobUrl?: string;
-  onConfirmManualUpload: (youtubeUrl: string) => void;
+  episode: KidsEpisode;
+  format: VideoFormat;
+  onQuickUpload: () => Promise<void>;
+  onUploadedSuccess: (episodeId: string) => void;
 }
 
-/**
- * Strictly MANUAL YouTube Publish Handoff Modal.
- * Auto-upload is intentionally disabled per YouTube anti-mass-upload policy.
- * Publish actions stay locked unless QC passed AND Bos provided >= 1 original element + ACC.
- */
 export function YouTubeUploadModal({
   open,
   onClose,
   episode,
-  videoBlobUrl,
-  onConfirmManualUpload,
+  format,
+  onQuickUpload,
+  onUploadedSuccess,
 }: YouTubeUploadModalProps) {
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [youtubeUrlInput, setYoutubeUrlInput] = useState(
-    episode.metrics.youtubeUrl || ""
-  );
-  const [savedNotice, setSavedNotice] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [privacy, setPrivacy] = useState<YouTubePrivacyStatus>("public");
+  const [showGuide, setShowGuide] = useState(false);
+  const [busyStep, setBusyStep] = useState<string | null>(null);
+  const [renderPct, setRenderPct] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<YouTubeUploadResult | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setClientId(getSavedYouTubeClientId());
+      setErrorMsg(null);
+      setResult(null);
+      setBusyStep(null);
+      setRenderPct(0);
+    }
+  }, [open]);
 
   if (!open) return null;
 
-  const seo = episode.divisions.seo.output;
-  const editing = episode.divisions.editing.output;
-  const qc = episode.divisions.qc.output;
-  const hasOriginal = hasBossOriginalElement(episode.bossOriginality);
-  const canPublish =
-    Boolean(qc?.passed) &&
-    hasOriginal &&
-    Boolean(episode.bossOriginality.confirmedByBoss);
+  const isKids = episode.themeId !== "ai_tech_tips";
 
-  const copyText = (key: string, value: string) => {
-    navigator.clipboard?.writeText(value).catch(() => {});
-    setCopiedKey(key);
-    window.setTimeout(() => setCopiedKey(null), 1500);
+  const handleAutoUpload = async () => {
+    setErrorMsg(null);
+    setResult(null);
+    const trimmed = clientId.trim();
+    if (!trimmed) {
+      setErrorMsg(
+        "Masukkan Google OAuth Client ID terlebih dahulu (klik Panduan 3 Menit di bawah), atau pakai Upload Cepat 1-Klik."
+      );
+      return;
+    }
+
+    try {
+      saveYouTubeClientId(trimmed);
+      setBusyStep("Meminta izin login Google (YouTube resmi)...");
+      const accessToken = await authorizeYouTubeUpload(trimmed);
+
+      setBusyStep("Merender video 60fps + musik bebas copyright...");
+      const { blob } = await renderEpisodeToVideoBlob(
+        episode,
+        format,
+        (pct) => setRenderPct(pct)
+      );
+
+      const uploadRes = await uploadEpisodeDirectlyToYouTube({
+        accessToken,
+        episode,
+        videoBlob: blob,
+        privacyStatus: privacy,
+        onStatus: (msg) => setBusyStep(msg),
+      });
+
+      setResult(uploadRes);
+      onUploadedSuccess(episode.id);
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kendala saat upload ke YouTube."
+      );
+    } finally {
+      setBusyStep(null);
+    }
   };
 
-  const fullMetadata = seo
-    ? `${seo.title}\n\n${seo.description}\n\n${seo.hashtags.join(" ")}\n\nTags:\n${seo.tags.join(
-        ", "
-      )}`
-    : "";
-
-  const handleSaveManualUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    onConfirmManualUpload(youtubeUrlInput.trim());
-    setSavedNotice(true);
-    window.setTimeout(() => setSavedNotice(false), 2000);
+  const handleQuickStudio = async () => {
+    setErrorMsg(null);
+    try {
+      setBusyStep("Menyiapkan video, thumbnail & membuka YouTube Studio...");
+      await onQuickUpload();
+      onUploadedSuccess(episode.id);
+      onClose();
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "Gagal menyiapkan file upload."
+      );
+    } finally {
+      setBusyStep(null);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-slate-700 bg-slate-950 p-5 text-slate-100 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-700 bg-slate-900 p-5 text-slate-100 shadow-2xl">
+        {/* Header */}
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-base font-black text-white">
-              📤 Paket Upload Manual ke YouTube Studio
-            </h3>
-            <p className="text-xs text-slate-400">
-              Tidak ada auto-upload. Bos memeriksa sendiri lalu upload manual di
-              YouTube Studio agar aman dari penolakan monetisasi konten massal.
-            </p>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-600 text-white shadow-lg">
+              <PlayCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                Upload ke YouTube (100% Gratis Rp 0)
+              </h3>
+              <p className="text-xs text-slate-400">
+                Ep #{episode.episodeNumber} ·{" "}
+                {format === "shorts" ? "YouTube Shorts 9:16" : "YouTube 16:9"} ·{" "}
+                {isKids ? "Made for Kids: YA" : "Kategori: Tech/AI"}
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup"
-            className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:bg-slate-800"
+            disabled={Boolean(busyStep)}
+            className="rounded-xl border border-slate-700 p-2 text-slate-400 hover:text-white disabled:opacity-40"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {!canPublish ? (
-          <div className="mt-4 rounded-2xl border border-rose-500/50 bg-rose-950/35 p-4 text-xs text-rose-100">
-            <div className="flex items-center gap-2 font-black text-rose-200">
-              <Lock className="h-4 w-4" />
-              <span>Publish Terkunci — Syarat Orisinalitas / QC Belum Terpenuhi</span>
+        {/* Success Result */}
+        {result && (
+          <div className="mt-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/15 p-4">
+            <div className="flex items-center gap-2 text-sm font-black text-emerald-300">
+              <CheckCircle2 className="h-5 w-5" />
+              <span>BERHASIL TERUPLOAD KE YOUTUBE!</span>
             </div>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-rose-100/90">
-              {!qc?.passed && (
-                <li>Divisi QC harus LOLOS terlebih dahulu (bebas kata terlarang &amp; kemiripan &lt; 45%).</li>
-              )}
-              {!hasOriginal && (
-                <li>
-                  Bos wajib mengisi minimal 1 elemen orisinal (ide, twist, dialog suara,
-                  atau karakter baru).
-                </li>
-              )}
-              {!episode.bossOriginality.confirmedByBoss && (
-                <li>Bos wajib mencentang persetujuan ACC Orisinalitas.</li>
-              )}
-            </ul>
+            <p className="mt-1 text-xs text-slate-200">
+              Video ID: <span className="font-mono font-bold">{result.videoId}</span>{" "}
+              {result.thumbnailUploaded
+                ? "• Thumbnail HD ikut terpasang!"
+                : "• Thumbnail bisa dipasang di YouTube Studio."}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                href={result.watchUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-black text-slate-950"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Tonton di YouTube
+              </a>
+              <a
+                href={result.studioUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-600 bg-slate-800 px-3.5 py-2 text-xs font-bold text-white"
+              >
+                Buka YouTube Studio
+              </a>
+            </div>
           </div>
-        ) : (
-          <div className="mt-4 space-y-4">
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-bold text-emerald-200">
-              <ShieldCheck className="h-4 w-4 shrink-0" />
+        )}
+
+        {/* Option 1: Instant 1-Click without Google Cloud setup */}
+        <div className="mt-4 rounded-2xl border border-amber-400/35 bg-amber-500/10 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-black tracking-wide text-amber-300 uppercase">
+              Cara 1 — Paling Cepat (Tanpa Setup)
+            </span>
+            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-200">
+              Siap Langsung Pakai
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-300">
+            Otomatis download video + thumbnail HD + salin Judul &amp; Deskripsi,
+            lalu langsung buka YouTube Studio.
+          </p>
+          <button
+            type="button"
+            disabled={Boolean(busyStep)}
+            onClick={handleQuickStudio}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-400 px-4 py-3 text-xs font-black text-slate-950 transition hover:bg-amber-300 disabled:opacity-50"
+          >
+            <Rocket className="h-4 w-4" />
+            Siapkan Semua File &amp; Buka YouTube Studio
+          </button>
+        </div>
+
+        {/* Option 2: True Direct Auto-Upload via YouTube Data API v3 (Free Rp 0) */}
+        <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-black tracking-wide text-sky-300 uppercase">
+              Cara 2 — Upload Otomatis Langsung (YouTube API v3 · Rp 0)
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowGuide((g) => !g)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:underline"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              {showGuide ? "Tutup Panduan" : "Panduan 3 Menit"}
+            </button>
+          </div>
+
+          {showGuide && (
+            <ol className="mt-2.5 space-y-1.5 rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-[11px] leading-relaxed text-slate-200">
+              <li>
+                <strong>1.</strong> Buka{" "}
+                <span className="font-mono text-sky-300">
+                  console.cloud.google.com
+                </span>{" "}
+                (100% gratis tanpa kartu kredit) → buat Project baru.
+              </li>
+              <li>
+                <strong>2.</strong> Menu <strong>APIs &amp; Services → Library</strong>{" "}
+                → cari &amp; aktifkan <strong>YouTube Data API v3</strong>{" "}
+                (kuota gratis 10.000 unit/hari = ~6 video/hari).
+              </li>
+              <li>
+                <strong>3.</strong> Menu <strong>Credentials → Create Credentials → OAuth Client ID → Web Application</strong>{" "}
+                → masukkan alamat web ini di <em>Authorized JavaScript origins</em>.
+              </li>
+              <li>
+                <strong>4.</strong> Salin <strong>Client ID</strong> (akhiran{" "}
+                <span className="font-mono">.apps.googleusercontent.com</span>) dan tempel di bawah!
+              </li>
+            </ol>
+          )}
+
+          <div className="mt-3 space-y-2.5">
+            <div>
+              <label className="mb-1 block text-[11px] font-bold text-slate-400">
+                Google OAuth Client ID (disimpan aman di browser kamu saja)
+              </label>
+              <input
+                type="text"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="1234567890-xxxx.apps.googleusercontent.com"
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-sky-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400">
+                Visibilitas:
+              </span>
+              {(["public", "unlisted", "private"] as YouTubePrivacyStatus[]).map(
+                (p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPrivacy(p)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold capitalize ${
+                      privacy === p
+                        ? "bg-sky-500 text-slate-950"
+                        : "bg-slate-800 text-slate-300"
+                    }`}
+                  >
+                    {p === "public"
+                      ? "Publik"
+                      : p === "unlisted"
+                      ? "Tidak Publik"
+                      : "Pribadi"}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={Boolean(busyStep)}
+              onClick={handleAutoUpload}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-xs font-black text-white transition hover:bg-red-500 disabled:opacity-50"
+            >
+              {busyStep ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>
+                    {busyStep} {renderPct > 0 && renderPct < 100 ? `(${renderPct}%)` : ""}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="h-4 w-4" />
+                  <span>Login Google &amp; Upload Otomatis ke YouTube</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
               <span>
-                QC Lolos ({qc?.score}/100) + Kontribusi Orisinal Bos Terverifikasi!
+                Login aman langsung lewat layar resmi Google. Password akun kamu
+                tidak pernah dilihat atau disimpan web ini.
               </span>
             </div>
+          </div>
+        </div>
 
-            {/* Step 1: Download Video & Thumbnail HD */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3.5">
-              <div className="text-xs font-black text-white">
-                Langkah 1 — Unduh File Video &amp; Thumbnail HD
-              </div>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {videoBlobUrl && editing ? (
-                  <a
-                    href={videoBlobUrl}
-                    download={editing.fileName}
-                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-emerald-400 px-3.5 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download Video ({editing.videoDurationSec}d)</span>
-                  </a>
-                ) : (
-                  <span className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-                    Jalankan Divisi 6 (Editing) dulu untuk mengunduh file video.
-                  </span>
-                )}
-
-                {editing?.thumbnailDataUrl && (
-                  <a
-                    href={editing.thumbnailDataUrl}
-                    download={`thumbnail-ep-${episode.episodeNumber}.png`}
-                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-3.5 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/30"
-                  >
-                    <ImageDown className="h-4 w-4" />
-                    <span>Download Thumbnail 1280×720</span>
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Step 2: Copy SEO Metadata */}
-            {seo && (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-black text-white">
-                    Langkah 2 — Salin Judul, Deskripsi &amp; Tag
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyText("all", fullMetadata)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-cyan-200 hover:border-cyan-400"
-                  >
-                    {copiedKey === "all" ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                    <span>{copiedKey === "all" ? "Disalin!" : "Salin Semua"}</span>
-                  </button>
-                </div>
-                <div className="mt-2 rounded-xl bg-slate-950 p-2.5 text-[11px] text-slate-300">
-                  <div className="font-bold text-white">{seo.title}</div>
-                  <div className="mt-1 line-clamp-3">{seo.description}</div>
-                  <div className="mt-1 text-cyan-300">
-                    {seo.hashtags.join(" ")}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Manual Upload to YouTube Studio + Record Real Link */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3.5">
-              <div className="text-xs font-black text-white">
-                Langkah 3 — Upload Manual di YouTube Studio &amp; Catat Link
-              </div>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                <a
-                  href="https://studio.youtube.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-black text-white hover:bg-rose-400"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Buka YouTube Studio (Manual)</span>
-                </a>
-              </div>
-
-              <form onSubmit={handleSaveManualUrl} className="mt-3 space-y-2">
-                <label className="block text-[11px] font-semibold text-slate-300">
-                  Tempel Link Video YouTube setelah Bos selesai upload manual:
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={youtubeUrlInput}
-                    onChange={(e) => setYoutubeUrlInput(e.target.value)}
-                    placeholder="https://youtube.com/shorts/..."
-                    className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-[40px] items-center gap-1 rounded-xl bg-amber-400 px-3.5 text-xs font-black text-slate-950 hover:bg-amber-300"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Simpan Link</span>
-                  </button>
-                </div>
-                {savedNotice && (
-                  <div className="text-[11px] font-bold text-emerald-300">
-                    ✅ Link YouTube tersimpan ke Dashboard Hasil Nyata!
-                  </div>
-                )}
-              </form>
-            </div>
+        {errorMsg && (
+          <div className="mt-3 rounded-2xl border border-rose-500/40 bg-rose-500/15 px-3.5 py-2.5 text-xs text-rose-200">
+            {errorMsg}
           </div>
         )}
       </div>

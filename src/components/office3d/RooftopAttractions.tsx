@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -362,74 +362,10 @@ function RooftopBadmintonCourt({
   isSimulationRunning: boolean;
 }) {
   const shuttleRef = useRef<THREE.Group>(null);
-  const rgbMatRefs = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
-  const rgbColorTmp = useMemo(() => new THREE.Color(), []);
-
-  // 32-segment continuous RGB Neon LED perimeter border around all 4 edges of the badminton court
-  const rgbPerimeterSegments = useMemo(() => {
-    const segs: {
-      pos: [number, number, number];
-      size: [number, number, number];
-      hueOffset: number;
-    }[] = [];
-    const halfW = 5.74;
-    const halfD = 3.34;
-    const topCount = 10;
-    const sideCount = 6;
-    const total = (topCount + sideCount) * 2;
-    let idx = 0;
-
-    // North edge (Z = -halfD)
-    const segW = (halfW * 2) / topCount;
-    for (let i = 0; i < topCount; i++) {
-      segs.push({
-        pos: [-halfW + segW * (i + 0.5), 0.055, -halfD],
-        size: [segW - 0.04, 0.075, 0.09],
-        hueOffset: idx++ / total,
-      });
-    }
-    // East edge (X = +halfW)
-    const segD = (halfD * 2) / sideCount;
-    for (let i = 0; i < sideCount; i++) {
-      segs.push({
-        pos: [halfW, 0.055, -halfD + segD * (i + 0.5)],
-        size: [0.09, 0.075, segD - 0.04],
-        hueOffset: idx++ / total,
-      });
-    }
-    // South edge (Z = +halfD)
-    for (let i = topCount - 1; i >= 0; i--) {
-      segs.push({
-        pos: [-halfW + segW * (i + 0.5), 0.055, halfD],
-        size: [segW - 0.04, 0.075, 0.09],
-        hueOffset: idx++ / total,
-      });
-    }
-    // West edge (X = -halfW)
-    for (let i = sideCount - 1; i >= 0; i--) {
-      segs.push({
-        pos: [-halfW, 0.055, -halfD + segD * (i + 0.5)],
-        size: [0.09, 0.075, segD - 0.04],
-        hueOffset: idx++ / total,
-      });
-    }
-    return segs;
-  }, []);
 
   useFrame((state) => {
-    const t = state.clock.elapsedTime;
-
-    // Smooth travelling rainbow RGB neon wave around the entire badminton court perimeter
-    for (let i = 0; i < rgbPerimeterSegments.length; i++) {
-      const mat = rgbMatRefs.current[i];
-      if (!mat) continue;
-      const hue = (rgbPerimeterSegments[i].hueOffset + t * 0.22) % 1;
-      rgbColorTmp.setHSL(hue, 0.96, 0.54);
-      mat.color.copy(rgbColorTmp);
-      mat.emissive.copy(rgbColorTmp);
-    }
-
     if (!shuttleRef.current || !isSimulationRunning) return;
+    const t = state.clock.elapsedTime;
     const phase = (t * 2.6) % (Math.PI * 2);
     // Smooth rally flight between X = -2.5 and X = +2.5 clearing the net (y=1.55m)
     const x = Math.cos(phase) * 2.55;
@@ -440,8 +376,7 @@ function RooftopBadmintonCourt({
     shuttleRef.current.rotation.z = Math.sin(phase) > 0 ? -0.9 : 0.9;
   });
 
-  const floodlightEmissive = isNight ? 2.6 : isSunset ? 1.8 : 0.75;
-  const rgbNeonIntensity = isNight ? 2.2 : isSunset ? 1.45 : 0.95;
+  const floodlightEmissive = isNight ? 4.2 : isSunset ? 2.4 : 0.9;
   const lineY = 0.022;
 
   const poleCorners: [number, number, number][] = [
@@ -458,38 +393,6 @@ function RooftopBadmintonCourt({
         <planeGeometry args={[11.6, 6.8]} />
         <meshStandardMaterial color="#1e3a4c" roughness={0.82} />
       </mesh>
-
-      {/* ANIMATED RGB NEON PERIMETER LED LIGHT STRIP AROUND BADMINTON COURT */}
-      <group>
-        {/* Sleek Dark Aluminum Curb Housing */}
-        {[-3.34, 3.34].map((cz, i) => (
-          <mesh key={`curb-ns-${i}`} position={[0, 0.025, cz]}>
-            <boxGeometry args={[11.62, 0.05, 0.14]} />
-            <meshStandardMaterial color="#0f172a" metalness={0.75} roughness={0.32} />
-          </mesh>
-        ))}
-        {[-5.74, 5.74].map((cx, i) => (
-          <mesh key={`curb-ew-${i}`} position={[cx, 0.025, 0]}>
-            <boxGeometry args={[0.14, 0.05, 6.82]} />
-            <meshStandardMaterial color="#0f172a" metalness={0.75} roughness={0.32} />
-          </mesh>
-        ))}
-        {/* 32 Flowing Rainbow RGB Neon Light Tubes */}
-        {rgbPerimeterSegments.map((seg, i) => (
-          <mesh key={`rgb-seg-${i}`} position={seg.pos}>
-            <boxGeometry args={seg.size} />
-            <meshStandardMaterial
-              ref={(el) => {
-                rgbMatRefs.current[i] = el;
-              }}
-              color="#22d3ee"
-              emissive="#22d3ee"
-              emissiveIntensity={rgbNeonIntensity}
-              roughness={0.22}
-            />
-          </mesh>
-        ))}
-      </group>
 
       {/* Official BWF Emerald-Green Badminton Court Mat (10.2m x 5.2m) */}
       <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -578,23 +481,6 @@ function RooftopBadmintonCourt({
             <mesh position={[0, 2.2, 0]} castShadow>
               <cylinderGeometry args={[0.06, 0.085, 4.3, 10]} />
               <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.28} />
-            </mesh>
-            {/* Neon RGB Accent Collar Rings on Each Corner Mast */}
-            <mesh position={[0, 0.34, 0]}>
-              <cylinderGeometry args={[0.115, 0.115, 0.12, 12]} />
-              <meshStandardMaterial
-                color={i % 2 === 0 ? "#22d3ee" : "#ec4899"}
-                emissive={i % 2 === 0 ? "#06b6d4" : "#d946ef"}
-                emissiveIntensity={rgbNeonIntensity}
-              />
-            </mesh>
-            <mesh position={[0, 3.88, 0]}>
-              <cylinderGeometry args={[0.095, 0.095, 0.12, 12]} />
-              <meshStandardMaterial
-                color={i % 2 === 0 ? "#a855f7" : "#22c55e"}
-                emissive={i % 2 === 0 ? "#a855f7" : "#22c55e"}
-                emissiveIntensity={rgbNeonIntensity}
-              />
             </mesh>
             {/* Angled LED Stadium Floodlight Housing */}
             <group position={[aimX * 0.45, 4.32, aimZ * 0.45]} rotation={[aimZ * 0.5, 0, -aimX * 0.65]}>

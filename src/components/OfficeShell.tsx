@@ -1,28 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { AgentManagementPanel } from "@/components/dashboard/AgentManagementPanel";
 import { LiveActivityPanel } from "@/components/dashboard/LiveActivityPanel";
-import { RealResultsDashboard } from "@/components/dashboard/RealResultsDashboard";
 import { KidsStudioPanel } from "@/components/kids/KidsStudioPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
 import { OfficeProvider, useOffice } from "@/store/OfficeContext";
-import { SimulatorProvider } from "@/store/SimulatorContext";
 import { AgencyProvider, useAgency } from "@/store/AgencyContext";
-import { PIPELINE_DIVISIONS } from "@/types/pipeline";
 
 function OfficeWorkspace() {
   const { activeSection, setActiveSection } = useOffice();
-  const { activeEpisode, runningDivision } = useAgency();
+  const { job } = useAgency();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const activeDivMeta = runningDivision
-    ? PIPELINE_DIVISIONS.find((d) => d.key === runningDivision)
-    : null;
+  const needsBossAction =
+    job.stage === "waiting_idea" || job.stage === "waiting_script";
 
   return (
     <div className="flex min-h-screen bg-[#030712] text-slate-100">
@@ -37,33 +33,25 @@ function OfficeWorkspace() {
         <TopHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-3 pb-24 sm:p-6 lg:pb-8">
-          {activeSection === "dashboard" && <KidsStudioPanel />}
-
-          {activeSection === "studio" && <RealResultsDashboard />}
+          {(activeSection === "dashboard" || activeSection === "studio") && (
+            <KidsStudioPanel />
+          )}
 
           {activeSection === "office" && (
             <div className="space-y-3">
-              {activeEpisode && (
+              {job.stage !== "idle" && (
                 <div
                   className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-4 py-2.5 text-xs ${
-                    activeDivMeta
-                      ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-100"
+                    needsBossAction
+                      ? "border-amber-400/70 bg-amber-400/15 text-amber-100"
                       : "border-slate-800 bg-slate-900/90 text-slate-200"
                   }`}
                 >
                   <div className="flex items-center gap-2 font-bold">
-                    {activeDivMeta ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-                    ) : (
-                      <Sparkles className="h-4 w-4 text-amber-300" />
-                    )}
-                    <span>
-                      {activeDivMeta
-                        ? `${activeDivMeta.label} (${activeDivMeta.agentName}) sedang bekerja nyata...`
-                        : `Episode #${activeEpisode.episodeNumber}: ${
-                            activeEpisode.divisions.seo.output?.title ||
-                            activeEpisode.bossTheme
-                          }`}
+                    <Sparkles className="h-4 w-4 text-amber-300" />
+                    <span>{job.activeStepLabel}</span>
+                    <span className="rounded-full bg-slate-950 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
+                      {job.progressPercent}%
                     </span>
                   </div>
                   <button
@@ -71,7 +59,9 @@ function OfficeWorkspace() {
                     onClick={() => setActiveSection("dashboard")}
                     className="inline-flex items-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 text-[11px] font-black text-slate-950 hover:bg-amber-300"
                   >
-                    <span>Buka Pipeline 7 Divisi</span>
+                    <span>
+                      {needsBossAction ? "Buka Laporan & ACC" : "Kembali ke Komando"}
+                    </span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -98,11 +88,9 @@ function OfficeWorkspace() {
 export function OfficeShell() {
   return (
     <OfficeProvider>
-      <SimulatorProvider>
-        <AgencyProvider>
-          <OfficeWorkspace />
-        </AgencyProvider>
-      </SimulatorProvider>
+      <AgencyProvider>
+        <OfficeWorkspace />
+      </AgencyProvider>
     </OfficeProvider>
   );
 }

@@ -15,17 +15,15 @@ import {
   Crosshair,
   Crown,
   Eye,
-  Film,
   Gamepad2,
   Layers,
-  Loader2,
   Monitor,
   Moon,
   Move,
+  Navigation,
   Pause,
   Play,
   RefreshCw,
-  RotateCcw,
   SlidersHorizontal,
   Sun,
   Sunrise,
@@ -35,12 +33,11 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  DESTINATION_PRESETS,
   FLOOR_1_Y,
   FLOOR_3_Y,
 } from "@/lib/data/initial-office-data";
 import { useOffice } from "@/store/OfficeContext";
-import { useAgency } from "@/store/AgencyContext";
-import { PIPELINE_DIVISIONS } from "@/types/pipeline";
 import type {
   BossFloor,
   CameraPreset,
@@ -175,7 +172,6 @@ function VirtualAnalogJoystick({
 export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const {
     agents,
-    setActiveSection,
     selectedAgentId,
     setSelectedAgentId,
     cameraPreset,
@@ -195,6 +191,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     setIsSimulationRunning,
     showLabelsIn3D,
     setShowLabelsIn3D,
+    setAgentStatus,
+    sendAgentToWaypoint,
     isBossMode,
     setIsBossMode,
     bossFollowCamera,
@@ -206,32 +204,9 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     moveBossToFloor,
   } = useOffice();
 
-  const {
-    activeEpisode,
-    editingProgressPct,
-    getAgentSnapshot,
-    runDivision,
-    runningDivision,
-  } = useAgency();
-
   const [clockText, setClockText] = useState("11:45");
   const [showMovePad, setShowMovePad] = useState(false);
   const [isBarExpanded, setIsBarExpanded] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<"logs" | "input" | "output">("logs");
-  const prevSelectedRef = useRef<string | null>(selectedAgentId);
-
-  // Auto-open real task/log inspector when user clicks an agent in the 3D scene
-  useEffect(() => {
-    if (selectedAgentId && selectedAgentId !== prevSelectedRef.current) {
-      setInspectorOpen(true);
-    }
-    prevSelectedRef.current = selectedAgentId;
-  }, [selectedAgentId]);
-
-  const selectedSnapshot = selectedAgentId
-    ? getAgentSnapshot(selectedAgentId)
-    : null;
 
   const cycleLighting = () => {
     const order: LightingPreset[] = ["day", "sunset", "night"];
@@ -449,75 +424,6 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             </button>
           </div>
         </div>
-
-        {/* LIVE AUTO-PIPELINE PROGRESS BANNER (while watching characters work in 3D!) */}
-        {!compact &&
-          activeEpisode &&
-          (runningDivision ||
-            activeEpisode.divisions.editing.status === "done") && (
-            <div className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-2 rounded-2xl border border-cyan-400/45 bg-slate-950/88 px-3 py-2 text-[11px] shadow-xl backdrop-blur-xl">
-              {runningDivision ? (
-                <>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-cyan-300" />
-                    <div className="min-w-0">
-                      <div className="truncate font-bold text-white">
-                        Auto-Produksi:{" "}
-                        {PIPELINE_DIVISIONS.find((d) => d.key === runningDivision)
-                          ?.label ?? runningDivision}
-                        {runningDivision === "editing" && editingProgressPct > 0
-                          ? ` (${editingProgressPct}%)`
-                          : ""}
-                      </div>
-                      <div className="mt-1 flex items-center gap-1">
-                        {PIPELINE_DIVISIONS.map((d) => {
-                          const st = activeEpisode.divisions[d.key].status;
-                          return (
-                            <span
-                              key={d.key}
-                              title={d.label}
-                              className={`h-1.5 flex-1 rounded-full ${
-                                st === "done"
-                                  ? "bg-emerald-400"
-                                  : st === "running"
-                                  ? "animate-pulse bg-cyan-400"
-                                  : st === "failed"
-                                  ? "bg-rose-500"
-                                  : "bg-slate-700"
-                              }`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("dashboard")}
-                    className="shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-2.5 py-1.5 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/30"
-                  >
-                    Detail
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex min-w-0 items-center gap-2 text-emerald-200">
-                    <Film className="h-4 w-4 shrink-0 text-emerald-400" />
-                    <span className="truncate font-bold">
-                      Video Ep #{activeEpisode.episodeNumber} Selesai!
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("dashboard")}
-                    className="shrink-0 rounded-xl bg-emerald-400 px-3 py-1.5 text-[10px] font-black text-slate-950 hover:brightness-110"
-                  >
-                    Lihat & Download
-                  </button>
-                </>
-              )}
-            </div>
-          )}
 
         {/* Collapsible Glassmorphism Neon Control Drawer (All Direct Pickers, >=44px Touch Targets) */}
         {isBarExpanded && (
@@ -937,161 +843,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             </div>
           </div>
 
-          {/* Real Agent Inspector Drawer — Tugas, Input, Output & Log Terakhir */}
-          {!compact && selectedAgent && inspectorOpen && (
-            <div className="pointer-events-auto ml-auto w-full max-w-md rounded-2xl border border-cyan-400/40 bg-slate-950/92 p-3 text-xs shadow-2xl backdrop-blur-xl">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5 font-black text-white">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: selectedAgent.accentColor }}
-                    />
-                    <span>{selectedAgent.name}</span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
-                        selectedAgent.status === "working"
-                          ? "bg-emerald-500/25 text-emerald-200"
-                          : selectedAgent.status === "walking"
-                          ? "bg-sky-500/25 text-sky-200"
-                          : selectedAgent.status === "error"
-                          ? "bg-rose-500/25 text-rose-200"
-                          : "bg-slate-800 text-slate-300"
-                      }`}
-                    >
-                      {selectedAgent.status === "working"
-                        ? "WORK"
-                        : selectedAgent.status === "walking"
-                        ? "WALK"
-                        : selectedAgent.status === "error"
-                        ? "ERROR"
-                        : "IDLE"}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">
-                    {selectedSnapshot?.divisionLabel ?? selectedAgent.role} ·{" "}
-                    {selectedAgent.currentActionLabel}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {selectedSnapshot?.episodeId && (
-                    <button
-                      type="button"
-                      disabled={Boolean(runningDivision)}
-                      onClick={() =>
-                        runDivision(
-                          selectedSnapshot.episodeId!,
-                          selectedSnapshot.division
-                        )
-                      }
-                      className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-40"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      <span>Retry</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setInspectorOpen(false)}
-                    aria-label="Tutup inspektor"
-                    className="rounded-lg border border-slate-700 p-1 text-slate-400 hover:text-white"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {selectedSnapshot ? (
-                <div className="mt-2.5 space-y-2">
-                  <div className="flex items-center justify-between text-[10px] text-slate-300">
-                    <span className="truncate">
-                      Episode: <strong>{selectedSnapshot.episodeTitle ?? "Belum ada"}</strong>
-                    </span>
-                    <span className="font-mono text-cyan-300">
-                      {selectedSnapshot.durationMs > 0
-                        ? `${(selectedSnapshot.durationMs / 1000).toFixed(1)}d`
-                        : "—"}
-                    </span>
-                  </div>
-
-                  {selectedSnapshot.error && (
-                    <div className="rounded-xl border border-rose-500/50 bg-rose-950/60 p-2 text-[10px] text-rose-200">
-                      <strong>Error:</strong> {selectedSnapshot.error}
-                    </div>
-                  )}
-
-                  <div className="flex gap-1">
-                    {(["logs", "input", "output"] as const).map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => setInspectorTab(tab)}
-                        className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase ${
-                          inspectorTab === tab
-                            ? "bg-cyan-500/25 text-cyan-100 ring-1 ring-cyan-400/60"
-                            : "bg-slate-900 text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {tab === "logs"
-                          ? `Log (${selectedSnapshot.logs.length})`
-                          : tab === "input"
-                          ? "Input JSON"
-                          : "Output JSON"}
-                      </button>
-                    ))}
-                  </div>
-
-                  {inspectorTab === "logs" && (
-                    <div className="max-h-28 overflow-y-auto rounded-xl bg-slate-900/90 p-2 font-mono text-[10px] text-slate-300">
-                      {selectedSnapshot.logs.length === 0 ? (
-                        <span className="text-slate-500">
-                          Belum ada tugas dijalankan untuk divisi ini.
-                        </span>
-                      ) : (
-                        selectedSnapshot.logs.slice(-8).map((l, i) => (
-                          <div
-                            key={i}
-                            className={
-                              l.level === "error"
-                                ? "text-rose-300"
-                                : l.level === "success"
-                                ? "text-emerald-300"
-                                : "text-slate-300"
-                            }
-                          >
-                            [{l.time}] {l.message}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {inspectorTab === "input" && (
-                    <pre className="max-h-28 overflow-auto rounded-xl bg-slate-900/90 p-2 text-[9px] text-amber-200">
-                      {selectedSnapshot.input
-                        ? JSON.stringify(selectedSnapshot.input, null, 2)
-                        : "Belum ada input tugas."}
-                    </pre>
-                  )}
-
-                  {inspectorTab === "output" && (
-                    <pre className="max-h-28 overflow-auto rounded-xl bg-slate-900/90 p-2 text-[9px] text-cyan-200">
-                      {selectedSnapshot.output
-                        ? JSON.stringify(selectedSnapshot.output, null, 2)
-                        : "Belum ada output tugas."}
-                    </pre>
-                  )}
-                </div>
-              ) : (
-                <div className="mt-2 rounded-xl bg-slate-900/80 p-2 text-[10px] text-slate-400">
-                  Staf pendukung kantor — antrean divisi terhubung ke 7 divisi
-                  produksi utama (Riset, SEO, Naskah, Suara, Motion, Editing, QC).
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Staff Selector + Real Status & Focus */}
+          {/* 10 Staff Selector + Quick Focus & Commands */}
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
             <div className="pointer-events-auto flex max-w-full items-center gap-1.5 overflow-x-auto pb-0.5">
               {agents.map((agent) => {
@@ -1100,43 +852,24 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                   <button
                     key={agent.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedAgentId(agent.id);
-                      setInspectorOpen(true);
-                    }}
+                    onClick={() => setSelectedAgentId(agent.id)}
                     onDoubleClick={() => focusOnAgent(agent.id)}
                     className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-2 py-1 text-left backdrop-blur-md transition ${
-                      agent.status === "error"
-                        ? "border-rose-500/80 bg-rose-950/85 text-rose-100"
-                        : active
+                      active
                         ? "border-amber-400/80 bg-slate-950/92 text-white shadow-lg"
                         : "border-white/15 bg-slate-950/75 text-slate-200 hover:border-slate-400/60"
                     }`}
                   >
                     <span
                       className="h-2 w-2 rounded-full"
-                      style={{
-                        backgroundColor:
-                          agent.status === "error"
-                            ? "#ef4444"
-                            : agent.status === "working"
-                            ? "#10b981"
-                            : agent.accentColor,
-                      }}
+                      style={{ backgroundColor: agent.accentColor }}
                     />
                     <div className="leading-tight">
                       <div className="text-[10px] font-bold tracking-wide">
                         {agent.name.split(" ")[0]}
                       </div>
                       <div className="text-[8px] uppercase tracking-wider text-slate-400">
-                        L{agent.floor} ·{" "}
-                        {agent.status === "working"
-                          ? "WORK"
-                          : agent.status === "walking"
-                          ? "WALK"
-                          : agent.status === "error"
-                          ? "ERROR"
-                          : "IDLE"}
+                        L{agent.floor} · {agent.status}
                       </div>
                     </div>
                   </button>
@@ -1145,22 +878,48 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             </div>
 
             {!compact && selectedAgent && (
-              <div className="pointer-events-auto flex items-center gap-1.5 rounded-xl border border-white/15 bg-slate-950/84 px-2 py-1 backdrop-blur-md">
+              <div className="pointer-events-auto flex items-center gap-1 overflow-x-auto rounded-xl border border-white/15 bg-slate-950/84 px-2 py-1 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => focusOnAgent(selectedAgent.id)}
-                  className="flex shrink-0 items-center gap-1 rounded-md border border-sky-400/60 bg-sky-500/25 px-2 py-1 text-[10px] font-bold text-sky-100 transition hover:bg-sky-500/40"
+                  className="flex shrink-0 items-center gap-1 rounded-md border border-sky-400/60 bg-sky-500/25 px-2 py-0.5 text-[9px] font-bold text-sky-100 transition hover:bg-sky-500/40"
                 >
                   <Crosshair className="h-3 w-3" />
-                  <span>Fokus {selectedAgent.name.split(" ")[0]}</span>
+                  Fokus {selectedAgent.name.split(" ")[0]}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setInspectorOpen((v) => !v)}
-                  className="flex shrink-0 items-center gap-1 rounded-md border border-cyan-400/50 bg-cyan-500/15 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/30"
-                >
-                  <span>{inspectorOpen ? "Tutup Log" : "Lihat Tugas & Log"}</span>
-                </button>
+                <span className="h-3 w-px shrink-0 bg-slate-700" />
+                <span className="hidden shrink-0 items-center gap-1 text-[10px] font-semibold text-amber-300 md:flex">
+                  <Navigation className="h-3 w-3" />
+                </span>
+                {(["idle", "working", "walking"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setAgentStatus(selectedAgent.id, mode)}
+                    className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase transition ${
+                      selectedAgent.status === mode
+                        ? "border-amber-300/80 bg-amber-400 text-slate-950"
+                        : "border-slate-700/80 bg-slate-900/80 text-slate-300"
+                    }`}
+                  >
+                    {mode === "working"
+                      ? "Work"
+                      : mode === "walking"
+                      ? "Walk"
+                      : "Idle"}
+                  </button>
+                ))}
+                <span className="h-3 w-px shrink-0 bg-slate-700" />
+                {DESTINATION_PRESETS.slice(0, 6).map((dest) => (
+                  <button
+                    key={dest.id}
+                    type="button"
+                    onClick={() => sendAgentToWaypoint(selectedAgent.id, dest.id)}
+                    className="shrink-0 rounded-md border border-slate-700/80 bg-slate-900/80 px-1.5 py-0.5 text-[9px] font-medium text-slate-200 transition hover:border-sky-400/60 hover:bg-sky-500/20"
+                  >
+                    {dest.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -1168,12 +927,13 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
           <div className="pointer-events-none flex items-center justify-between text-[9px] text-white/85 drop-shadow lg:justify-end">
             <span className="flex items-center gap-1 lg:hidden">
               <Compass className="h-3 w-3 text-amber-300" />
-              Klik agen untuk lihat tugas, input, output &amp; log nyata
+              Klik &ldquo;Main Bos FAJREZ&rdquo; untuk analog game • Tap 2x
+              zoom bebas
             </span>
             <span className="hidden items-center gap-1.5 lg:flex">
               <Compass className="h-3 w-3 text-amber-300" />
-              Agen bekerja di meja HANYA saat divisi aktif • Antrean kosong = IDLE •
-              Gagal = Indikator Merah di Meja • Klik agen untuk inspeksi log
+              Klik &ldquo;Main Bos FAJREZ&rdquo; untuk analog/WASD • Klik 2x
+              fokus zoom bebas • 10 Staff Simulasi + Bos FAJREZ (Non-AI)
             </span>
           </div>
         </div>

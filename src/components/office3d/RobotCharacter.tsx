@@ -20,28 +20,6 @@ interface RobotCharacterProps {
   onArrive: (agentId: string, waypointId: string) => void;
 }
 
-/** Only these real chair / workstation waypoints allow an agent to sit down. */
-const SEATED_WAYPOINT_IDS = new Set([
-  "wp-ws-01",
-  "wp-ws-02",
-  "wp-ws-03",
-  "wp-ws-04",
-  "wp-ws-05",
-  "wp-ws-06",
-  "wp-ws-07",
-  "wp-ws-08",
-  "wp-seat-01",
-  "wp-seat-02",
-  "wp-seat-03",
-  "wp-seat-04",
-  "wp-seat-05",
-  "wp-seat-06",
-  "wp-seat-07",
-  "wp-seat-08",
-  "wp-l1-seat",
-  "wp-l3-boardroom",
-]);
-
 export function RobotCharacter({
   agent,
   isSelected,
@@ -55,16 +33,9 @@ export function RobotCharacter({
   const torsoRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
-  const leftElbowRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
-  const rightElbowRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
   const rightLegRef = useRef<THREE.Group>(null);
-  const leftKneeRef = useRef<THREE.Group>(null);
-  const rightKneeRef = useRef<THREE.Group>(null);
-  const coffeeMugRef = useRef<THREE.Group>(null);
-  const steam1Ref = useRef<THREE.Mesh>(null);
-  const steam2Ref = useRef<THREE.Mesh>(null);
 
   const initialPos = useMemo(() => {
     const wp = OFFICE_WAYPOINTS[agent.currentWaypointId];
@@ -75,13 +46,8 @@ export function RobotCharacter({
     new THREE.Vector3(initialPos[0], initialPos[1], initialPos[2])
   );
   const pathQueueRef = useRef<string[]>([]);
-  // IMPORTANT: initialize to currentWaypointId (NOT targetWaypointId) so if Bos
-  // ordered work on the Komando tab before mounting Kantor 3D, the agent IMMEDIATELY
-  // calculates the path and walks to their desk on mount!
-  const lastTargetRef = useRef<string>(agent.currentWaypointId);
-  const arrivedSentRef = useRef<boolean>(
-    agent.currentWaypointId === agent.targetWaypointId
-  );
+  const lastTargetRef = useRef<string>(agent.targetWaypointId);
+  const arrivedSentRef = useRef<boolean>(true);
   const phaseOffset = useMemo(
     () => (agent.id.charCodeAt(agent.id.length - 1) % 10) * 0.75,
     [agent.id]
@@ -168,7 +134,7 @@ export function RobotCharacter({
         );
         const dir = dest.clone().sub(currentPosRef.current);
         const dist = dir.length();
-        const speed = 3.5;
+        const speed = 2.15;
 
         if (dist <= 0.14) {
           currentPosRef.current.copy(dest);
@@ -188,35 +154,19 @@ export function RobotCharacter({
           root.rotation.y += diff * Math.min(1, dt * 10);
         }
       }
-    } else if (agent.status === "working" || agent.status === "error") {
+    } else if (agent.status === "working") {
       const targetAngle = Math.PI;
       let diff = targetAngle - root.rotation.y;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       root.rotation.y += diff * Math.min(1, dt * 8);
-    } else if (agent.status === "idle") {
-      // Face the lounge chair / coffee table direction cleanly
-      const seatWp = OFFICE_WAYPOINTS[agent.currentWaypointId];
-      const targetAngle = seatWp?.facingYaw ?? Math.PI;
-      let diff = targetAngle - root.rotation.y;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      root.rotation.y += diff * Math.min(1, dt * 6);
     }
 
-    const hasRealChairHere = SEATED_WAYPOINT_IDS.has(agent.currentWaypointId);
-    const isWorkingSeated =
-      !isMoving &&
-      hasRealChairHere &&
-      (agent.status === "working" || agent.status === "error");
-    const isIdleSeatedCoffee =
-      !isMoving && hasRealChairHere && agent.status === "idle";
+    const isWorkingSeated = !isMoving && agent.status === "working";
     const verticalOffset = isMoving
-      ? Math.abs(Math.sin(t * 7.8)) * 0.04
+      ? Math.abs(Math.sin(t * 7.2)) * 0.04
       : isWorkingSeated
-      ? -0.23
-      : isIdleSeatedCoffee
-      ? -0.24
+      ? -0.22
       : 0;
 
     root.position.set(
@@ -225,183 +175,67 @@ export function RobotCharacter({
       currentPosRef.current.z
     );
 
-    if (coffeeMugRef.current) {
-      coffeeMugRef.current.visible = isIdleSeatedCoffee;
-    }
-
     if (isMoving) {
-      const stride = Math.sin(t * 7.8);
+      const stride = Math.sin(t * 7.2);
       if (leftLegRef.current) leftLegRef.current.rotation.x = stride * 0.56;
       if (rightLegRef.current) rightLegRef.current.rotation.x = -stride * 0.56;
-      if (leftKneeRef.current)
-        leftKneeRef.current.rotation.x = Math.max(0, -stride * 0.45);
-      if (rightKneeRef.current)
-        rightKneeRef.current.rotation.x = Math.max(0, stride * 0.45);
       if (leftArmRef.current) {
         leftArmRef.current.rotation.x = -stride * 0.44;
-        leftArmRef.current.rotation.y = 0;
         leftArmRef.current.rotation.z = 0.08;
-      }
-      if (leftElbowRef.current) {
-        leftElbowRef.current.rotation.x = -0.18;
       }
       if (rightArmRef.current) {
         rightArmRef.current.rotation.x = stride * 0.44;
-        rightArmRef.current.rotation.y = 0;
         rightArmRef.current.rotation.z = -0.08;
-      }
-      if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = -0.18;
       }
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0.05;
         torsoRef.current.position.y = 1.02;
-        torsoRef.current.position.z = 0;
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 1.5) * 0.1;
-        headRef.current.rotation.x = 0;
       }
     } else if (isWorkingSeated) {
-      // Natural 90-degree bent knees seated at workstation desk
-      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.48;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.48;
-      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
-      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
-
-      // REALISTIC OFFICE WORK: Torso tucked snugly to desk so left hand ACTUALLY types on keyboard & right hand glides on 3D mouse!
-      const typeTap = Math.sin(t * 16.5) * 0.09 + Math.sin(t * 24.0) * 0.04;
-      const mouseGlide = Math.sin(t * 2.2) * 0.15;
-      const mouseClick = Math.sin(t * 7.8) > 0.85 ? 0.07 : 0;
-
+      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.25;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.25;
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.82 + Math.sin(t * 4.0) * 0.03;
-        leftArmRef.current.rotation.y = 0.16 + Math.sin(t * 2.8) * 0.06;
-        leftArmRef.current.rotation.z = -0.04;
-      }
-      if (leftElbowRef.current) {
-        leftElbowRef.current.rotation.x = -0.66 + typeTap;
+        leftArmRef.current.rotation.x = -0.82 + Math.sin(t * 9.5) * 0.07;
+        leftArmRef.current.rotation.z = -0.08;
       }
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = -0.78 + Math.cos(t * 2.4) * 0.03;
-        rightArmRef.current.rotation.y = -0.14 + mouseGlide;
+        rightArmRef.current.rotation.x = -0.82 + Math.cos(t * 9.5) * 0.07;
         rightArmRef.current.rotation.z = 0.08;
       }
-      if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = -0.68 + mouseClick;
-      }
       if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0.16;
+        torsoRef.current.rotation.x = 0.12;
         torsoRef.current.position.y = 1.02;
-        torsoRef.current.position.z = 0.12;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.85) * 0.22;
-        headRef.current.rotation.x = 0.12;
-      }
-    } else if (isIdleSeatedCoffee) {
-      // REAL 90-DEGREE SEATED RELAXED POSE WITH BENT ELBOW & COFFEE MUG
-      const breathe = Math.sin(t * 1.9);
-      const sipCycle = (t * 0.22) % 1; // 1 sip every ~4.5 seconds
-      const sipLift =
-        sipCycle < 0.28 ? Math.sin((sipCycle / 0.28) * Math.PI) : 0;
-
-      // Thighs flat on seat cushion, shins bent 90 degrees straight down
-      if (leftLegRef.current) leftLegRef.current.rotation.x = -1.48;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -1.48;
-      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
-      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
-
-      // Left arm rests relaxed on armrest / lap
-      if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.34 + breathe * 0.02;
-        leftArmRef.current.rotation.y = 0;
-        leftArmRef.current.rotation.z = 0.12;
-      }
-      if (leftElbowRef.current) {
-        leftElbowRef.current.rotation.x = -0.72;
-      }
-
-      // Right arm bends naturally at elbow to hold mug in front of torso, then lifts to sip
-      const upperArmX = -0.26 - sipLift * 0.34 + breathe * 0.02;
-      const elbowX = -1.16 - sipLift * 0.52;
-      if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = upperArmX;
-        rightArmRef.current.rotation.z = 0.14 + sipLift * 0.12;
-      }
-      if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = elbowX;
-      }
-
-      // Keep coffee mug strictly upright so espresso never spills
-      if (coffeeMugRef.current) {
-        coffeeMugRef.current.rotation.x = -(upperArmX + elbowX);
-      }
-
-      // Animate rising warm coffee steam puffs
-      if (steam1Ref.current) {
-        const s1 = (t * 0.7) % 1;
-        steam1Ref.current.position.y = 0.08 + s1 * 0.13;
-        steam1Ref.current.position.x = Math.sin(t * 2.4) * 0.014;
-        const sc1 = 0.6 + s1 * 0.8;
-        steam1Ref.current.scale.set(sc1, sc1, sc1);
-      }
-      if (steam2Ref.current) {
-        const s2 = (t * 0.7 + 0.5) % 1;
-        steam2Ref.current.position.y = 0.08 + s2 * 0.13;
-        steam2Ref.current.position.x = Math.cos(t * 2.1) * 0.014;
-        const sc2 = 0.6 + s2 * 0.8;
-        steam2Ref.current.scale.set(sc2, sc2, sc2);
-      }
-
-      if (torsoRef.current) {
-        torsoRef.current.rotation.x = -0.05;
-        torsoRef.current.position.y = 1.02 + breathe * 0.01;
-        torsoRef.current.position.z = 0;
-      }
-      if (headRef.current) {
-        headRef.current.rotation.y =
-          (1 - sipLift) * Math.sin(t * 0.55) * 0.24;
-        headRef.current.rotation.x = -sipLift * 0.1;
+        headRef.current.rotation.y = Math.sin(t * 0.9) * 0.18;
       }
     } else {
-      // Standing upright cleanly (never float-sit without a real chair!)
-      const breathe = Math.sin(t * 2.0);
+      const breathe = Math.sin(t * 2.1);
       if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
       if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (leftKneeRef.current) leftKneeRef.current.rotation.x = 0;
-      if (rightKneeRef.current) rightKneeRef.current.rotation.x = 0;
       if (leftArmRef.current) {
         leftArmRef.current.rotation.x = 0.04 + breathe * 0.02;
-        leftArmRef.current.rotation.y = 0;
         leftArmRef.current.rotation.z = 0.08;
-      }
-      if (leftElbowRef.current) {
-        leftElbowRef.current.rotation.x = -0.06;
       }
       if (rightArmRef.current) {
         rightArmRef.current.rotation.x = 0.04 - breathe * 0.02;
-        rightArmRef.current.rotation.y = 0;
         rightArmRef.current.rotation.z = -0.08;
-      }
-      if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = -0.06;
       }
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0;
         torsoRef.current.position.y = 1.02 + breathe * 0.012;
-        torsoRef.current.position.z = 0;
       }
       if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.65) * 0.22;
-        headRef.current.rotation.x = 0;
+        headRef.current.rotation.y = Math.sin(t * 0.7) * 0.24;
       }
     }
   });
 
   const { skinColor, hairColor, hairStyle, suitColor, shirtColor, pantsColor } =
     agent.appearance;
-  const isFemale = hairStyle === "bob" || hairStyle === "ponytail";
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -421,8 +255,6 @@ export function RobotCharacter({
   const statusDotColor =
     agent.status === "working"
       ? "#10b981"
-      : agent.status === "error"
-      ? "#ef4444"
       : agent.status === "walking"
       ? "#38bdf8"
       : agent.status === "idle"
@@ -436,130 +268,78 @@ export function RobotCharacter({
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Subtle Role-Colored Ground Presence Ring (Red when division failed) */}
+      {/* Subtle Role-Colored Ground Presence Ring for Instant Visual Readability */}
       <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[isSelected ? 0.42 : 0.34, isSelected ? 0.56 : 0.41, 24]} />
         <meshBasicMaterial
-          color={agent.status === "error" ? "#ef4444" : agent.accentColor}
+          color={agent.accentColor}
           transparent
-          opacity={agent.status === "error" || isSelected ? 0.92 : 0.42}
+          opacity={isSelected ? 0.92 : 0.42}
         />
       </mesh>
 
-      {/* ARTICULATED LEFT LEG (THIGH + HINGED 90° KNEE SHIN + DRESS SHOE) */}
+      {/* SCULPTED LEFT LEG + DRESS SHOE */}
       <group ref={leftLegRef} position={[-0.1, 0.79, 0]}>
-        {/* Upper Thigh */}
-        <mesh position={[0, -0.18, 0]} castShadow>
-          <capsuleGeometry args={[0.072, 0.24, 8, 12]} />
+        <mesh position={[0, -0.34, 0]} castShadow>
+          <capsuleGeometry args={[0.072, 0.52, 8, 12]} />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        {/* Hinged Knee Joint -> Lower Shin + Dress Shoe */}
-        <group ref={leftKneeRef} position={[0, -0.36, 0]}>
-          <mesh position={[0, -0.17, 0]} castShadow>
-            <capsuleGeometry args={[0.062, 0.24, 8, 10]} />
-            <meshStandardMaterial color={pantsColor} roughness={0.78} />
-          </mesh>
-          <mesh position={[0, -0.35, 0.045]} castShadow>
-            <capsuleGeometry args={[0.052, 0.12, 6, 10]} />
-            <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
-          </mesh>
-        </group>
+        <mesh position={[0, -0.71, 0.045]} castShadow>
+          <capsuleGeometry args={[0.055, 0.12, 6, 10]} />
+          <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
+        </mesh>
       </group>
 
-      {/* ARTICULATED RIGHT LEG (THIGH + HINGED 90° KNEE SHIN + DRESS SHOE) */}
+      {/* SCULPTED RIGHT LEG + DRESS SHOE */}
       <group ref={rightLegRef} position={[0.1, 0.79, 0]}>
-        {/* Upper Thigh */}
-        <mesh position={[0, -0.18, 0]} castShadow>
-          <capsuleGeometry args={[0.072, 0.24, 8, 12]} />
+        <mesh position={[0, -0.34, 0]} castShadow>
+          <capsuleGeometry args={[0.072, 0.52, 8, 12]} />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        {/* Hinged Knee Joint -> Lower Shin + Dress Shoe */}
-        <group ref={rightKneeRef} position={[0, -0.36, 0]}>
-          <mesh position={[0, -0.17, 0]} castShadow>
-            <capsuleGeometry args={[0.062, 0.24, 8, 10]} />
-            <meshStandardMaterial color={pantsColor} roughness={0.78} />
-          </mesh>
-          <mesh position={[0, -0.35, 0.045]} castShadow>
-            <capsuleGeometry args={[0.052, 0.12, 6, 10]} />
-            <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
-          </mesh>
-        </group>
+        <mesh position={[0, -0.71, 0.045]} castShadow>
+          <capsuleGeometry args={[0.055, 0.12, 6, 10]} />
+          <meshStandardMaterial color="#18191d" roughness={0.28} metalness={0.2} />
+        </mesh>
       </group>
 
-      {/* SCULPTED ANATOMICAL TORSO & GENDER-TAILORED BLAZER */}
+      {/* SCULPTED ANATOMICAL TORSO & TAILORED BLAZER */}
       <group ref={torsoRef} position={[0, 1.02, 0]}>
-        {/* Sculpted waist / tailored skirt for female, straight trousers waist for male */}
+        {/* Sculpted waist / belt */}
         <mesh position={[0, -0.17, 0]} castShadow>
-          <cylinderGeometry
-            args={isFemale ? [0.14, 0.185, 0.25, 14] : [0.158, 0.168, 0.22, 14]}
-          />
+          <cylinderGeometry args={[0.155, 0.165, 0.22, 14]} />
           <meshStandardMaterial color={pantsColor} roughness={0.76} />
         </mesh>
-        <mesh position={[0, -0.06, 0]}>
-          <cylinderGeometry args={[isFemale ? 0.146 : 0.164, isFemale ? 0.146 : 0.164, 0.04, 14]} />
+        <mesh position={[0, -0.07, 0]}>
+          <cylinderGeometry args={[0.162, 0.162, 0.04, 14]} />
           <meshStandardMaterial color="#18181b" roughness={0.4} />
         </mesh>
 
-        {/* Blazer Chest & Shoulders (Slim feminine with sculpted bust contour vs Broad masculine) */}
-        <mesh
-          position={[0, 0.14, 0]}
-          scale={isFemale ? [1.0, 1, 0.7] : [1.24, 1, 0.76]}
-          castShadow
-        >
-          <cylinderGeometry args={[0.18, isFemale ? 0.125 : 0.14, 0.5, 16]} />
+        {/* Rounded Tapered Sculpted Blazer Chest & Shoulders */}
+        <mesh position={[0, 0.14, 0]} scale={[1.22, 1, 0.74]} castShadow>
+          <cylinderGeometry args={[0.185, 0.145, 0.5, 16]} />
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
-        {/* Sculpted Natural Feminine Bust Contour */}
-        {isFemale && (
-          <group>
-            <mesh position={[-0.072, 0.21, 0.118]} scale={[0.95, 0.9, 0.96]} castShadow>
-              <sphereGeometry args={[0.074, 14, 12]} />
-              <meshStandardMaterial color={suitColor} roughness={0.64} />
-            </mesh>
-            <mesh position={[0.072, 0.21, 0.118]} scale={[0.95, 0.9, 0.96]} castShadow>
-              <sphereGeometry args={[0.074, 14, 12]} />
-              <meshStandardMaterial color={suitColor} roughness={0.64} />
-            </mesh>
-          </group>
-        )}
-        {/* Shoulder Cap */}
-        <mesh
-          position={[0, 0.35, 0]}
-          scale={isFemale ? [1.04, 0.44, 0.68] : [1.3, 0.48, 0.76]}
-          castShadow
-        >
+        {/* Rounded Shoulder Cap */}
+        <mesh position={[0, 0.35, 0]} scale={[1.28, 0.48, 0.74]} castShadow>
           <sphereGeometry args={[0.185, 16, 12]} />
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
 
-        {/* Crisp Shirt / Blouse Front */}
+        {/* Crisp Shirt V-Front & Collar */}
         <mesh position={[0, 0.22, 0.112]}>
-          <boxGeometry args={[isFemale ? 0.1 : 0.11, 0.3, 0.035]} />
+          <boxGeometry args={[0.11, 0.3, 0.035]} />
           <meshStandardMaterial color={shirtColor} roughness={0.55} />
         </mesh>
-        {/* Male Executive Tie vs Female Subtle Pendant Collar */}
-        {!isFemale ? (
-          <mesh position={[0, 0.17, 0.132]}>
-            <boxGeometry args={[0.044, 0.25, 0.016]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={0.35}
-              roughness={0.36}
-            />
-          </mesh>
-        ) : (
-          <mesh position={[0, 0.27, 0.132]}>
-            <sphereGeometry args={[0.022, 10, 10]} />
-            <meshStandardMaterial
-              color="#f8fafc"
-              emissive={agent.accentColor}
-              emissiveIntensity={0.45}
-              metalness={0.5}
-              roughness={0.2}
-            />
-          </mesh>
-        )}
+        {/* Role-Colored Accent Tie & Shoulder Trim for High Readability */}
+        <mesh position={[0, 0.17, 0.132]}>
+          <boxGeometry args={[0.044, 0.25, 0.016]} />
+          <meshStandardMaterial
+            color={agent.accentColor}
+            emissive={agent.accentColor}
+            emissiveIntensity={0.35}
+            roughness={0.36}
+          />
+        </mesh>
         {/* Crisp Role-Colored Collar Piping on Shoulders */}
         <mesh position={[-0.17, 0.36, 0.02]} rotation={[0, 0, 0.16]}>
           <boxGeometry args={[0.08, 0.025, 0.08]} />
@@ -590,93 +370,36 @@ export function RobotCharacter({
           />
         </mesh>
 
-        {/* ARTICULATED LEFT ARM (UPPER ARM + BENT ELBOW FOREARM FOR REAL KEYBOARD TYPING!) */}
+        {/* LEFT ARM (Smooth Capsule + Shirt Cuff + Hand) */}
         <group ref={leftArmRef} position={[-0.24, 0.33, 0]}>
-          <mesh position={[0, -0.12, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
+          <mesh position={[0, -0.23, 0]} castShadow>
+            <capsuleGeometry args={[0.056, 0.38, 8, 12]} />
             <meshStandardMaterial color={suitColor} roughness={0.66} />
           </mesh>
-          <group ref={leftElbowRef} position={[0, -0.24, 0]}>
-            <mesh position={[0, -0.11, 0]} castShadow>
-              <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
-              <meshStandardMaterial color={suitColor} roughness={0.66} />
-            </mesh>
-            <mesh position={[0, -0.21, 0]}>
-              <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.55} />
-            </mesh>
-            <mesh position={[0, -0.26, 0]}>
-              <sphereGeometry args={[0.048, 10, 10]} />
-              <meshStandardMaterial color={skinColor} roughness={0.72} />
-            </mesh>
-          </group>
+          <mesh position={[0, -0.44, 0]}>
+            <cylinderGeometry args={[0.046, 0.046, 0.05, 10]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.55} />
+          </mesh>
+          <mesh position={[0, -0.5, 0]}>
+            <sphereGeometry args={[0.05, 10, 10]} />
+            <meshStandardMaterial color={skinColor} roughness={0.72} />
+          </mesh>
         </group>
 
-        {/* ARTICULATED RIGHT ARM (UPPER ARM + BENT ELBOW FOREARM + REAL 3D COFFEE MUG) */}
+        {/* RIGHT ARM */}
         <group ref={rightArmRef} position={[0.24, 0.33, 0]}>
-          {/* Upper Arm */}
-          <mesh position={[0, -0.12, 0]} castShadow>
-            <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
+          <mesh position={[0, -0.23, 0]} castShadow>
+            <capsuleGeometry args={[0.056, 0.38, 8, 12]} />
             <meshStandardMaterial color={suitColor} roughness={0.66} />
           </mesh>
-          {/* Hinged Elbow Forearm */}
-          <group ref={rightElbowRef} position={[0, -0.24, 0]}>
-            <mesh position={[0, -0.11, 0]} castShadow>
-              <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
-              <meshStandardMaterial color={suitColor} roughness={0.66} />
-            </mesh>
-            <mesh position={[0, -0.21, 0]}>
-              <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
-              <meshStandardMaterial color={shirtColor} roughness={0.55} />
-            </mesh>
-            <mesh position={[0, -0.26, 0]}>
-              <sphereGeometry args={[0.048, 10, 10]} />
-              <meshStandardMaterial color={skinColor} roughness={0.72} />
-            </mesh>
-
-            {/* REAL 3D CERAMIC COFFEE MUG + DARK ESPRESSO + WARM STEAM (visible when seated IDLE) */}
-            <group ref={coffeeMugRef} position={[0, -0.28, 0.05]} visible={false}>
-              {/* Ceramic Mug Body */}
-              <mesh castShadow>
-                <cylinderGeometry args={[0.05, 0.043, 0.105, 14]} />
-                <meshStandardMaterial color="#f8fafc" roughness={0.22} metalness={0.05} />
-              </mesh>
-              {/* Accent Stripe Around Mug */}
-              <mesh position={[0, 0, 0]}>
-                <cylinderGeometry args={[0.051, 0.048, 0.022, 14]} />
-                <meshStandardMaterial color="#c2410c" roughness={0.35} />
-              </mesh>
-              {/* Dark Hot Espresso Surface */}
-              <mesh position={[0, 0.046, 0]}>
-                <cylinderGeometry args={[0.042, 0.042, 0.012, 12]} />
-                <meshStandardMaterial color="#3b1f0e" roughness={0.18} />
-              </mesh>
-              {/* Mug Handle */}
-              <mesh position={[0.052, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <torusGeometry args={[0.026, 0.008, 8, 14, Math.PI]} />
-                <meshStandardMaterial color="#f1f5f9" roughness={0.25} />
-              </mesh>
-              {/* Rising Warm Coffee Steam Puffs */}
-              <mesh ref={steam1Ref} position={[0, 0.09, 0]}>
-                <sphereGeometry args={[0.017, 8, 8]} />
-                <meshStandardMaterial
-                  color="#ffffff"
-                  transparent
-                  opacity={0.42}
-                  depthWrite={false}
-                />
-              </mesh>
-              <mesh ref={steam2Ref} position={[0.01, 0.14, 0]}>
-                <sphereGeometry args={[0.013, 8, 8]} />
-                <meshStandardMaterial
-                  color="#f8fafc"
-                  transparent
-                  opacity={0.3}
-                  depthWrite={false}
-                />
-              </mesh>
-            </group>
-          </group>
+          <mesh position={[0, -0.44, 0]}>
+            <cylinderGeometry args={[0.046, 0.046, 0.05, 10]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.55} />
+          </mesh>
+          <mesh position={[0, -0.5, 0]}>
+            <sphereGeometry args={[0.05, 10, 10]} />
+            <meshStandardMaterial color={skinColor} roughness={0.72} />
+          </mesh>
         </group>
 
         {/* NECK & SCULPTED REALISTIC HEAD */}
@@ -730,59 +453,32 @@ export function RobotCharacter({
 
           {hairStyle === "bob" && (
             <group>
-              {/* Full Rounded Hair Crown */}
               <mesh position={[0, 0.24, -0.02]} scale={[0.98, 1.05, 1.0]} castShadow>
-                <sphereGeometry args={[0.152, 16, 14]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+                <sphereGeometry args={[0.15, 16, 14]} />
+                <meshStandardMaterial color={hairColor} roughness={0.78} />
               </mesh>
-              {/* Long Flowing Back Hair Drape Past Shoulders */}
-              <mesh position={[0, -0.03, -0.11]} castShadow>
-                <boxGeometry args={[0.26, 0.48, 0.11]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              <mesh position={[-0.115, 0.14, -0.02]} castShadow>
+                <capsuleGeometry args={[0.04, 0.14, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.78} />
               </mesh>
-              <mesh position={[0, -0.26, -0.115]} scale={[1.0, 0.65, 0.55]} castShadow>
-                <sphereGeometry args={[0.13, 12, 10]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              {/* Long Face-Framing Side Hair Strands Reaching Chest/Shoulders */}
-              <mesh position={[-0.122, 0.03, 0.015]} castShadow>
-                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              <mesh position={[0.122, 0.03, 0.015]} castShadow>
-                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              <mesh position={[0.115, 0.14, -0.02]} castShadow>
+                <capsuleGeometry args={[0.04, 0.14, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.78} />
               </mesh>
             </group>
           )}
 
           {hairStyle === "ponytail" && (
             <group>
-              {/* Sleek Hair Crown */}
               <mesh position={[0, 0.25, -0.02]} castShadow>
                 <sphereGeometry
-                  args={[0.15, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]}
+                  args={[0.146, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58]}
                 />
+                <meshStandardMaterial color={hairColor} roughness={0.78} />
+              </mesh>
+              <mesh position={[0, 0.21, -0.15]} rotation={[0.38, 0, 0]} castShadow>
+                <capsuleGeometry args={[0.05, 0.16, 6, 10]} />
                 <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              {/* Soft Front Side-Framing Wisps */}
-              <mesh position={[-0.12, 0.1, 0.02]} castShadow>
-                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              <mesh position={[0.12, 0.1, 0.02]} castShadow>
-                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              {/* Hair Tie Accent */}
-              <mesh position={[0, 0.24, -0.145]}>
-                <torusGeometry args={[0.042, 0.012, 8, 12]} />
-                <meshStandardMaterial color={agent.accentColor} roughness={0.4} />
-              </mesh>
-              {/* Long Flowing High Ponytail Tail Reaching Mid-Back */}
-              <mesh position={[0, 0.02, -0.175]} rotation={[0.18, 0, 0]} castShadow>
-                <capsuleGeometry args={[0.06, 0.44, 8, 12]} />
-                <meshStandardMaterial color={hairColor} roughness={0.74} />
               </mesh>
             </group>
           )}

@@ -5,7 +5,6 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { AlertTriangle, Box, RotateCcw } from "lucide-react";
 import { OfficeScene } from "@/components/office3d/OfficeScene";
-import { NandaSimulatorHUD } from "@/components/office3d/NandaSimulatorHUD";
 import { SceneControlsHUD } from "@/components/office3d/SceneControlsHUD";
 import { useOffice } from "@/store/OfficeContext";
 
@@ -161,7 +160,6 @@ export function VirtualOfficeCanvas({
           >
             <OfficeScene />
           </Canvas>
-          <NandaSimulatorHUD />
           <SceneControlsHUD compact={compactHud} />
         </CanvasErrorBoundary>
       )}

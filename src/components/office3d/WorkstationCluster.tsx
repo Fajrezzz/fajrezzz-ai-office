@@ -34,7 +34,6 @@ export function WorkstationCluster({
       {workstations.map((ws) => {
         const assigned = agents.find((a) => a.id === ws.assignedAgentId);
         const isActive = assigned?.status === "working";
-        const isError = assigned?.status === "error";
         const [x, y, z] = ws.position;
 
         const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -76,54 +75,11 @@ export function WorkstationCluster({
               </group>
             ))}
 
-            {/* Modesty Privacy Panel + Acoustic Felt Desk Divider (GenRoom / Paintit.ai Style) */}
+            {/* Modesty Privacy Panel */}
             <mesh position={[0, 0.56, -0.46]} castShadow>
               <boxGeometry args={[2.16, 0.34, 0.04]} />
               <meshStandardMaterial color="#2a313e" roughness={0.62} />
             </mesh>
-            <mesh position={[0, 0.96, -0.48]} castShadow>
-              <boxGeometry args={[2.28, 0.38, 0.045]} />
-              <meshStandardMaterial color="#64748b" roughness={0.92} />
-            </mesh>
-
-            {/* Under-Desk 3-Drawer White Rolling Filing Pedestal Cabinet */}
-            <group position={[0.76, 0, 0.04]}>
-              <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.44, 0.58, 0.54]} />
-                <meshStandardMaterial color="#f1f5f9" roughness={0.44} />
-              </mesh>
-              {/* 3 Drawer Front Seams & Brushed Silver Pull Handles */}
-              {[0.17, 0.34, 0.51].map((dy, di) => (
-                <mesh key={di} position={[0, dy, 0.28]}>
-                  <boxGeometry args={[0.16, 0.018, 0.02]} />
-                  <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.22} />
-                </mesh>
-              ))}
-              {/* 4 Caster Wheels */}
-              {[
-                [-0.16, -0.2],
-                [0.16, -0.2],
-                [-0.16, 0.2],
-                [0.16, 0.2],
-              ].map(([wx, wz], wi) => (
-                <mesh key={wi} position={[wx, 0.03, wz]}>
-                  <cylinderGeometry args={[0.025, 0.025, 0.03, 8]} />
-                  <meshStandardMaterial color="#1e293b" roughness={0.6} />
-                </mesh>
-              ))}
-            </group>
-
-            {/* Mini Potted Green Desk Plant beside Dual Monitors */}
-            <group position={[-0.96, 0.78, -0.22]}>
-              <mesh position={[0, 0.06, 0]} castShadow>
-                <cylinderGeometry args={[0.065, 0.052, 0.12, 10]} />
-                <meshStandardMaterial color="#e2e8f0" roughness={0.35} />
-              </mesh>
-              <mesh position={[0, 0.16, 0]} castShadow>
-                <sphereGeometry args={[0.095, 10, 8]} />
-                <meshStandardMaterial color="#2f7d43" roughness={0.82} />
-              </mesh>
-            </group>
 
             {/* Dual Ultra-Sharp Widescreen Monitors */}
             {[-0.48, 0.48].map((mx, idx) => (
@@ -146,21 +102,15 @@ export function WorkstationCluster({
                   <boxGeometry args={[0.88, 0.52, 0.035]} />
                   <meshStandardMaterial color="#111622" metalness={0.55} roughness={0.3} />
                 </mesh>
-                {/* High-res glowing screen (Active green/white when working, Red alert when failed, Dim when idle) */}
+                {/* High-res glowing screen */}
                 <mesh position={[0, 0, 0.02]}>
                   <planeGeometry args={[0.83, 0.47]} />
                   <meshStandardMaterial
                     map={textures.monitorScreen}
                     emissiveMap={textures.monitorScreen}
-                    emissive={isError ? "#ef4444" : "#ffffff"}
+                    emissive="#ffffff"
                     emissiveIntensity={
-                      isError
-                        ? 1.85
-                        : isActive
-                        ? isNight
-                          ? 0.95
-                          : 0.62
-                        : 0.14
+                      isActive ? (isNight ? 0.95 : 0.62) : 0.24
                     }
                     roughness={0.18}
                   />
@@ -168,75 +118,19 @@ export function WorkstationCluster({
               </group>
             ))}
 
-            {/* Real Division Error Indicator Beacon on Desk (only visible when division FAILED) */}
-            {isError && (
-              <group position={[0, 1.56, -0.26]}>
-                <mesh>
-                  <sphereGeometry args={[0.13, 14, 12]} />
-                  <meshStandardMaterial
-                    color="#ef4444"
-                    emissive="#ef4444"
-                    emissiveIntensity={2.8}
-                    toneMapped={false}
-                  />
-                </mesh>
-                <mesh position={[0, -0.14, 0]}>
-                  <cylinderGeometry args={[0.025, 0.025, 0.22, 8]} />
-                  <meshStandardMaterial color="#991b1b" metalness={0.6} roughness={0.3} />
-                </mesh>
-              </group>
-            )}
-
-            {/* Large Stitched Desk Mat + Backlit Mechanical Keyboard + Ergonomic Wireless Mouse */}
+            {/* Desk Mat, Mechanical Keyboard & Mouse */}
             <mesh position={[0, 0.778, 0.16]} receiveShadow>
-              <boxGeometry args={[1.14, 0.01, 0.44]} />
-              <meshStandardMaterial color="#18202c" roughness={0.9} />
+              <boxGeometry args={[1.08, 0.01, 0.42]} />
+              <meshStandardMaterial color="#1f2937" roughness={0.88} />
             </mesh>
-            {/* Detailed Mechanical Keyboard (Positioned Cleanly Within Working Hand Reach!) */}
-            <group position={[-0.1, 0.79, 0.25]}>
-              <mesh castShadow>
-                <boxGeometry args={[0.48, 0.024, 0.175]} />
-                <meshStandardMaterial color="#0f172a" roughness={0.38} metalness={0.45} />
-              </mesh>
-              {/* Sculpted Keycap Grid Rows */}
-              {[-0.05, -0.016, 0.018, 0.052].map((kz, ri) => (
-                <mesh key={ri} position={[-0.03, 0.016, kz]}>
-                  <boxGeometry args={[0.37, 0.01, 0.024]} />
-                  <meshStandardMaterial
-                    color={isActive ? "#334155" : "#1e293b"}
-                    emissive={isActive ? "#38bdf8" : "#000000"}
-                    emissiveIntensity={isActive ? (isNight ? 0.55 : 0.22) : 0}
-                    roughness={0.5}
-                  />
-                </mesh>
-              ))}
-              {/* Numpad / Arrow Keys Cluster */}
-              <mesh position={[0.195, 0.016, 0]}>
-                <boxGeometry args={[0.058, 0.01, 0.12]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.5} />
-              </mesh>
-            </group>
-            {/* Dedicated Ergonomic Mouse Pad Accent + Sculpted Wireless Office Mouse */}
-            <group position={[0.3, 0.785, 0.25]}>
-              <mesh position={[0, -0.002, 0]}>
-                <boxGeometry args={[0.24, 0.006, 0.26]} />
-                <meshStandardMaterial color="#111827" roughness={0.85} />
-              </mesh>
-              {/* Contoured Ergonomic Mouse Body */}
-              <mesh position={[0, 0.016, 0]} scale={[0.76, 0.48, 1.24]} castShadow>
-                <sphereGeometry args={[0.056, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
-                <meshStandardMaterial color="#1e293b" metalness={0.35} roughness={0.28} />
-              </mesh>
-              {/* Glowing Mouse Scroll Wheel LED */}
-              <mesh position={[0, 0.031, -0.028]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.008, 0.008, 0.012, 10]} />
-                <meshStandardMaterial
-                  color="#38bdf8"
-                  emissive={isActive ? "#22d3ee" : "#0ea5e9"}
-                  emissiveIntensity={isActive ? 1.4 : 0.4}
-                />
-              </mesh>
-            </group>
+            <mesh position={[-0.08, 0.79, 0.18]}>
+              <boxGeometry args={[0.48, 0.024, 0.17]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.45} />
+            </mesh>
+            <mesh position={[0.32, 0.79, 0.18]}>
+              <boxGeometry args={[0.08, 0.024, 0.12]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.4} />
+            </mesh>
 
             {/* Ceramic Coffee Mug */}
             <mesh position={[-0.86, 0.83, 0.24]} castShadow>

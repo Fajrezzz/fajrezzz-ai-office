@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  BarChart3,
   Box,
   ChevronLeft,
   ChevronRight,
@@ -40,15 +39,9 @@ const NAV_ITEMS: {
     icon: Box,
   },
   {
-    id: "studio",
-    label: "Hasil & KPI YPP",
-    shortLabel: "Hasil YPP",
-    icon: BarChart3,
-  },
-  {
     id: "agents",
-    label: "Tim 7 Divisi",
-    shortLabel: "Tim 7",
+    label: "Tim & Divisi",
+    shortLabel: "Tim 10",
     icon: Users,
   },
 ];
@@ -81,7 +74,7 @@ export function Sidebar({
                   FAJREZZZ
                 </div>
                 <div className="truncate text-[10px] font-bold tracking-wider text-amber-300 uppercase">
-                  AI CONTENT STUDIO
+                  YT ANAK AUTOPILOT
                 </div>
               </div>
             )}
@@ -143,23 +136,22 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* Honest Free-Tier API & Quota Disclosure */}
+      {/* Simple Free Note */}
       <div className="border-t border-slate-800 p-3">
         {!collapsed || isMobile ? (
-          <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-100">
+          <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-200">
             <div className="flex items-center gap-1.5 font-bold">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              <span>AI Gratis Rp 0 (Langsung Jalan)</span>
+              <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
+              <span>100% Gratis (Rp 0)</span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-              Langsung aktif gratis tanpa kartu kredit &amp; tanpa API key lewat
-              Pollinations AI. Opsional tambah key gratis Groq/Gemini di Vercel
-              untuk kecepatan lebih tinggi. Upload YouTube manual oleh Bos.
+              Animasi &amp; musik dibuat langsung di browser tanpa bayar API.
+              Tinggal download &amp; upload ke YouTube.
             </p>
           </div>
         ) : (
           <div className="flex justify-center">
-            <Sparkles className="h-5 w-5 text-cyan-400" />
+            <Sparkles className="h-5 w-5 text-emerald-400" />
           </div>
         )}
       </div>
@@ -188,8 +180,8 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Clean 4-Button Android Bottom Navigation Bar */}
-      <nav className="fixed right-0 bottom-0 left-0 z-40 grid grid-cols-4 border-t border-slate-800 bg-[#050b1d]/95 px-2 py-2 backdrop-blur-lg lg:hidden">
+      {/* Ultra-Clean 3-Button Android Bottom Navigation Bar */}
+      <nav className="fixed right-0 bottom-0 left-0 z-40 grid grid-cols-3 border-t border-slate-800 bg-[#050b1d]/95 px-2 py-2 backdrop-blur-lg lg:hidden">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = activeSection === item.id;

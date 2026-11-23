@@ -8,1308 +8,779 @@ import React, {
   useRef,
   useState,
 } from "react";
-import type { PublishPlatform, VideoFormat } from "@/lib/kids-studio/episode-brain";
 import {
-  runEditingDivisionBrowser,
-  runMotionDivisionBrowser,
-  runVoiceDivisionBrowser,
-} from "@/lib/pipeline/browser-divisions";
-import {
-  createEmptyBossOriginality,
-  createEmptyDivisionRecord,
-  PIPELINE_DIVISIONS,
-  type BossOriginalityInput,
-  type DivisionLogEntry,
-  type DivisionRunHistoryPoint,
-  type DivisionRunRecord,
-  type EditingInput,
-  type EpisodeRealMetrics,
-  type MotionInput,
-  type PipelineDivisionKey,
-  type QcInput,
-  type QcOutput,
-  type RealDivisionStatus,
-  type RealEpisode,
-  type ResearchInput,
-  type ResearchOutput,
-  type ScriptInput,
-  type ScriptOutput,
-  type SeoInput,
-  type SeoOutput,
-  type VoiceInput,
-} from "@/types/pipeline";
+  buildEpisodeFromSelectedIdea,
+  generateAutonomousKidsEpisode,
+  generateIdeaOptionsFromBrief,
+  type ContentIdeaOption,
+  type KidsEpisode,
+  type PublishPlatform,
+} from "@/lib/kids-studio/episode-brain";
 import { useOffice } from "@/store/OfficeContext";
 
-const EPISODES_STORAGE_KEY = "fajrezzz_real_episodes_v2";
-const HISTORY_STORAGE_KEY = "fajrezzz_division_history_v2";
+export type AgencyDivisionKey =
+  | "director"
+  | "research"
+  | "seo"
+  | "script"
+  | "voice"
+  | "motion"
+  | "qc";
+
+export type DivisionStepStatus = "waiting" | "working" | "done" | "break";
+
+export type AgencyJobStage =
+  | "idle"
+  | "briefing"
+  | "waiting_idea"
+  | "scripting"
+  | "waiting_script"
+  | "producing"
+  | "ready";
+
+export interface TeamChatMessage {
+  id: string;
+  time: string;
+  senderName: string;
+  division: string;
+  avatarColor: string;
+  text: string;
+  kind: "boss" | "work" | "report" | "break";
+}
+
+export interface AgencyJob {
+  id: string;
+  brief: string;
+  platform: PublishPlatform;
+  stage: AgencyJobStage;
+  activeStepLabel: string;
+  progressPercent: number;
+  divisionStatus: Record<AgencyDivisionKey, DivisionStepStatus>;
+  ideas: ContentIdeaOption[];
+  selectedIdea: ContentIdeaOption | null;
+  draftEpisode: KidsEpisode | null;
+  finalEpisodeId: string | null;
+}
+
+export const AGENCY_DIVISIONS: {
+  key: AgencyDivisionKey;
+  label: string;
+  shortLabel: string;
+  staffId: string;
+  staffName: string;
+  workWaypointId: string;
+  color: string;
+}[] = [
+  {
+    key: "director",
+    label: "Direktur Konten",
+    shortLabel: "Direktur",
+    staffId: "staff-09",
+    staffName: "Reza",
+    workWaypointId: "wp-l3-boardroom",
+    color: "#eab308",
+  },
+  {
+    key: "research",
+    label: "Tim Riset",
+    shortLabel: "Riset",
+    staffId: "staff-01",
+    staffName: "Raka",
+    workWaypointId: "wp-ws-01",
+    color: "#0ea5e9",
+  },
+  {
+    key: "seo",
+    label: "Tim SEO",
+    shortLabel: "SEO",
+    staffId: "staff-02",
+    staffName: "Nadia",
+    workWaypointId: "wp-ws-02",
+    color: "#10b981",
+  },
+  {
+    key: "script",
+    label: "Penulis Naskah",
+    shortLabel: "Naskah",
+    staffId: "staff-03",
+    staffName: "Dimas",
+    workWaypointId: "wp-ws-03",
+    color: "#f59e0b",
+  },
+  {
+    key: "voice",
+    label: "Studio Suara",
+    shortLabel: "Suara",
+    staffId: "staff-05",
+    staffName: "Bima",
+    workWaypointId: "wp-ws-05",
+    color: "#6366f1",
+  },
+  {
+    key: "motion",
+    label: "Motion & Editing",
+    shortLabel: "Motion",
+    staffId: "staff-04",
+    staffName: "Clara & Salsa",
+    workWaypointId: "wp-ws-04",
+    color: "#ec4899",
+  },
+  {
+    key: "qc",
+    label: "Tim QC & Publish",
+    shortLabel: "QC",
+    staffId: "staff-07",
+    staffName: "Fajar & Alya",
+    workWaypointId: "wp-ws-07",
+    color: "#f97316",
+  },
+];
+
+const EPISODES_STORAGE_KEY = "fajrezzz_kids_episodes_v1";
 
 function nowClock(): string {
   return new Date().toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: false,
   });
 }
 
-function makeLog(
-  level: DivisionLogEntry["level"],
-  message: string
-): DivisionLogEntry {
-  return { time: nowClock(), level, message };
+function defaultDivisionStatus(): Record<AgencyDivisionKey, DivisionStepStatus> {
+  return {
+    director: "waiting",
+    research: "waiting",
+    seo: "waiting",
+    script: "waiting",
+    voice: "waiting",
+    motion: "waiting",
+    qc: "waiting",
+  };
 }
 
-export interface AgentRealStateSnapshot {
-  division: PipelineDivisionKey;
-  divisionLabel: string;
-  agentId: string;
-  agentName: string;
-  episodeId: string | null;
-  episodeTitle: string | null;
-  status: RealDivisionStatus;
-  durationMs: number;
-  provider: string | null;
-  model: string | null;
-  input: unknown;
-  output: unknown;
-  error: string | null;
-  hint: string | null;
-  logs: DivisionLogEntry[];
-  startedAt: string | null;
-  finishedAt: string | null;
-}
+const INITIAL_CHAT: TeamChatMessage[] = [
+  {
+    id: "chat-init-1",
+    time: nowClock(),
+    senderName: "Reza Mahendra",
+    division: "Direktur Konten",
+    avatarColor: "#eab308",
+    text: "Selamat datang Bos FAJREZ! Semua divisi (Riset, SEO, Naskah, Suara, Motion, Editing, QC) standby. Ketik aja 1 tugas dari HP, aku langsung bagi kerjaan ke tiap ruangan!",
+    kind: "report",
+  },
+  {
+    id: "chat-init-2",
+    time: nowClock(),
+    senderName: "Dimas Wijaya",
+    division: "Penulis Naskah",
+    avatarColor: "#f59e0b",
+    text: "☕ Lagi ngopi dulu sebentar di Espresso Lounge L2 sambil nunggu brief baru dari Bos!",
+    kind: "break",
+  },
+  {
+    id: "chat-init-3",
+    time: nowClock(),
+    senderName: "Bima Kusuma",
+    division: "Studio Suara",
+    avatarColor: "#6366f1",
+    text: "🎮 Santai bentar main game di Balcony L2, nanti pas naskah disetujui langsung gas mixing audio!",
+    kind: "break",
+  },
+];
 
 interface AgencyContextValue {
-  episodes: RealEpisode[];
-  activeEpisodeId: string | null;
-  activeEpisode: RealEpisode | null;
-  setActiveEpisodeId: (id: string | null) => void;
-  divisionHistory: DivisionRunHistoryPoint[];
-  /** Ephemeral video Blob URLs generated by Divisi 6 Editing in current browser session */
-  videoBlobUrls: Record<string, string>;
-  editingProgressPct: number;
-  runningDivision: PipelineDivisionKey | null;
-  /** Create a new episode from Bos theme & automatically run ALL 7 divisions straight to real video */
-  startNewEpisode: (theme: string, platform: PublishPlatform) => Promise<RealEpisode | null>;
-  /** Select 1 of 5 Research ideas and run SEO -> Script -> Voice -> Motion -> Editing (Video) -> QC */
-  selectIdeaAndContinue: (episodeId: string, ideaId: string) => Promise<RealEpisode | null>;
-  /** Execute or retry a single division on an episode */
-  runDivision: (
-    episodeId: string,
-    division: PipelineDivisionKey,
-    overrideEpisode?: RealEpisode
-  ) => Promise<RealEpisode | null>;
-  /** Run Voice -> Motion -> Editing -> QC sequentially */
-  runProductionAndExport: (episodeId: string) => Promise<void>;
-  /** Resume and automatically finish all remaining queued/failed divisions of an episode straight to video */
-  continueEpisodeAuto: (episodeId: string) => Promise<RealEpisode | null>;
-  /** Update Bos mandatory originality fields */
-  updateBossOriginality: (
-    episodeId: string,
-    patch: Partial<BossOriginalityInput>
-  ) => void;
-  /** Update real YouTube URL / views / watchHours / revenue metrics */
-  updateEpisodeMetrics: (
-    episodeId: string,
-    patch: Partial<EpisodeRealMetrics>
-  ) => void;
+  job: AgencyJob;
+  teamChat: TeamChatMessage[];
+  episodes: KidsEpisode[];
+  selectedEpisodeId: string;
+  setSelectedEpisodeId: (id: string) => void;
+  autoApproveMode: boolean;
+  setAutoApproveMode: (auto: boolean) => void;
+  submitBossBrief: (brief: string, platform: PublishPlatform) => void;
+  selectIdeaOption: (ideaId: string) => void;
+  updateDraftFields: (patch: { title?: string; hook3s?: string; thumbnailHeadline?: string }) => void;
+  approveScriptAndProduce: () => void;
+  markEpisodeUploaded: (episodeId: string, uploaded?: boolean) => void;
   deleteEpisode: (episodeId: string) => void;
-  /** Import backed-up JSON episodes & history */
-  importBackupJson: (payload: {
-    episodes?: RealEpisode[];
-    divisionHistory?: DivisionRunHistoryPoint[];
-  }) => void;
-  /** Latest real task snapshot per agent ID for 3D Kantor Inspector */
-  getAgentSnapshot: (agentId: string) => AgentRealStateSnapshot | null;
 }
 
 const AgencyContext = createContext<AgencyContextValue | null>(null);
 
-function sanitizeEpisodesForStorage(episodes: RealEpisode[]): RealEpisode[] {
-  // Strip large dataURL previews beyond the 5 most recent episodes so localStorage never overflows
-  return episodes.map((ep, idx) => {
-    if (idx < 4) return ep;
-    return {
-      ...ep,
-      divisions: {
-        ...ep.divisions,
-        motion: ep.divisions.motion.output
-          ? {
-              ...ep.divisions.motion,
-              output: {
-                ...ep.divisions.motion.output,
-                sceneFrames: ep.divisions.motion.output.sceneFrames.map((f) => ({
-                  ...f,
-                  keyframeDataUrl: "",
-                })),
-              },
-            }
-          : ep.divisions.motion,
-        editing: ep.divisions.editing.output
-          ? {
-              ...ep.divisions.editing,
-              output: {
-                ...ep.divisions.editing.output,
-                thumbnailDataUrl: "",
-              },
-            }
-          : ep.divisions.editing,
-      },
-    };
-  });
-}
-
 export function AgencyProvider({ children }: { children: React.ReactNode }) {
-  const { dispatchAgentRealWork, addActivity } = useOffice();
+  const { sendAgentToWaypoint, setAgentStatus, addActivity } = useOffice();
 
-  const [episodes, setEpisodes] = useState<RealEpisode[]>([]);
-  const [activeEpisodeId, setActiveEpisodeId] = useState<string | null>(null);
-  const [divisionHistory, setDivisionHistory] = useState<DivisionRunHistoryPoint[]>([]);
-  const [videoBlobUrls, setVideoBlobUrls] = useState<Record<string, string>>({});
-  const [editingProgressPct, setEditingProgressPct] = useState<number>(0);
-  const [runningDivision, setRunningDivision] =
-    useState<PipelineDivisionKey | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [episodes, setEpisodes] = useState<KidsEpisode[]>(() => [
+    generateAutonomousKidsEpisode(1, "rescue_trucks", true),
+  ]);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string>("");
+  const [autoApproveMode, setAutoApproveMode] = useState<boolean>(false);
+  const [teamChat, setTeamChat] = useState<TeamChatMessage[]>(INITIAL_CHAT);
+  const [job, setJob] = useState<AgencyJob>({
+    id: "job-idle",
+    brief: "",
+    platform: "youtube_shorts",
+    stage: "idle",
+    activeStepLabel: "Standby menunggu perintah Bos",
+    progressPercent: 0,
+    divisionStatus: defaultDivisionStatus(),
+    ideas: [],
+    selectedIdea: null,
+    draftEpisode: null,
+    finalEpisodeId: null,
+  });
 
-  const episodesRef = useRef<RealEpisode[]>(episodes);
+  const timersRef = useRef<number[]>([]);
+  const autoApproveRef = useRef(autoApproveMode);
+  autoApproveRef.current = autoApproveMode;
+
+  const episodesRef = useRef(episodes);
   episodesRef.current = episodes;
 
-  // Hydrate persisted real episodes & division KPI history from localStorage
-  useEffect(() => {
-    try {
-      const rawEp = window.localStorage.getItem(EPISODES_STORAGE_KEY);
-      if (rawEp) {
-        const parsed = JSON.parse(rawEp) as RealEpisode[];
-        if (Array.isArray(parsed)) {
-          // Reset any stale "running" status left over from a page reload to "queued"
-          const cleaned = parsed.map((ep) => {
-            const fixedDivisions = { ...ep.divisions };
-            (Object.keys(fixedDivisions) as PipelineDivisionKey[]).forEach((k) => {
-              if (fixedDivisions[k].status === "running") {
-                fixedDivisions[k] = {
-                  ...fixedDivisions[k],
-                  status: "queued",
-                } as never;
-              }
-            });
-            return { ...ep, divisions: fixedDivisions };
-          });
-          setEpisodes(cleaned);
-          if (cleaned[0]) setActiveEpisodeId(cleaned[0].id);
-        }
-      }
-      const rawHist = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (rawHist) {
-        const parsedH = JSON.parse(rawHist) as DivisionRunHistoryPoint[];
-        if (Array.isArray(parsedH)) setDivisionHistory(parsedH);
-      }
-    } catch {
-      // ignore corrupted storage
-    } finally {
-      setHydrated(true);
-    }
+  const clearScheduledTimers = useCallback(() => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  }, []);
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timersRef.current.push(id);
+    return id;
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    return () => clearScheduledTimers();
+  }, [clearScheduledTimers]);
+
+  // Hydrate saved episodes from localStorage
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(EPISODES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as KidsEpisode[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEpisodes(parsed);
+          setSelectedEpisodeId(parsed[0].id);
+          return;
+        }
+      }
+    } catch {
+      // Ignore storage error
+    }
+    setSelectedEpisodeId((prev) => prev || episodesRef.current[0]?.id || "");
+  }, []);
+
+  // Persist episodes
+  useEffect(() => {
     try {
       window.localStorage.setItem(
         EPISODES_STORAGE_KEY,
-        JSON.stringify(sanitizeEpisodesForStorage(episodes))
+        JSON.stringify(episodes.slice(0, 20))
       );
     } catch {
-      // ignore quota error
+      // Ignore quota error
     }
-  }, [episodes, hydrated]);
+  }, [episodes]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(
-        HISTORY_STORAGE_KEY,
-        JSON.stringify(divisionHistory.slice(0, 500))
-      );
-    } catch {
-      // ignore
-    }
-  }, [divisionHistory, hydrated]);
-
-  const syncAgent3D = useCallback(
+  const pushChat = useCallback(
     (
-      division: PipelineDivisionKey,
-      state: "working" | "idle" | "error",
-      customLabel?: string
+      senderName: string,
+      division: string,
+      avatarColor: string,
+      text: string,
+      kind: TeamChatMessage["kind"]
     ) => {
-      const meta = PIPELINE_DIVISIONS.find((d) => d.key === division);
-      if (!meta) return;
-      if (state === "working") {
-        dispatchAgentRealWork(
-          meta.agentId,
-          "working",
-          meta.deskWaypointId,
-          customLabel ?? `Sedang menjalankan ${meta.label}`
-        );
-      } else if (state === "error") {
-        dispatchAgentRealWork(
-          meta.agentId,
-          "error",
-          meta.deskWaypointId,
-          customLabel ?? `ERROR pada ${meta.label} — butuh Retry`
-        );
-      } else {
-        dispatchAgentRealWork(
-          meta.agentId,
-          "idle",
-          meta.loungeWaypointId,
-          customLabel ?? "☕ Antrean kosong — IDLE / ngopi santai"
-        );
-      }
-    },
-    [dispatchAgentRealWork]
-  );
-
-  const patchEpisode = useCallback(
-    (episodeId: string, updater: (ep: RealEpisode) => RealEpisode): RealEpisode | null => {
-      let updated: RealEpisode | null = null;
-      const next = episodesRef.current.map((ep) => {
-        if (ep.id !== episodeId) return ep;
-        updated = updater(ep);
-        return updated;
-      });
-      episodesRef.current = next;
-      setEpisodes(next);
-      return updated;
-    },
-    []
-  );
-
-  const recordDivisionHistory = useCallback(
-    (entry: Omit<DivisionRunHistoryPoint, "id" | "timestamp">) => {
-      setDivisionHistory((prev) => [
+      setTeamChat((prev) => [
         {
-          ...entry,
-          id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          timestamp: new Date().toISOString(),
+          id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          time: nowClock(),
+          senderName,
+          division,
+          avatarColor,
+          text,
+          kind,
         },
-        ...prev,
+        ...prev.slice(0, 35),
       ]);
     },
     []
   );
 
-  const runDivision = useCallback(
-    async (
-      episodeId: string,
-      division: PipelineDivisionKey,
-      overrideEpisode?: RealEpisode,
-      keepAtDeskOnDone = false
-    ): Promise<RealEpisode | null> => {
-      const currentEp =
-        overrideEpisode ??
-        episodesRef.current.find((e) => e.id === episodeId);
-      if (!currentEp) return null;
-
-      const meta = PIPELINE_DIVISIONS.find((d) => d.key === division)!;
-      const startedAt = new Date().toISOString();
-      const startMs = Date.now();
-
-      setRunningDivision(division);
-      syncAgent3D(division, "working");
-
-      const updateDiv = (
-        ep: RealEpisode,
-        patch: Partial<DivisionRunRecord<unknown, unknown>>
-      ): RealEpisode => {
-        const prevDiv = ep.divisions[division];
-        const nextDiv = { ...prevDiv, ...patch };
-        const nextDivisions = {
-          ...ep.divisions,
-          [division]: nextDiv,
-        };
-        const totalApiCostUsd = (
-          Object.values(nextDivisions) as DivisionRunRecord[]
-        ).reduce((sum, d) => sum + (d.estimatedCostUsd || 0), 0);
-        const totalProductionMs = (
-          Object.values(nextDivisions) as DivisionRunRecord[]
-        ).reduce((sum, d) => sum + (d.durationMs || 0), 0);
-
-        return {
-          ...ep,
-          updatedAt: new Date().toISOString(),
-          divisions: nextDivisions,
-          metrics: {
-            ...ep.metrics,
-            apiCostUsd: totalApiCostUsd,
-            totalProductionMs,
-          },
-        };
+  // Move specific 3D office staff to desks (working) and send others to coffee/game breaks
+  const orchestrateOfficeStaff = useCallback(
+    (workingStaff: string[], coffeeBreakStaff: string[], gameBreakStaff: string[]) => {
+      const deskMap: Record<string, string> = {
+        "staff-01": "wp-ws-01",
+        "staff-02": "wp-ws-02",
+        "staff-03": "wp-ws-03",
+        "staff-04": "wp-ws-04",
+        "staff-05": "wp-ws-05",
+        "staff-06": "wp-ws-06",
+        "staff-07": "wp-ws-07",
+        "staff-08": "wp-ws-08",
+        "staff-09": "wp-l3-boardroom",
+        "staff-10": "wp-l1-reception",
       };
 
-      const markRunning = (inputData: unknown, startMsg: string) => {
-        patchEpisode(episodeId, (ep) =>
-          updateDiv(ep, {
-            status: "running",
-            startedAt,
-            finishedAt: null,
-            error: null,
-            hint: null,
-            input: inputData,
-            runCount: ep.divisions[division].runCount + 1,
-            logs: [...ep.divisions[division].logs, makeLog("info", startMsg)],
-          })
-        );
-      };
-
-      const markFailed = (errorMsg: string, hintMsg: string | null = null) => {
-        const durationMs = Date.now() - startMs;
-        syncAgent3D(division, "error");
-        setRunningDivision(null);
-        recordDivisionHistory({
-          episodeId,
-          division,
-          agentId: meta.agentId,
-          status: "failed",
-          durationMs,
-          apiCostUsd: 0,
-        });
-        addActivity(
-          meta.agentName,
-          "system",
-          `${meta.label} GAGAL: ${errorMsg}`,
-          "warning",
-          meta.shortLabel
-        );
-        return patchEpisode(episodeId, (ep) =>
-          updateDiv(ep, {
-            status: "failed",
-            finishedAt: new Date().toISOString(),
-            durationMs,
-            error: errorMsg,
-            hint: hintMsg,
-            logs: [
-              ...ep.divisions[division].logs,
-              makeLog("error", `GAGAL (${(durationMs / 1000).toFixed(1)}d): ${errorMsg}`),
-            ],
-          })
-        );
-      };
-
-      const markDone = (
-        outputData: unknown,
-        info: {
-          provider: string;
-          model: string;
-          durationMs: number;
-          tokensUsed?: number;
-          estimatedCostUsd?: number;
-          successMsg: string;
-          qcPassed?: boolean;
-        }
-      ) => {
-        if (division === "research") {
-          syncAgent3D(
-            division,
-            "working",
-            "5 ide siap — menunggu Bos pilih ide di Komando"
-          );
-        } else if (!keepAtDeskOnDone) {
-          syncAgent3D(division, "idle");
-        }
-        setRunningDivision(null);
-        recordDivisionHistory({
-          episodeId,
-          division,
-          agentId: meta.agentId,
-          status: "done",
-          qcPassed: info.qcPassed,
-          durationMs: info.durationMs,
-          apiCostUsd: info.estimatedCostUsd ?? 0,
-        });
-        addActivity(
-          meta.agentName,
-          "system",
-          `${meta.label} selesai (${(info.durationMs / 1000).toFixed(1)}d via ${info.provider}).`,
-          "success",
-          meta.shortLabel
-        );
-        return patchEpisode(episodeId, (ep) =>
-          updateDiv(ep, {
-            status: "done",
-            finishedAt: new Date().toISOString(),
-            durationMs: info.durationMs,
-            provider: info.provider,
-            model: info.model,
-            tokensUsed: info.tokensUsed ?? 0,
-            estimatedCostUsd: info.estimatedCostUsd ?? 0,
-            output: outputData,
-            error: null,
-            hint: null,
-            logs: [
-              ...ep.divisions[division].logs,
-              makeLog("success", info.successMsg),
-            ],
-          })
-        );
-      };
-
-      const otherEpisodes = episodesRef.current.filter((e) => e.id !== episodeId);
-
-      const appendLiveLog = (
-        level: "info" | "success" | "warning" | "error",
-        message: string
-      ) => {
-        patchEpisode(episodeId, (ep) =>
-          updateDiv(ep, {
-            logs: [...ep.divisions[division].logs, makeLog(level, message)],
-          })
-        );
-      };
-
-      const fetchServerDivisionWithAutoRetry = async (
-        endpoint: string,
-        payload: unknown
-      ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> => {
-        const retryDelaysMs = [5000, 9000, 13000];
-        let lastStatus = 500;
-        let lastData: Record<string, unknown> = {};
-
-        for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
-          try {
-            const res = await fetch(endpoint, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            lastStatus = res.status;
-            const data = (await res.json().catch(() => ({}))) as Record<
-              string,
-              unknown
-            >;
-            lastData = data;
-            if (res.ok && data.ok) {
-              return { ok: true, status: res.status, data };
-            }
-
-            const errStr = String(data.error ?? "");
-            const isTransient =
-              res.status === 429 ||
-              res.status === 502 ||
-              res.status === 503 ||
-              res.status === 504 ||
-              /limit|sibuk|gagal merespons|timeout/i.test(errStr);
-
-            if (!isTransient || attempt === retryDelaysMs.length) {
-              return { ok: false, status: res.status, data };
-            }
-
-            const waitMs = retryDelaysMs[attempt];
-            appendLiveLog(
-              "warning",
-              `Server AI gratis sedang antre (${res.status}) — otomatis coba ulang #${
-                attempt + 1
-              } dalam ${Math.round(waitMs / 1000)} detik...`
-            );
-            await new Promise((r) => setTimeout(r, waitMs));
-          } catch (netErr) {
-            if (attempt === retryDelaysMs.length) {
-              return {
-                ok: false,
-                status: 500,
-                data: {
-                  ok: false,
-                  error:
-                    netErr instanceof Error
-                      ? netErr.message
-                      : "Kesalahan jaringan saat memanggil server AI",
-                },
-              };
-            }
-            const waitMs = retryDelaysMs[attempt];
-            appendLiveLog(
-              "warning",
-              `Koneksi terganggu — otomatis coba ulang #${attempt + 1} dalam ${Math.round(
-                waitMs / 1000
-              )} detik...`
-            );
-            await new Promise((r) => setTimeout(r, waitMs));
-          }
-        }
-        return { ok: false, status: lastStatus, data: lastData };
-      };
-
-      try {
-        /* ==================== 1. RISET (SERVER LLM) ==================== */
-        if (division === "research") {
-          const input: ResearchInput = {
-            theme: currentEp.bossTheme,
-            platform: currentEp.platform,
-            previousEpisodeTitles: otherEpisodes
-              .map((e) => e.divisions.seo.output?.title || e.bossTheme)
-              .filter(Boolean)
-              .slice(0, 12),
-            avoidStructures: otherEpisodes
-              .map((e) => e.divisions.script.output?.storyStructure)
-              .filter((v): v is string => Boolean(v))
-              .slice(0, 6),
-            avoidSettings: otherEpisodes
-              .map((e) => e.divisions.script.output?.setting)
-              .filter((v): v is string => Boolean(v))
-              .slice(0, 6),
-            avoidCharacters: otherEpisodes
-              .map((e) => e.divisions.script.output?.supportingCharacter)
-              .filter((v): v is string => Boolean(v))
-              .slice(0, 6),
-          };
-          markRunning(input, `Memanggil AI untuk riset 5 ide unik dari tema "${input.theme}"...`);
-
-          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
-            "/api/pipeline/research",
-            input
-          );
-          if (!ok) {
-            return markFailed(
-              String(data.error || `HTTP ${status}`),
-              (data.hint as string | null) || null
-            );
-          }
-
-          const out = data.output as ResearchOutput;
-          const metaInfo = (data.meta ?? {}) as {
-            provider?: string;
-            model?: string;
-            durationMs?: number;
-            usage?: { totalTokens?: number };
-            estimatedCostUsd?: number;
-          };
-          return markDone(out, {
-            provider: metaInfo.provider || "llm",
-            model: metaInfo.model || "unknown",
-            durationMs: metaInfo.durationMs || Date.now() - startMs,
-            tokensUsed: metaInfo.usage?.totalTokens || 0,
-            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
-            successMsg: `Berhasil menyusun ${out.ideas.length} ide episode unik (${metaInfo.provider}/${metaInfo.model}).`,
-          });
-        }
-
-        /* ==================== 2. SEO (SERVER LLM) ==================== */
-        if (division === "seo") {
-          const ideas = currentEp.divisions.research.output?.ideas ?? [];
-          const selectedIdea =
-            ideas.find((i) => i.id === currentEp.selectedIdeaId) ?? ideas[0];
-          if (!selectedIdea) {
-            return markFailed(
-              "Belum ada ide dari Divisi Riset. Jalankan Divisi Riset terlebih dahulu."
-            );
-          }
-          const input: SeoInput = {
-            idea: selectedIdea,
-            platform: currentEp.platform,
-          };
-          markRunning(input, `Menyusun judul, deskripsi, tag & hashtag untuk "${selectedIdea.title}"...`);
-
-          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
-            "/api/pipeline/seo",
-            input
-          );
-          if (!ok) {
-            return markFailed(
-              String(data.error || `HTTP ${status}`),
-              (data.hint as string | null) || null
-            );
-          }
-
-          const out = data.output as SeoOutput;
-          const metaInfo = (data.meta ?? {}) as {
-            provider?: string;
-            model?: string;
-            durationMs?: number;
-            usage?: { totalTokens?: number };
-            estimatedCostUsd?: number;
-          };
-          return markDone(out, {
-            provider: metaInfo.provider || "llm",
-            model: metaInfo.model || "unknown",
-            durationMs: metaInfo.durationMs || Date.now() - startMs,
-            tokensUsed: metaInfo.usage?.totalTokens || 0,
-            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
-            successMsg: `SEO selesai: "${out.title}" (${out.tags.length} tag, ${out.hashtags.length} hashtag).`,
-          });
-        }
-
-        /* ==================== 3. NASKAH (SERVER LLM) ==================== */
-        if (division === "script") {
-          const ideas = currentEp.divisions.research.output?.ideas ?? [];
-          const selectedIdea =
-            ideas.find((i) => i.id === currentEp.selectedIdeaId) ?? ideas[0];
-          const seo = currentEp.divisions.seo.output;
-          if (!selectedIdea || !seo) {
-            return markFailed(
-              "Hasil Riset & SEO wajib selesai sebelum Divisi Naskah berjalan."
-            );
-          }
-          const input: ScriptInput = {
-            idea: selectedIdea,
-            seo,
-            platform: currentEp.platform,
-            previousSummaries: otherEpisodes
-              .map((e) => e.divisions.script.output?.summary)
-              .filter((v): v is string => Boolean(v))
-              .slice(0, 8),
-            bossOriginalElements: currentEp.bossOriginality,
-          };
-          markRunning(input, `Menulis naskah YouTube/TikTok bahasa Indonesia per segmen...`);
-
-          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
-            "/api/pipeline/script",
-            input
-          );
-          if (!ok) {
-            return markFailed(
-              String(data.error || `HTTP ${status}`),
-              (data.hint as string | null) || null
-            );
-          }
-
-          const out = data.output as ScriptOutput;
-          const metaInfo = (data.meta ?? {}) as {
-            provider?: string;
-            model?: string;
-            durationMs?: number;
-            usage?: { totalTokens?: number };
-            estimatedCostUsd?: number;
-          };
-          return markDone(out, {
-            provider: metaInfo.provider || "llm",
-            model: metaInfo.model || "unknown",
-            durationMs: metaInfo.durationMs || Date.now() - startMs,
-            tokensUsed: metaInfo.usage?.totalTokens || 0,
-            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
-            successMsg: `Naskah ${out.scenes.length} adegan (${out.totalDurationSec}d) selesai.`,
-          });
-        }
-
-        /* ==================== 4. SUARA / TTS (BROWSER) ==================== */
-        if (division === "voice") {
-          const script = currentEp.divisions.script.output;
-          if (!script || script.scenes.length === 0) {
-            return markFailed("Naskah belum tersedia untuk Divisi Suara (TTS).");
-          }
-          const input: VoiceInput = {
-            scenes: script.scenes,
-            preferredLang: "id-ID",
-          };
-          markRunning(input, `Menyiapkan narasi TTS per adegan (${script.scenes.length} adegan)...`);
-
-          const out = await runVoiceDivisionBrowser(script.scenes);
-          return markDone(out, {
-            provider: out.engine,
-            model: out.voiceName,
-            durationMs: Date.now() - startMs,
-            successMsg: `TTS siap untuk ${out.sceneTracks.length} adegan (${out.voiceName}, ~${out.totalEstimatedSec}d).`,
-          });
-        }
-
-        /* ==================== 5. MOTION (BROWSER CANVAS) ==================== */
-        if (division === "motion") {
-          const script = currentEp.divisions.script.output;
-          const ideas = currentEp.divisions.research.output?.ideas ?? [];
-          const selectedIdea =
-            ideas.find((i) => i.id === currentEp.selectedIdeaId) ?? ideas[0];
-          if (!script || script.scenes.length === 0) {
-            return markFailed("Naskah belum tersedia untuk Divisi Motion.");
-          }
-          const input: MotionInput = {
-            episodeNumber: currentEp.episodeNumber,
-            themeId: selectedIdea?.themeId ?? "rescue_trucks",
-            format: currentEp.format,
-            scenes: script.scenes,
-          };
-          markRunning(input, `Merender keyframe animasi per adegan di browser (${currentEp.format})...`);
-
-          const out = await runMotionDivisionBrowser(currentEp, currentEp.format);
-          return markDone(out, {
-            provider: "html5-canvas-2d",
-            model: `${out.width}x${out.height}@${out.fps}fps`,
-            durationMs: Date.now() - startMs,
-            successMsg: `${out.sceneFrames.length} keyframe adegan animasi selesai dirender (${out.totalDurationSec}d).`,
-          });
-        }
-
-        /* ==================== 6. EDITING (BROWSER MEDIARECORDER) ==================== */
-        if (division === "editing") {
-          const script = currentEp.divisions.script.output;
-          if (!script || script.scenes.length === 0) {
-            return markFailed("Naskah & Motion wajib selesai sebelum Editing.");
-          }
-          const input: EditingInput = {
-            episodeId: currentEp.id,
-            format: currentEp.format,
-            totalDurationSec: script.totalDurationSec,
-          };
-          setEditingProgressPct(1);
-          markRunning(input, `Menggabungkan animasi + audio via MediaRecorder & merender Thumbnail HD 1280x720...`);
-
-          const { output, videoBlob } = await runEditingDivisionBrowser(
-            currentEp,
-            currentEp.format,
-            (pct) => setEditingProgressPct(pct)
-          );
-          const url = URL.createObjectURL(videoBlob);
-          setVideoBlobUrls((prev) => {
-            if (prev[episodeId]) URL.revokeObjectURL(prev[episodeId]);
-            return { ...prev, [episodeId]: url };
-          });
-          setEditingProgressPct(100);
-
-          return markDone(output, {
-            provider: "browser-mediarecorder",
-            model: output.videoMimeType,
-            durationMs: Date.now() - startMs,
-            successMsg: `Video ${(output.videoSizeBytes / (1024 * 1024)).toFixed(2)} MB + Thumbnail HD 1280x720 siap diunduh.`,
-          });
-        }
-
-        /* ==================== 7. QC (SERVER + DETERMINISTIC) ==================== */
-        if (division === "qc") {
-          const seo = currentEp.divisions.seo.output;
-          const script = currentEp.divisions.script.output;
-          if (!seo || !script) {
-            return markFailed("SEO & Naskah wajib selesai sebelum QC dijalankan.");
-          }
-          const input: QcInput = {
-            title: seo.title,
-            description: seo.description,
-            summary: script.summary,
-            storyStructure: script.storyStructure,
-            setting: script.setting,
-            supportingCharacter: script.supportingCharacter,
-            moralLesson: script.moralLesson,
-            scenes: script.scenes,
-            previousEpisodes: otherEpisodes
-              .filter((e) => Boolean(e.divisions.script.output))
-              .slice(0, 10)
-              .map((e) => ({
-                id: e.id,
-                title: e.divisions.seo.output?.title || e.bossTheme,
-                summary: e.divisions.script.output?.summary || "",
-                storyStructure: e.divisions.script.output?.storyStructure || "",
-                setting: e.divisions.script.output?.setting || "",
-                supportingCharacter:
-                  e.divisions.script.output?.supportingCharacter || "",
-              })),
-          };
-          markRunning(input, `Menjalankan audit QC (durasi, kata terlarang, pedoman YouTube, anti-duplikat)...`);
-
-          const { ok, status, data } = await fetchServerDivisionWithAutoRetry(
-            "/api/pipeline/qc",
-            input
-          );
-          if (!ok) {
-            return markFailed(
-              String(data.error || `HTTP ${status}`),
-              (data.hint as string | null) || null
-            );
-          }
-
-          const out = data.output as QcOutput;
-          const metaInfo = (data.meta ?? {}) as {
-            provider?: string;
-            model?: string;
-            durationMs?: number;
-            usage?: { totalTokens?: number };
-            estimatedCostUsd?: number;
-          };
-          return markDone(out, {
-            provider: metaInfo.provider || "qc",
-            model: metaInfo.model || "rules-v1",
-            durationMs: metaInfo.durationMs || Date.now() - startMs,
-            tokensUsed: metaInfo.usage?.totalTokens || 0,
-            estimatedCostUsd: metaInfo.estimatedCostUsd || 0,
-            qcPassed: out.passed,
-            successMsg: out.passed
-              ? `LOLOS QC (Skor ${out.score}/100, kemiripan ${out.similarityScore}%).`
-              : `DIBLOKIR QC: ${out.blockedReasons.join(" | ")}`,
-          });
-        }
-
-        return null;
-      } catch (err) {
-        return markFailed(
-          err instanceof Error ? err.message : "Terjadi kesalahan tidak terduga."
-        );
-      }
-    },
-    [addActivity, patchEpisode, recordDivisionHistory, syncAgent3D]
-  );
-
-  const selectIdeaAndContinue = useCallback(
-    async (episodeId: string, ideaId: string): Promise<RealEpisode | null> => {
-      const epWithIdea = patchEpisode(episodeId, (ep) => ({
-        ...ep,
-        selectedIdeaId: ideaId,
-        updatedAt: new Date().toISOString(),
-      }));
-      if (!epWithIdea) return null;
-
-      // Research handoff done -> Raka returns to lounge coffee while production team works at desks!
-      syncAgent3D("research", "idle");
-      const activeStages: PipelineDivisionKey[] = [
-        "seo",
-        "script",
-        "voice",
-        "motion",
-        "editing",
-        "qc",
-      ];
-      activeStages.forEach((stage) => {
-        syncAgent3D(
-          stage,
-          "working",
-          `Bersiap di meja untuk ${stage.toUpperCase()} episode otomatis`
-        );
+      workingStaff.forEach((id) => {
+        const wp = deskMap[id];
+        if (wp) sendAgentToWaypoint(id, wp);
+        setAgentStatus(id, "working");
       });
 
-      const releaseRemainingIdle = (ep: RealEpisode | null) => {
-        activeStages.forEach((stage) => {
-          const st = ep?.divisions[stage]?.status;
-          if (st !== "failed") {
-            syncAgent3D(stage, "idle");
-          }
-        });
-      };
-
-      const paceIfPollinations = async (provider?: string | null) => {
-        if (provider === "pollinations") {
-          await new Promise((r) => setTimeout(r, 6000));
+      coffeeBreakStaff.forEach((id) => {
+        if (id === "staff-09") {
+          sendAgentToWaypoint(id, "wp-l3-lounge");
+        } else if (id === "staff-10") {
+          sendAgentToWaypoint(id, "wp-pool-deck");
+        } else {
+          sendAgentToWaypoint(id, "wp-l2-lounge");
         }
-      };
+      });
 
-      await paceIfPollinations(epWithIdea.divisions.research.provider);
-      const afterSeo = await runDivision(episodeId, "seo", epWithIdea, true);
-      if (!afterSeo || afterSeo.divisions.seo.status !== "done") {
-        releaseRemainingIdle(afterSeo);
-        return afterSeo;
-      }
-      syncAgent3D("seo", "idle");
-
-      await paceIfPollinations(afterSeo.divisions.seo.provider);
-      const afterScript = await runDivision(episodeId, "script", afterSeo, true);
-      if (!afterScript || afterScript.divisions.script.status !== "done") {
-        releaseRemainingIdle(afterScript);
-        return afterScript;
-      }
-      syncAgent3D("script", "idle");
-
-      const afterVoice = await runDivision(episodeId, "voice", afterScript, true);
-      if (!afterVoice || afterVoice.divisions.voice.status !== "done") {
-        releaseRemainingIdle(afterVoice);
-        return afterVoice;
-      }
-      syncAgent3D("voice", "idle");
-
-      const afterMotion = await runDivision(episodeId, "motion", afterVoice, true);
-      if (!afterMotion || afterMotion.divisions.motion.status !== "done") {
-        releaseRemainingIdle(afterMotion);
-        return afterMotion;
-      }
-      syncAgent3D("motion", "idle");
-
-      // Automatically render the real downloadable .webm video + HD 1280x720 thumbnail!
-      const afterEditing = await runDivision(
-        episodeId,
-        "editing",
-        afterMotion,
-        true
-      );
-      if (!afterEditing || afterEditing.divisions.editing.status !== "done") {
-        releaseRemainingIdle(afterEditing);
-        return afterEditing;
-      }
-      syncAgent3D("editing", "idle");
-
-      await paceIfPollinations(afterScript.divisions.script.provider);
-      const afterQc = await runDivision(episodeId, "qc", afterEditing, true);
-      releaseRemainingIdle(afterQc);
-      return afterQc;
+      gameBreakStaff.forEach((id) => {
+        if (id === "staff-09") {
+          sendAgentToWaypoint(id, "wp-l3-balcony");
+        } else if (id === "staff-10") {
+          sendAgentToWaypoint(id, "wp-supercar-bay");
+        } else {
+          sendAgentToWaypoint(id, "wp-l2-promenade");
+        }
+      });
     },
-    [patchEpisode, runDivision, syncAgent3D]
+    [sendAgentToWaypoint, setAgentStatus]
   );
 
-  const startNewEpisode = useCallback(
-    async (
-      theme: string,
-      platform: PublishPlatform
-    ): Promise<RealEpisode | null> => {
-      const cleanTheme = theme.trim();
-      if (!cleanTheme) return null;
+  const runFinalProduction = useCallback(
+    (draftEpisode: KidsEpisode) => {
+      clearScheduledTimers();
 
-      const nextNumber =
-        episodesRef.current.reduce(
-          (max, ep) => Math.max(max, ep.episodeNumber),
-          0
-        ) + 1;
+      // Step A: Studio Suara (Bima) works!
+      orchestrateOfficeStaff(
+        ["staff-05", "staff-09"],
+        ["staff-01", "staff-03"],
+        ["staff-02", "staff-10"]
+      );
+      setJob((prev) => ({
+        ...prev,
+        stage: "producing",
+        activeStepLabel: "Studio Suara meracik musik bebas copyright & audio...",
+        progressPercent: 64,
+        divisionStatus: {
+          director: "done",
+          research: "done",
+          seo: "done",
+          script: "done",
+          voice: "working",
+          motion: "waiting",
+          qc: "waiting",
+        },
+      }));
+      pushChat(
+        "Bima Kusuma",
+        "Studio Suara",
+        "#6366f1",
+        "Naskah disetujui Bos! Aku stop main game & langsung racik musik bebas copyright + tempo narasi 5 adegan!",
+        "work"
+      );
+      pushChat(
+        "Dimas Wijaya",
+        "Penulis Naskah",
+        "#f59e0b",
+        "☕ Naskah sudah approved! Izin istirahat ngopi dulu di Espresso Lounge ya tim.",
+        "break"
+      );
+      addActivity(
+        "Bima (Studio Suara)",
+        "robot-placeholder",
+        `Memproduksi musik & audio untuk "${draftEpisode.thumbnailHeadline}"`,
+        "info",
+        "L2 • Studio Suara"
+      );
 
-      const format: VideoFormat =
-        platform === "youtube_landscape" ? "landscape" : "shorts";
+      // Step B: Motion & Editing (Clara & Salsa)
+      schedule(() => {
+        orchestrateOfficeStaff(
+          ["staff-04", "staff-06"],
+          ["staff-05", "staff-01"],
+          ["staff-03", "staff-02"]
+        );
+        setJob((prev) => ({
+          ...prev,
+          activeStepLabel: "Tim Motion & Editing render animasi 60fps + Thumbnail HD...",
+          progressPercent: 82,
+          divisionStatus: {
+            director: "done",
+            research: "done",
+            seo: "done",
+            script: "done",
+            voice: "done",
+            motion: "working",
+            qc: "waiting",
+          },
+        }));
+        pushChat(
+          "Clara Santoso",
+          "Tim Motion & Animasi",
+          "#ec4899",
+          "Audio masuk! Aku & Salsa lagi render visual 60fps + Thumbnail HD 1280×720 biar CTR tinggi!",
+          "work"
+        );
+        addActivity(
+          "Clara & Salsa (Motion/Editing)",
+          "robot-placeholder",
+          "Merender animasi 60fps & subtitle 5 adegan",
+          "info",
+          "L2 • Motion Studio"
+        );
+      }, 1900);
 
-      const now = new Date().toISOString();
-      const newEpisode: RealEpisode = {
-        id: `ep-${Date.now()}`,
-        episodeNumber: nextNumber,
-        createdAt: now,
-        updatedAt: now,
-        bossTheme: cleanTheme,
+      // Step C: Tim QC & Publishing (Fajar & Alya)
+      schedule(() => {
+        orchestrateOfficeStaff(
+          ["staff-07", "staff-08"],
+          ["staff-04", "staff-06"],
+          ["staff-05", "staff-03"]
+        );
+        setJob((prev) => ({
+          ...prev,
+          activeStepLabel: "Tim QC mengecek hook 3 detik, audio & standar aman...",
+          progressPercent: 94,
+          divisionStatus: {
+            director: "done",
+            research: "done",
+            seo: "done",
+            script: "done",
+            voice: "done",
+            motion: "done",
+            qc: "working",
+          },
+        }));
+        pushChat(
+          "Fajar Nugroho",
+          "Tim QC",
+          "#f97316",
+          "Lagi cek final QC: hook 3 detik, warna, audio bebas copyright & status aman YouTube/TikTok...",
+          "work"
+        );
+      }, 3800);
+
+      // Step D: READY TO POST!
+      schedule(() => {
+        orchestrateOfficeStaff(
+          ["staff-08", "staff-09"],
+          ["staff-01", "staff-04", "staff-07"],
+          ["staff-02", "staff-05", "staff-06"]
+        );
+
+        setEpisodes((prev) => [draftEpisode, ...prev].slice(0, 20));
+        setSelectedEpisodeId(draftEpisode.id);
+
+        setJob((prev) => ({
+          ...prev,
+          stage: "ready",
+          activeStepLabel: "✅ LOLOS QC 100%! Konten siap posting ke YouTube / TikTok!",
+          progressPercent: 100,
+          finalEpisodeId: draftEpisode.id,
+          divisionStatus: {
+            director: "done",
+            research: "done",
+            seo: "done",
+            script: "done",
+            voice: "done",
+            motion: "done",
+            qc: "done",
+          },
+        }));
+
+        pushChat(
+          "Alya Ramadhani",
+          "Publishing & QC",
+          "#8b5cf6",
+          `✅ BERES BOS! Episode #${draftEpisode.episodeNumber} "${draftEpisode.title}" lolos QC 100%! Video, musik, thumbnail HD & SEO sudah masuk panel — tinggal Download atau Upload ke YouTube!`,
+          "report"
+        );
+        addActivity(
+          "Tim FAJREZZZ AI",
+          "system",
+          `Konten siap posting: "${draftEpisode.title}"`,
+          "success",
+          "Panel Laporan Bos"
+        );
+      }, 5400);
+    },
+    [addActivity, clearScheduledTimers, orchestrateOfficeStaff, pushChat, schedule]
+  );
+
+  const selectIdeaOption = useCallback(
+    (ideaId: string) => {
+      clearScheduledTimers();
+
+      setJob((prev) => {
+        const chosen = prev.ideas.find((i) => i.id === ideaId) ?? prev.ideas[0];
+        if (!chosen) return prev;
+
+        const nextEpNum = (episodesRef.current[0]?.episodeNumber ?? 0) + 1;
+        const draft = buildEpisodeFromSelectedIdea(
+          chosen,
+          prev.brief,
+          nextEpNum,
+          autoApproveRef.current
+        );
+
+        pushChat(
+          "BOS FAJREZ",
+          "Owner",
+          "#fbbf24",
+          `Aku pilih ide: "${chosen.title}". Lanjut tulis naskahnya!`,
+          "boss"
+        );
+
+        orchestrateOfficeStaff(
+          ["staff-03", "staff-02"],
+          ["staff-01", "staff-04"],
+          ["staff-05", "staff-07"]
+        );
+
+        pushChat(
+          "Dimas Wijaya",
+          "Penulis Naskah",
+          "#f59e0b",
+          "Siap Bos! Aku langsung balik ke meja WS-03 buat nulis naskah 5 adegan + hook 3 detik yang nendang!",
+          "work"
+        );
+        pushChat(
+          "Raka Pratama",
+          "Tim Riset",
+          "#0ea5e9",
+          "☕ Riset kelar! Aku ngopi sebentar di Espresso Lounge L2 ya!",
+          "break"
+        );
+
+        schedule(() => {
+          setJob((cur) => ({
+            ...cur,
+            stage: "waiting_script",
+            activeStepLabel:
+              "Laporan Naskah masuk! Bos tinggal klik Setujui Naskah.",
+            progressPercent: 52,
+            draftEpisode: draft,
+            divisionStatus: {
+              ...cur.divisionStatus,
+              seo: "done",
+              script: "done",
+            },
+          }));
+
+          pushChat(
+            "Dimas Wijaya",
+            "Penulis Naskah",
+            "#f59e0b",
+            `📄 Laporan naskah 5 adegan + SEO masuk panel Bos! Silakan baca & klik "Setujui Naskah", sisanya tim Suara, Motion, Editing & QC yang jalan!`,
+            "report"
+          );
+
+          if (autoApproveRef.current) {
+            schedule(() => {
+              pushChat(
+                "Reza Mahendra",
+                "Direktur Konten",
+                "#eab308",
+                "⚡ Mode Autopilot aktif — naskah otomatis disetujui! Tim Suara & Motion langsung produksi!",
+                "work"
+              );
+              runFinalProduction(draft);
+            }, 1500);
+          }
+        }, 1800);
+
+        return {
+          ...prev,
+          stage: "scripting",
+          selectedIdea: chosen,
+          draftEpisode: draft,
+          activeStepLabel: "Penulis Naskah & SEO menyusun skrip 5 adegan...",
+          progressPercent: 40,
+          divisionStatus: {
+            ...prev.divisionStatus,
+            research: "done",
+            seo: "working",
+            script: "working",
+          },
+        };
+      });
+    },
+    [clearScheduledTimers, orchestrateOfficeStaff, pushChat, runFinalProduction, schedule]
+  );
+
+  const submitBossBrief = useCallback(
+    (brief: string, platform: PublishPlatform) => {
+      const cleanBrief =
+        brief.trim() || "Bikinin video animasi anak truk pemadam penyelamat";
+      clearScheduledTimers();
+
+      const nextEpNum = (episodesRef.current[0]?.episodeNumber ?? 0) + 1;
+      const ideas = generateIdeaOptionsFromBrief(cleanBrief, nextEpNum);
+
+      setJob({
+        id: `job-${Date.now()}`,
+        brief: cleanBrief,
         platform,
-        format,
-        selectedIdeaId: null,
-        bossOriginality: createEmptyBossOriginality(),
-        metrics: {
-          youtubeUrl: "",
-          uploadedAt: null,
-          views: 0,
-          watchHours: 0,
-          revenueIdr: 0,
-          apiCostUsd: 0,
-          totalProductionMs: 0,
-          lastSyncedAt: null,
+        stage: "briefing",
+        activeStepLabel: "Direktur Konten sedang membagi tugas ke tiap ruangan...",
+        progressPercent: 14,
+        divisionStatus: {
+          director: "working",
+          research: "working",
+          seo: "working",
+          script: "waiting",
+          voice: "waiting",
+          motion: "waiting",
+          qc: "waiting",
         },
-        divisions: {
-          research: createEmptyDivisionRecord("research"),
-          seo: createEmptyDivisionRecord("seo"),
-          script: createEmptyDivisionRecord("script"),
-          voice: createEmptyDivisionRecord("voice"),
-          motion: createEmptyDivisionRecord("motion"),
-          editing: createEmptyDivisionRecord("editing"),
-          qc: createEmptyDivisionRecord("qc"),
-        },
-      };
+        ideas,
+        selectedIdea: null,
+        draftEpisode: null,
+        finalEpisodeId: null,
+      });
 
-      const nextList = [newEpisode, ...episodesRef.current];
-      episodesRef.current = nextList;
-      setEpisodes(nextList);
-      setActiveEpisodeId(newEpisode.id);
-
+      // Boss message
+      pushChat("BOS FAJREZ", "Owner", "#fbbf24", cleanBrief, "boss");
       addActivity(
         "BOS FAJREZ",
         "user",
-        `Memulai Produksi Otomatis 7 Divisi Episode #${nextNumber}: "${cleanTheme}".`,
+        `Mengirim tugas baru: "${cleanBrief}"`,
         "info",
-        "Komando Bos"
+        "Panel Komando HP"
       );
 
-      // Mobilize ALL 7 divisions immediately to walk from lounge chairs to desks!
-      PIPELINE_DIVISIONS.forEach((d) => {
-        syncAgent3D(
-          d.key,
-          "working",
-          d.key === "research"
-            ? `Sedang menjalankan ${d.label}`
-            : `Siaga di meja menunggu giliran ${d.shortLabel}`
+      // Director + Research + SEO jump to desks; Voice & QC chill on break
+      orchestrateOfficeStaff(
+        ["staff-09", "staff-01", "staff-02"],
+        ["staff-03", "staff-04"],
+        ["staff-05", "staff-07", "staff-10"]
+      );
+
+      schedule(() => {
+        pushChat(
+          "Reza Mahendra",
+          "Direktur Konten",
+          "#eab308",
+          `Siap Bos! Tugas "${cleanBrief}" diterima. Raka (Tim Riset) & Nadia (Tim SEO) langsung masuk ruangan buat nyiapin 3 ide viral sekarang!`,
+          "work"
         );
-      });
+      }, 450);
 
-      const afterResearch = await runDivision(
-        newEpisode.id,
-        "research",
-        newEpisode,
-        true
-      );
-      if (
-        !afterResearch ||
-        afterResearch.divisions.research.status !== "done"
-      ) {
-        PIPELINE_DIVISIONS.forEach((d) => {
-          if (d.key !== "research") syncAgent3D(d.key, "idle");
-        });
-        return afterResearch;
-      }
-
-      // Automatically pick best fresh Idea #1 and run straight through SEO -> Script -> Voice -> Motion -> Editing (Video) -> QC!
-      const bestIdea = afterResearch.divisions.research.output?.ideas?.[0];
-      if (!bestIdea) {
-        PIPELINE_DIVISIONS.forEach((d) => syncAgent3D(d.key, "idle"));
-        return afterResearch;
-      }
-
-      addActivity(
-        "AUTO-PIPELINE",
-        "system",
-        `Otomatis memilih ide terbaik #1 "${bestIdea.title}" → lanjut SEO sampai Video jadi!`,
-        "success",
-        "Otomatis"
-      );
-
-      return selectIdeaAndContinue(newEpisode.id, bestIdea.id);
-    },
-    [addActivity, runDivision, selectIdeaAndContinue, syncAgent3D]
-  );
-
-  const runProductionAndExport = useCallback(
-    async (episodeId: string) => {
-      const current = episodesRef.current.find((e) => e.id === episodeId);
-      if (!current) return;
-
-      const exportStages: PipelineDivisionKey[] = [
-        "voice",
-        "motion",
-        "editing",
-        "qc",
-      ];
-      exportStages.forEach((stage) => {
-        if (current.divisions[stage].status !== "done" || stage === "editing") {
-          syncAgent3D(stage, "working", `Render & ekspor ${stage.toUpperCase()} di meja kerja`);
-        }
-      });
-
-      const releaseDone = (ep: RealEpisode | null) => {
-        exportStages.forEach((stage) => {
-          if (ep?.divisions[stage]?.status !== "failed") {
-            syncAgent3D(stage, "idle");
-          }
-        });
-      };
-
-      let ep: RealEpisode | null = current;
-      if (ep.divisions.voice.status !== "done") {
-        ep = await runDivision(episodeId, "voice", ep, true);
-        if (!ep || ep.divisions.voice.status !== "done") {
-          releaseDone(ep);
-          return;
-        }
-      }
-      if (ep.divisions.motion.status !== "done") {
-        ep = await runDivision(episodeId, "motion", ep, true);
-        if (!ep || ep.divisions.motion.status !== "done") {
-          releaseDone(ep);
-          return;
-        }
-      }
-      ep = await runDivision(episodeId, "editing", ep, true);
-      if (!ep || ep.divisions.editing.status !== "done") {
-        releaseDone(ep);
-        return;
-      }
-
-      if (ep.divisions.qc.status !== "done") {
-        ep = await runDivision(episodeId, "qc", ep, true);
-      }
-      releaseDone(ep);
-    },
-    [runDivision, syncAgent3D]
-  );
-
-  const continueEpisodeAuto = useCallback(
-    async (episodeId: string): Promise<RealEpisode | null> => {
-      let ep = episodesRef.current.find((e) => e.id === episodeId) ?? null;
-      if (!ep) return null;
-
-      PIPELINE_DIVISIONS.forEach((d) => {
-        if (ep!.divisions[d.key].status !== "done") {
-          syncAgent3D(d.key, "working", `Melanjutkan otomatis ${d.label}`);
-        }
-      });
-
-      const releaseNonFailed = (latest: RealEpisode | null) => {
-        PIPELINE_DIVISIONS.forEach((d) => {
-          if (latest?.divisions[d.key]?.status !== "failed") {
-            syncAgent3D(d.key, "idle");
-          }
-        });
-      };
-
-      const paceIfPollinations = async (provider?: string | null) => {
-        if (provider === "pollinations") {
-          await new Promise((r) => setTimeout(r, 6000));
-        }
-      };
-
-      if (ep.divisions.research.status !== "done") {
-        ep = await runDivision(episodeId, "research", ep, true);
-        if (!ep || ep.divisions.research.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
-        }
-      }
-      syncAgent3D("research", "idle");
-
-      if (!ep.selectedIdeaId) {
-        const bestIdea = ep.divisions.research.output?.ideas?.[0];
-        if (!bestIdea) {
-          releaseNonFailed(ep);
-          return ep;
-        }
-        ep = patchEpisode(episodeId, (cur) => ({
-          ...cur,
-          selectedIdeaId: bestIdea.id,
-          updatedAt: new Date().toISOString(),
+      schedule(() => {
+        setJob((prev) => ({
+          ...prev,
+          stage: "waiting_idea",
+          activeStepLabel:
+            "Laporan 3 Ide Viral masuk! Bos tinggal pilih 1 ide terbaik.",
+          progressPercent: 28,
+          divisionStatus: {
+            ...prev.divisionStatus,
+            director: "done",
+            research: "done",
+            seo: "working",
+          },
         }));
-        if (!ep) return null;
-      }
 
-      if (ep.divisions.seo.status !== "done") {
-        await paceIfPollinations(ep.divisions.research.provider);
-        ep = await runDivision(episodeId, "seo", ep, true);
-        if (!ep || ep.divisions.seo.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
+        pushChat(
+          "Raka Pratama",
+          "Tim Riset",
+          "#0ea5e9",
+          `💡 Laporan masuk Bos! 3 ide viral + hook 3 detik sudah siap di panel. Silakan pilih 1 ide yang paling cocok!`,
+          "report"
+        );
+        addActivity(
+          "Raka (Tim Riset)",
+          "robot-placeholder",
+          "Mengirim 3 pilihan ide viral ke Panel Bos",
+          "success",
+          "L2 • WS-01"
+        );
+
+        if (autoApproveRef.current && ideas[0]) {
+          schedule(() => {
+            selectIdeaOption(ideas[0].id);
+          }, 1500);
         }
-      }
-      syncAgent3D("seo", "idle");
-
-      if (ep.divisions.script.status !== "done") {
-        await paceIfPollinations(ep.divisions.seo.provider);
-        ep = await runDivision(episodeId, "script", ep, true);
-        if (!ep || ep.divisions.script.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
-        }
-      }
-      syncAgent3D("script", "idle");
-
-      if (ep.divisions.voice.status !== "done") {
-        ep = await runDivision(episodeId, "voice", ep, true);
-        if (!ep || ep.divisions.voice.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
-        }
-      }
-      syncAgent3D("voice", "idle");
-
-      if (ep.divisions.motion.status !== "done") {
-        ep = await runDivision(episodeId, "motion", ep, true);
-        if (!ep || ep.divisions.motion.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
-        }
-      }
-      syncAgent3D("motion", "idle");
-
-      if (ep.divisions.editing.status !== "done") {
-        ep = await runDivision(episodeId, "editing", ep, true);
-        if (!ep || ep.divisions.editing.status !== "done") {
-          releaseNonFailed(ep);
-          return ep;
-        }
-      }
-      syncAgent3D("editing", "idle");
-
-      if (ep.divisions.qc.status !== "done") {
-        await paceIfPollinations(ep.divisions.script.provider);
-        ep = await runDivision(episodeId, "qc", ep, true);
-      }
-      releaseNonFailed(ep);
-      return ep;
+      }, 1700);
     },
-    [patchEpisode, runDivision, syncAgent3D]
+    [
+      addActivity,
+      clearScheduledTimers,
+      orchestrateOfficeStaff,
+      pushChat,
+      schedule,
+      selectIdeaOption,
+    ]
   );
 
-  const updateBossOriginality = useCallback(
-    (episodeId: string, patch: Partial<BossOriginalityInput>) => {
-      patchEpisode(episodeId, (ep) => ({
-        ...ep,
-        updatedAt: new Date().toISOString(),
-        bossOriginality: {
-          ...ep.bossOriginality,
-          ...patch,
-        },
-      }));
-    },
-    [patchEpisode]
-  );
-
-  const updateEpisodeMetrics = useCallback(
-    (episodeId: string, patch: Partial<EpisodeRealMetrics>) => {
-      patchEpisode(episodeId, (ep) => ({
-        ...ep,
-        updatedAt: new Date().toISOString(),
-        metrics: {
-          ...ep.metrics,
-          ...patch,
-        },
-      }));
-    },
-    [patchEpisode]
-  );
-
-  const deleteEpisode = useCallback((episodeId: string) => {
-    setEpisodes((prev) => {
-      const next = prev.filter((e) => e.id !== episodeId);
-      episodesRef.current = next;
-      setActiveEpisodeId((curr) => (curr === episodeId ? next[0]?.id ?? null : curr));
-      return next;
-    });
-  }, []);
-
-  const importBackupJson = useCallback(
-    (payload: {
-      episodes?: RealEpisode[];
-      divisionHistory?: DivisionRunHistoryPoint[];
-    }) => {
-      if (Array.isArray(payload.episodes)) {
-        setEpisodes(payload.episodes);
-        episodesRef.current = payload.episodes;
-        setActiveEpisodeId(payload.episodes[0]?.id ?? null);
-      }
-      if (Array.isArray(payload.divisionHistory)) {
-        setDivisionHistory(payload.divisionHistory);
-      }
+  const updateDraftFields = useCallback(
+    (patch: { title?: string; hook3s?: string; thumbnailHeadline?: string }) => {
+      setJob((prev) => {
+        if (!prev.draftEpisode) return prev;
+        const updated: KidsEpisode = {
+          ...prev.draftEpisode,
+          title: patch.title ?? prev.draftEpisode.title,
+          hook3s: patch.hook3s ?? prev.draftEpisode.hook3s,
+          thumbnailHeadline:
+            patch.thumbnailHeadline ?? prev.draftEpisode.thumbnailHeadline,
+        };
+        return { ...prev, draftEpisode: updated };
+      });
     },
     []
   );
 
-  const activeEpisode =
-    episodes.find((e) => e.id === activeEpisodeId) ?? episodes[0] ?? null;
+  const approveScriptAndProduce = useCallback(() => {
+    if (!job.draftEpisode) return;
+    pushChat(
+      "BOS FAJREZ",
+      "Owner",
+      "#fbbf24",
+      "✅ Naskah disetujui! Lanjut Studio Suara, Motion, Editing sampai QC!",
+      "boss"
+    );
+    runFinalProduction(job.draftEpisode);
+  }, [job.draftEpisode, pushChat, runFinalProduction]);
 
-  const getAgentSnapshot = useCallback(
-    (agentId: string): AgentRealStateSnapshot | null => {
-      const meta = PIPELINE_DIVISIONS.find((d) => d.agentId === agentId);
-      if (!meta) return null;
-      const ep = activeEpisode ?? episodes[0] ?? null;
-      const rec = ep?.divisions[meta.key] ?? null;
-      return {
-        division: meta.key,
-        divisionLabel: meta.label,
-        agentId: meta.agentId,
-        agentName: meta.agentName,
-        episodeId: ep?.id ?? null,
-        episodeTitle: ep?.divisions.seo.output?.title || ep?.bossTheme || null,
-        status: rec?.status ?? "queued",
-        durationMs: rec?.durationMs ?? 0,
-        provider: rec?.provider ?? null,
-        model: rec?.model ?? null,
-        input: rec?.input ?? null,
-        output: rec?.output ?? null,
-        error: rec?.error ?? null,
-        hint: rec?.hint ?? null,
-        logs: rec?.logs ?? [],
-        startedAt: rec?.startedAt ?? null,
-        finishedAt: rec?.finishedAt ?? null,
-      };
+  const markEpisodeUploaded = useCallback(
+    (episodeId: string, uploaded = true) => {
+      setEpisodes((prev) =>
+        prev.map((ep) => (ep.id === episodeId ? { ...ep, uploaded } : ep))
+      );
     },
-    [activeEpisode, episodes]
+    []
   );
+
+  const deleteEpisode = useCallback((episodeId: string) => {
+    setEpisodes((prev) => {
+      const next = prev.filter((ep) => ep.id !== episodeId);
+      if (next.length > 0) {
+        setSelectedEpisodeId((cur) => (cur === episodeId ? next[0].id : cur));
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <AgencyContext.Provider
       value={{
+        job,
+        teamChat,
         episodes,
-        activeEpisodeId: activeEpisode?.id ?? null,
-        activeEpisode,
-        setActiveEpisodeId,
-        divisionHistory,
-        videoBlobUrls,
-        editingProgressPct,
-        runningDivision,
-        startNewEpisode,
-        selectIdeaAndContinue,
-        runDivision,
-        runProductionAndExport,
-        continueEpisodeAuto,
-        updateBossOriginality,
-        updateEpisodeMetrics,
+        selectedEpisodeId,
+        setSelectedEpisodeId,
+        autoApproveMode,
+        setAutoApproveMode,
+        submitBossBrief,
+        selectIdeaOption,
+        updateDraftFields,
+        approveScriptAndProduce,
+        markEpisodeUploaded,
         deleteEpisode,
-        importBackupJson,
-        getAgentSnapshot,
       }}
     >
       {children}
