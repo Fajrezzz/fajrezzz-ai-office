@@ -22,7 +22,9 @@ export type VisualStyleId =
   | "clean_tutorial"
   | "agent_3d_network"
   | "minimal_kinetic"
-  | "high_energy_news";
+  | "high_energy_news"
+  /** v9 — gaya zine/collage + glitch kinetic typography (video referensi Bos) */
+  | "zine_glitch";
 
 /** V3 TikTok Content Formats */
 export type TikTokContentFormat =

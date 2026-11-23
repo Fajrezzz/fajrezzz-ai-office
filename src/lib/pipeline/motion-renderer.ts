@@ -13,14 +13,15 @@ import {
 } from "./video-engine-v3.ts";
 import { evaluateGsapSceneTimeline } from "./gsap-timeline-choreographer.ts";
 import { autoSelectCinematicPresetForTopic } from "./cinematic-presets.ts";
+import { isZineStyle, renderZineFrame } from "./zine-style.ts";
 
 /* ============================================================================
    FAJREZZZ AI OFFICE — V3 TIKTOK AI AGENT & CLAUDE CODE MOTION ENGINE
    - Resolution-Independent Native Vector Rendering (1080p / 2K / 4K 2160x3840)
    - 0ms-Drift Word-Level Audio-Subtitle Synchronization
    - Strict TikTok 9:16 Safe Zone (clears right buttons + top/bottom UI)
-   - 7 Auto-Selected AI Visual Styles (A-G) + 8 Specialized AI/Coding Templates
-   - 5 Dual-Scene Cross-Transitions with Motion Blur Streaks & 2.5D Camera Drift
+   - 8 AI Visual Styles (termasuk `zine_glitch` kolase/kinetic) + 8 Coding Templates
+   - 5 Dual-Scene Cross-Transitions + Zine Whip Speed-Lines & RGB Channel Split
    ============================================================================ */
 
 export type SceneTemplateId =
@@ -205,6 +206,27 @@ const STYLE_PALETTES: Record<VisualStyleId, StylePalette> = {
     glow: "rgba(255, 59, 48, 0.38)",
     gridColor: "rgba(255, 59, 48, 0.075)",
   },
+  /**
+   * v9 — ZINE GLITCH: kertas krem, tipografi raksasa terpotong, slab hitam miring,
+   * kolase halftone. Ini look "signature channel" yang meniru referensi video Bos.
+   */
+  zine_glitch: {
+    id: "zine_glitch",
+    name: "Zine Collage Glitch (Kinetic Typography)",
+    isLight: true,
+    bg0: "#F1EBE0",
+    bg1: "#E3D9C8",
+    surface: "#0A0A0B",
+    surfaceAlt: "rgba(241, 235, 224, 0.92)",
+    border: "rgba(10, 10, 11, 0.85)",
+    text: "#0A0A0B",
+    muted: "#7A6F5F",
+    accent: "#E23A2E",
+    accent2: "#F5A623",
+    accent3: "#2D6BFF",
+    glow: "rgba(226, 58, 46, 0.30)",
+    gridColor: "rgba(10, 10, 11, 0.06)",
+  },
 };
 
 const VALID_STYLES = Object.keys(STYLE_PALETTES) as VisualStyleId[];
@@ -218,7 +240,11 @@ export function resolveVisualStyle(
   if (presetMatch && VALID_STYLES.includes(presetMatch[1] as VisualStyleId)) {
     return presetMatch[1] as VisualStyleId;
   }
-  return autoSelectCinematicPresetForTopic(textHint).mappedVisualStyle;
+  // Tanpa instruksi eksplisit: pakai look signature channel (zine/collage glitch)
+  // supaya hasil video konsisten dengan referensi di folder Drive "VIDEO AI".
+  // Preset lain tetap bisa dipilih lewat `Style: <id>` di prompt agen.
+  void autoSelectCinematicPresetForTopic;
+  return "zine_glitch";
 }
 
 function chooseSceneTemplate(
@@ -1728,6 +1754,11 @@ export function renderEditorialFrame(
   elapsedSec: number,
   _brollImages?: Array<HTMLImageElement | null>
 ): void {
+  // v9 — gaya zine/collage glitch punya renderer khusus (tipografi bleeding + halftone)
+  if (isZineStyle(episode.visualStyle)) {
+    renderZineFrame(ctx, width, height, episode, elapsedSec, _brollImages);
+    return;
+  }
   void _brollImages;
   const s = width / 1080;
   const safe = getTikTokSafeZone(width, height);
@@ -2003,7 +2034,10 @@ export function renderEditorialFrame(
    6. TIKTOK 9:16 VERTICAL COVER THUMBNAIL RENDERER (1080x1920)
    ============================================================================ */
 
-export function renderEditorialThumbnail(episode: EditorialEpisode): string {
+export function renderEditorialThumbnail(
+  episode: EditorialEpisode,
+  brollImages?: Array<HTMLImageElement | null>
+): string {
   const w = 1080;
   const h = 1920;
   const canvas = document.createElement("canvas");
@@ -2012,7 +2046,7 @@ export function renderEditorialThumbnail(episode: EditorialEpisode): string {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  renderEditorialFrame(ctx, w, h, episode, 1.45);
+  renderEditorialFrame(ctx, w, h, episode, 1.45, brollImages);
   return canvas.toDataURL("image/png");
 }
 

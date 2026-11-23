@@ -201,8 +201,8 @@ test("TEST 6 & Security: Autonomous Agent Engine enforces sandbox and runs full 
   }
 });
 
-test("Phase 2-6: All 6 Fajrezzz Cinematic Presets, 7-Agent Workflow & 3 Test Topics match cleanly", () => {
-  assert.equal(FAJREZZZ_CINEMATIC_PRESETS.length, 6);
+test("Phase 2-6: 7 Fajrezzz Cinematic Presets (v9 menambah zine_glitch_editorial), 7-Agent Workflow & 3 Test Topics match cleanly", () => {
+  assert.equal(FAJREZZZ_CINEMATIC_PRESETS.length, 7);
   assert.equal(INTELLIGENT_EDITING_WORKFLOW.length, 7);
   assert.equal(PHASE_6_TEST_VIDEO_TOPICS.length, 3);
 

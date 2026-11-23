@@ -45,6 +45,7 @@ const VALID_VISUAL_STYLES: VisualStyleId[] = [
   "agent_3d_network",
   "minimal_kinetic",
   "high_energy_news",
+  "zine_glitch",
 ];
 
 const VALID_FORMATS: TikTokContentFormat[] = [
