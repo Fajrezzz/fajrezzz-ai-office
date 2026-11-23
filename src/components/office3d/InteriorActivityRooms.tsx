@@ -1,17 +1,18 @@
 "use client";
 
 import React from "react";
-import { Text } from "@react-three/drei";
 import { CYBERPUNK_THEME } from "@/lib/config/cyberpunk-theme";
 import { FLOOR_1_Y, FLOOR_3_Y } from "@/lib/data/initial-office-data";
+import { useSimulator, type MiniGameType } from "@/store/SimulatorContext";
 
 /**
  * Stage 2 Interior Activity Rooms & Cyberpunk Architectural Accents:
+ * - Cyberpunk architectural neon edge strips & backlit vertical fin accents (0 extra lights!)
  * - L1 West: MT5 Control Room (18 Accounts Wall + Curved Trading Consoles)
- * - L1 East: Executive Gym + Retro-Cyber Arcade + F1 Racing Simulator
- * - L3 East: Executive Billiard/Pool Table + Chess Lounge + Mini Cinema Wall
+ * - L1 East: Executive Gym + Clickable Retro-Cyber Arcade + Clickable F1 Racing Simulator
+ * - L3 East: Clickable Emerald Billiard/Pool Table + Clickable 3D Chess Table + Mini Cinema Wall
  * - Rooftop: Wood-Slat Pergola Lounge + Glowing Neon Helipad "H"
- * - Exterior Facade: Glowing Cyberpunk "FAJREZZZ HQ" Hologram Sign
+ * (Note: Overlapping "FAJREZZZ HQ" facade board removed so "FAJREZZZ AI OFFICE" sign remains clean)
  */
 export function InteriorActivityRooms({
   showL1,
@@ -24,9 +25,16 @@ export function InteriorActivityRooms({
   showRoof: boolean;
   isNight: boolean;
 }) {
+  const { setActiveMiniGame, pushSimLog } = useSimulator();
+
   const neonGlow = isNight
     ? CYBERPUNK_THEME.intensity.nightAccent
     : CYBERPUNK_THEME.intensity.daySubtleAccent;
+
+  const launchGame = (game: MiniGameType, label: string) => {
+    setActiveMiniGame(game);
+    pushSimLog("Bos Fajrez", `Mulai bermain mini-game ${label}!`, "system");
+  };
 
   return (
     <group>
@@ -80,49 +88,6 @@ export function InteriorActivityRooms({
         </group>
       )}
 
-      {/* CYBERPUNK HOLOGRAM FACADE SIGN ("FAJREZZZ HQ") */}
-      {showRoof && (
-        <group position={[0, 12.65, 4.18]}>
-          <mesh>
-            <boxGeometry args={[6.4, 0.82, 0.08]} />
-            <meshPhysicalMaterial
-              color="#071222"
-              emissive={CYBERPUNK_THEME.neon.cyanEmissive}
-              emissiveIntensity={isNight ? 0.55 : 0.14}
-              transparent
-              opacity={0.74}
-              roughness={0.22}
-            />
-          </mesh>
-          <mesh position={[0, 0.42, 0.02]}>
-            <boxGeometry args={[6.44, 0.04, 0.06]} />
-            <meshStandardMaterial
-              color={CYBERPUNK_THEME.neon.cyan}
-              emissive={CYBERPUNK_THEME.neon.cyanEmissive}
-              emissiveIntensity={neonGlow}
-            />
-          </mesh>
-          <mesh position={[0, -0.42, 0.02]}>
-            <boxGeometry args={[6.44, 0.04, 0.06]} />
-            <meshStandardMaterial
-              color={CYBERPUNK_THEME.neon.magenta}
-              emissive={CYBERPUNK_THEME.neon.magentaEmissive}
-              emissiveIntensity={neonGlow}
-            />
-          </mesh>
-          <Text
-            position={[0, 0.02, 0.06]}
-            fontSize={0.42}
-            color="#e0f2fe"
-            letterSpacing={0.14}
-            anchorX="center"
-            anchorY="middle"
-          >
-            FAJREZZZ HQ
-          </Text>
-        </group>
-      )}
-
       {/* L1 WEST WING: RUANG KONTROL MT5 (18 AKUN TRADING WALL) */}
       {showL1 && (
         <group position={[-9.2, FLOOR_1_Y, -4.6]}>
@@ -160,7 +125,7 @@ export function InteriorActivityRooms({
         </group>
       )}
 
-      {/* L1 EAST WING: EXECUTIVE GYM + ARCADE + RACING SIMULATOR */}
+      {/* L1 EAST WING: EXECUTIVE GYM + CLICKABLE ARCADE + CLICKABLE F1 RACING SIMULATOR */}
       {showL1 && (
         <group position={[9.2, FLOOR_1_Y, -4.2]}>
           {/* Treadmill */}
@@ -174,6 +139,7 @@ export function InteriorActivityRooms({
               <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.3} />
             </mesh>
           </group>
+
           {/* Weight Bench & Barbell */}
           <group position={[0.2, 0, 0.5]}>
             <mesh position={[0, 0.42, 0]} castShadow>
@@ -191,9 +157,23 @@ export function InteriorActivityRooms({
               </mesh>
             ))}
           </group>
-          {/* 2 Glowing Cyberpunk Arcade Cabinets */}
+
+          {/* 2 Clickable Glowing Cyberpunk Arcade Cabinets -> Launches Cyber Arcade Mini-Game! */}
           {[1.4, 2.3].map((ax, ai) => (
-            <group key={`arc-${ai}`} position={[ax, 0, -0.8]}>
+            <group
+              key={`arc-${ai}`}
+              position={[ax, 0, -0.8]}
+              onClick={(e) => {
+                e.stopPropagation();
+                launchGame("arcade", "Cyber Neon Arcade");
+              }}
+              onPointerOver={() => {
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = "auto";
+              }}
+            >
               <mesh position={[0, 0.92, 0]} castShadow>
                 <boxGeometry args={[0.72, 1.84, 0.68]} />
                 <meshStandardMaterial color="#0f172a" roughness={0.35} />
@@ -208,8 +188,21 @@ export function InteriorActivityRooms({
               </mesh>
             </group>
           ))}
-          {/* F1 Racing Simulator Cockpit */}
-          <group position={[1.8, 0, 1.25]}>
+
+          {/* Clickable F1 Racing Simulator Cockpit -> Launches Cyber Racing Mini-Game! */}
+          <group
+            position={[1.8, 0, 1.25]}
+            onClick={(e) => {
+              e.stopPropagation();
+              launchGame("racing", "F1 Cyber Racing Sim");
+            }}
+            onPointerOver={() => {
+              document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={() => {
+              document.body.style.cursor = "auto";
+            }}
+          >
             <mesh position={[0, 0.22, 0]} castShadow>
               <boxGeometry args={[0.78, 0.28, 1.5]} />
               <meshStandardMaterial color="#111827" metalness={0.65} roughness={0.3} />
@@ -227,6 +220,7 @@ export function InteriorActivityRooms({
               />
             </mesh>
           </group>
+
           {/* Overhead Magenta RGB LED Strip */}
           <mesh position={[0.4, 3.25, 0]}>
             <boxGeometry args={[4.8, 0.05, 0.08]} />
@@ -239,11 +233,23 @@ export function InteriorActivityRooms({
         </group>
       )}
 
-      {/* L3 EAST WING: BILLIARD TABLE + CHESS TABLE + EXECUTIVE CINEMA WALL */}
+      {/* L3 EAST WING: CLICKABLE BILLIARD TABLE + CLICKABLE 3D CHESS TABLE + EXECUTIVE CINEMA WALL */}
       {showL3 && (
         <group position={[8.6, FLOOR_3_Y, -2.0]}>
-          {/* Real Pro Emerald-Felt Billiard / Pool Table */}
-          <group position={[0, 0, 0.4]}>
+          {/* Clickable Pro Emerald-Felt Billiard / Pool Table -> Launches 2D Physics Billiards! */}
+          <group
+            position={[0, 0, 0.4]}
+            onClick={(e) => {
+              e.stopPropagation();
+              launchGame("billiards", "Biliar Fisika 8-Ball");
+            }}
+            onPointerOver={() => {
+              document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={() => {
+              document.body.style.cursor = "auto";
+            }}
+          >
             <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
               <boxGeometry args={[2.5, 0.18, 1.4]} />
               <meshStandardMaterial color="#5c3a21" roughness={0.55} />
@@ -257,7 +263,7 @@ export function InteriorActivityRooms({
               <boxGeometry args={[2.28, 0.02, 1.18]} />
               <meshStandardMaterial color="#15803d" roughness={0.85} />
             </mesh>
-            {/* Colorful Billiard Balls + Cue Stick */}
+            {/* Colorful Billiard Balls */}
             {[
               [-0.45, "#f8fafc"],
               [0.32, "#facc15"],
@@ -291,6 +297,54 @@ export function InteriorActivityRooms({
             ))}
           </group>
 
+          {/* Clickable 3D Executive Chess Table -> Launches Chess vs AI Mini-Game! */}
+          <group
+            position={[2.55, 0, 0.45]}
+            onClick={(e) => {
+              e.stopPropagation();
+              launchGame("chess", "Catur Eksekutif vs AI");
+            }}
+            onPointerOver={() => {
+              document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={() => {
+              document.body.style.cursor = "auto";
+            }}
+          >
+            <mesh position={[0, 0.4, 0]} castShadow>
+              <cylinderGeometry args={[0.08, 0.24, 0.76, 12]} />
+              <meshStandardMaterial color="#3b2313" roughness={0.55} />
+            </mesh>
+            <mesh position={[0, 0.8, 0]} castShadow receiveShadow>
+              <boxGeometry args={[0.92, 0.07, 0.92]} />
+              <meshStandardMaterial color="#5c3a21" roughness={0.48} />
+            </mesh>
+            {/* Checkered Board Top + Sculpted White/Black Chess Pieces */}
+            {[-0.27, -0.09, 0.09, 0.27].map((cx, xi) =>
+              [-0.27, -0.09, 0.09, 0.27].map((cz, zi) => (
+                <mesh key={`sq-${xi}-${zi}`} position={[cx, 0.842, cz]}>
+                  <boxGeometry args={[0.175, 0.014, 0.175]} />
+                  <meshStandardMaterial
+                    color={(xi + zi) % 2 === 0 ? "#f8fafc" : "#1e293b"}
+                    roughness={0.4}
+                  />
+                </mesh>
+              ))
+            )}
+            {[-0.24, 0, 0.24].map((px, pi) => (
+              <React.Fragment key={`cp-${pi}`}>
+                <mesh position={[px, 0.9, -0.26]}>
+                  <cylinderGeometry args={[0.024, 0.04, 0.11, 8]} />
+                  <meshStandardMaterial color="#f8fafc" roughness={0.3} />
+                </mesh>
+                <mesh position={[px, 0.9, 0.26]}>
+                  <cylinderGeometry args={[0.024, 0.04, 0.11, 8]} />
+                  <meshStandardMaterial color="#0f172a" roughness={0.35} />
+                </mesh>
+              </React.Fragment>
+            ))}
+          </group>
+
           {/* Mini Cinema Screening Wall behind Lounge */}
           <group position={[0, 1.75, -2.55]}>
             <mesh castShadow>
@@ -308,8 +362,8 @@ export function InteriorActivityRooms({
           </group>
 
           {/* Overhead Purple RGB Strip */}
-          <mesh position={[0, 3.3, 0]}>
-            <boxGeometry args={[3.8, 0.05, 0.08]} />
+          <mesh position={[0.4, 3.3, 0]}>
+            <boxGeometry args={[4.6, 0.05, 0.08]} />
             <meshStandardMaterial
               color={CYBERPUNK_THEME.neon.purple}
               emissive={CYBERPUNK_THEME.neon.purpleEmissive}

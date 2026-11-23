@@ -12,6 +12,7 @@ import {
   Coffee,
   Compass,
   Clock,
+  Gamepad2,
   HelpCircle,
   MapPin,
   Save,
@@ -22,6 +23,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
+import { MiniGameModal } from "@/components/office3d/MiniGameModal";
 import { useOffice } from "@/store/OfficeContext";
 import {
   DRIVABLE_VEHICLES,
@@ -78,6 +80,7 @@ export function NandaSimulatorHUD() {
     currentLocationName,
     activeSimModal,
     setActiveSimModal,
+    setActiveMiniGame,
     mt5Accounts,
     mt5Summary,
     staffVitals,
@@ -215,6 +218,14 @@ export function NandaSimulatorHUD() {
             className="flex shrink-0 items-center gap-1 rounded-full border border-violet-400/40 bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold text-violet-200 hover:bg-violet-950/70"
           >
             <MapPin className="h-3 w-3" /> Peta (M)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveMiniGame("billiards")}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-pink-400/50 bg-pink-500/15 px-2.5 py-1 text-[10px] font-bold text-pink-200 hover:bg-pink-500/30"
+          >
+            <Gamepad2 className="h-3 w-3" /> Mini-Game (4)
           </button>
 
           <button
@@ -692,6 +703,9 @@ export function NandaSimulatorHUD() {
           </div>
         </div>
       )}
+
+      {/* PLAYABLE INTERIOR MINI-GAMES MODAL (Billiards, F1 Racing Sim, Cyber Arcade, Chess) */}
+      <MiniGameModal />
     </>
   );
 }

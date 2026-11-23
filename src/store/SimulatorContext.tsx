@@ -27,6 +27,7 @@ export type TimeSpeed = "slow" | "normal" | "fast";
 export type SimCameraMode = "orbit" | "drone" | "topdown";
 export type ViewPerspective = "third" | "first";
 export type DriveCameraMode = "follow" | "hood";
+export type MiniGameType = "billiards" | "racing" | "arcade" | "chess";
 
 export interface Mt5Account {
   id: string;
@@ -282,6 +283,9 @@ interface SimulatorContextValue {
   setActiveSimModal: (
     m: null | "mt5" | "directory" | "map" | "settings" | "help" | "lounge"
   ) => void;
+  // Interactive Playable Mini-Games (Billiards, F1 Racing Sim, Cyber Arcade, Chess)
+  activeMiniGame: MiniGameType | null;
+  setActiveMiniGame: (g: MiniGameType | null) => void;
   // MT5 Monitor (18 Accounts - clearly labeled SIMULASI)
   mt5Accounts: Mt5Account[];
   mt5Summary: {
@@ -353,6 +357,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
   const [activeSimModal, setActiveSimModal] = useState<
     null | "mt5" | "directory" | "map" | "settings" | "help" | "lounge"
   >(null);
+  const [activeMiniGame, setActiveMiniGame] = useState<MiniGameType | null>(null);
 
   const [mt5Accounts, setMt5Accounts] = useState<Mt5Account[]>(INITIAL_MT5_ACCOUNTS);
   const [invitedLoungeIds, setInvitedLoungeIds] = useState<string[]>([]);
@@ -796,7 +801,9 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else if (k === "escape") {
-        if (activeSimModal) {
+        if (activeMiniGame) {
+          setActiveMiniGame(null);
+        } else if (activeSimModal) {
           setActiveSimModal(null);
         } else if (activeVehicleId) {
           setActiveVehicleId(null);
@@ -812,6 +819,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    activeMiniGame,
     activeSimModal,
     activeVehicleId,
     bossPositionRef,
@@ -862,6 +870,8 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
       setCurrentLocationName,
       activeSimModal,
       setActiveSimModal,
+      activeMiniGame,
+      setActiveMiniGame,
       mt5Accounts,
       mt5Summary,
       staffVitals,
@@ -906,6 +916,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
       zoomPct,
       currentLocationName,
       activeSimModal,
+      activeMiniGame,
       mt5Accounts,
       mt5Summary,
       staffVitals,
