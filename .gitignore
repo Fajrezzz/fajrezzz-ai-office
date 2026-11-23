@@ -32,3 +32,6 @@ next-env.d.ts
 
 # Dev preview frames (npm run preview:zine)
 /.zine-preview
+
+# Studio v10 runtime history (dev/CLI only, not durable in serverless)
+/.studio-data

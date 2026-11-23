@@ -26,6 +26,7 @@ import {
 } from "@/lib/config/team-roster";
 import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
 import { AiRouterMonitoringPanel } from "@/components/dashboard/AiRouterMonitoringPanel";
+import { StudioIntelligencePanel } from "@/components/dashboard/StudioIntelligencePanel";
 import { useAgency } from "@/store/AgencyContext";
 import { useOffice } from "@/store/OfficeContext";
 import { PIPELINE_DIVISIONS, type RealEpisode } from "@/types/pipeline";
@@ -418,6 +419,9 @@ export function RealResultsDashboard({ compact = false }: { compact?: boolean })
           </div>
         </div>
       </div>
+
+      {/* STUDIO INTELLIGENCE v10 — skor topik, blueprint, audit skill berbasis bukti */}
+      <StudioIntelligencePanel />
 
       {/* CENTRAL AI ROUTER MONITORING (GEMINI + GROQ + OPENROUTER) & AUTONOMOUS AGENT ENGINE */}
       <AiRouterMonitoringPanel />

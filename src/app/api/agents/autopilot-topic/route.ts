@@ -7,6 +7,17 @@ import {
   summarizeRecency,
 } from "@/lib/ai/research-recency";
 import { fetchLiveAiTrends } from "@/lib/ai/trend-intelligence";
+import { CANDIDATE_BANK } from "@/lib/studio/candidate-bank";
+import {
+  TOPIC_CATEGORIES,
+  categoryLabel,
+  detectCategory,
+  selectBestTopic,
+  type TopicCandidate,
+  type TopicHistoryRecord,
+} from "@/lib/studio/topic-intelligence";
+import { buildCreativeBlueprint, describeBlueprint } from "@/lib/studio/creative-blueprint";
+import { buildEditingPlan, describeEditingPlan } from "@/lib/studio/dynamic-editing";
 import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
 import type {
   TikTokContentFormat,
@@ -38,96 +49,90 @@ interface AutopilotTopicResponse {
   sourceVerified: boolean;
   trendVerificationNote: string;
   verifiedTrends: TrendSourceRecord[];
+  /** Kategori lintas-domain (bukan hanya AI) + skor topik + blueprint. */
+  category?: string;
+  topicScore?: number;
+  blueprintLine?: string;
+  editingLine?: string;
+  needsFreshResearch?: boolean;
 }
 
-const VALID_FORMATS: TikTokContentFormat[] = [
-  "breaking_ai_news",
-  "ai_tools_must_know",
-  "claude_code_experiment",
-  "ai_agent_vs_human",
-  "before_after_automation",
-  "ai_coding_tutorial",
-  "ai_agent_builds_project",
-  "myth_vs_reality",
-  "surprising_experiment",
-  "feature_visual_demo",
-];
+/* ------------------------------------------------------------------ */
+/* Jembatan ke mesin Studio v10 (topik lintas kategori + blueprint)   */
+/* ------------------------------------------------------------------ */
 
-const VALID_STYLES: VisualStyleId[] = [
-  "dark_ai_cinematic",
-  "tech_documentary",
-  "cyberpunk_dev",
-  "clean_tutorial",
-  "agent_3d_network",
-  "minimal_kinetic",
-  "high_energy_news",
-  "zine_glitch",
-];
+const FORMAT_BY_CATEGORY: Record<string, TikTokContentFormat> = {
+  teknologi_ai: "feature_visual_demo",
+  sains: "feature_visual_demo",
+  sejarah: "surprising_experiment",
+  alam: "feature_visual_demo",
+  edukasi: "ai_coding_tutorial",
+  keamanan_digital: "myth_vs_reality",
+  psikologi: "myth_vs_reality",
+  inovasi: "surprising_experiment",
+  ekonomi: "before_after_automation",
+  sosial: "myth_vs_reality",
+  produktivitas: "ai_tools_must_know",
+  mitos_fakta: "myth_vs_reality",
+};
 
-const CURATED_AI_AGENT_FALLBACKS: Array<{
-  theme: string;
-  niche: string;
-  reasoning: string;
-  viralHookPreview: string;
-  contentFormat: TikTokContentFormat;
-  visualStyle: VisualStyleId;
-}> = [
-  {
-    theme:
-      "Cara kerja Claude Code di terminal untuk membaca repo, mengedit beberapa file sekaligus, dan menjalankan build otomatis",
-    niche: "Claude Code & Terminal AI",
-    reasoning:
-      "Developer dan pembuat produk digital aktif mencari alur kerja nyata AI coding agent berbasis terminal.",
-    viralHookPreview:
-      "Stop copy-paste kode dari chat AI! Ini cara AI agent kerja langsung di terminal kamu.",
-    contentFormat: "ai_coding_tutorial",
-    visualStyle: "clean_tutorial",
-  },
-  {
-    theme:
-      "AI Agent vs Workflow Manual: membandingkan tahapan riset, coding, testing, dan pull request GitHub secara objektif",
-    niche: "AI Agent vs Human Workflow",
-    reasoning:
-      "Perbandingan before-after workflow nyata membantu penonton memahami kapan AI agent efektif dan kapan tetap butuh review manusia.",
-    viralHookPreview:
-      "Kerjaan repo 4 jam bisa berubah drastis kalau AI agent bantu eksekusi terminal — tapi ada 1 syarat wajib.",
-    contentFormat: "ai_agent_vs_human",
-    visualStyle: "tech_documentary",
-  },
-  {
-    theme:
-      "Arsitektur Multi-Agent AI: bagaimana beberapa agent spesialis berbagi tugas riset, coding, dan QA seperti kantor virtual",
-    niche: "Multi-Agent Systems",
-    reasoning:
-      "Konsep multi-agent dan karyawan virtual AI punya daya tarik visual tinggi lewat diagram alur node dan data flow.",
-    viralHookPreview:
-      "Satu AI saja sering lupa konteks. Ini alasan sistem multi-agent membagi tugas ke beberapa spesialis!",
-    contentFormat: "feature_visual_demo",
-    visualStyle: "agent_3d_network",
-  },
-  {
-    theme:
-      "Eksperimen membangun fitur web nyata dengan AI coding agent: dari prompt terminal sampai verifikasi build dan PR GitHub",
-    niche: "AI Agent Builds Real Projects",
-    reasoning:
-      "Demonstrasi proses nyata dari prompt sampai verifikasi build memberi edukasi praktis tanpa melebih-lebihkan.",
-    viralHookPreview:
-      "Apa yang terjadi kalau AI agent disuruh bikin fitur lengkap dari nol lalu diuji build-nya sendiri?",
-    contentFormat: "ai_agent_builds_project",
-    visualStyle: "cyberpunk_dev",
-  },
-  {
-    theme:
-      "Mitos vs Fakta AI Coding Agent 2026: kenapa prompt panjang kalah penting dibanding verifikasi test dan struktur repo",
-    niche: "Myth vs Reality AI Coding",
-    reasoning:
-      "Meluruskan ekspektasi berlebihan soal AI coding memberi nilai tinggi dan memicu diskusi sehat di kolom komentar TikTok.",
-    viralHookPreview:
-      "Banyak orang mengira AI coding gagal karena modelnya bodoh — padahal masalahnya di satu kebiasaan ini!",
-    contentFormat: "myth_vs_reality",
-    visualStyle: "minimal_kinetic",
-  },
-];
+const STYLE_BY_CATEGORY: Record<string, VisualStyleId> = {
+  teknologi_ai: "dark_ai_cinematic",
+  sains: "tech_documentary",
+  sejarah: "tech_documentary",
+  alam: "tech_documentary",
+  edukasi: "clean_tutorial",
+  keamanan_digital: "high_energy_news",
+  psikologi: "minimal_kinetic",
+  inovasi: "agent_3d_network",
+  ekonomi: "minimal_kinetic",
+  sosial: "zine_glitch",
+  produktivitas: "clean_tutorial",
+  mitos_fakta: "cyberpunk_dev",
+};
+
+/** Judul episode lama → riwayat minimal supaya anti-repetisi tetap bekerja. */
+function historyFromPastTopics(pastTopics: string[], nowMs: number): TopicHistoryRecord[] {
+  return pastTopics.slice(0, 25).map((title, i) => ({
+    episodeId: `past-${i}`,
+    episodeNumber: i + 1,
+    producedAt: new Date(nowMs - (i + 1) * 86_400_000).toISOString(),
+    title,
+    mainTopic: title,
+    category: detectCategory(title) ?? "edukasi",
+    angle: title,
+    hook: title,
+    summary: title,
+    sources: [],
+    storyFormat: "unknown",
+    visualStyle: "unknown",
+    status: "published" as const,
+  }));
+}
+
+function studioPlanFor(
+  candidate: TopicCandidate,
+  history: TopicHistoryRecord[],
+  episodeCount: number
+) {
+  const blueprint = buildCreativeBlueprint(candidate, { episodeIndex: episodeCount + 1 }).blueprint;
+  const editingPlan = buildEditingPlan(blueprint, candidate, []);
+  const score = scoreCached(candidate, history);
+  return {
+    category: candidate.category,
+    topicScore: score,
+    blueprintLine: describeBlueprint(blueprint),
+    editingLine: describeEditingPlan(editingPlan),
+    contentFormat: FORMAT_BY_CATEGORY[candidate.category] ?? "feature_visual_demo",
+    visualStyle: STYLE_BY_CATEGORY[candidate.category] ?? "minimal_kinetic",
+  };
+}
+
+function scoreCached(candidate: TopicCandidate, history: TopicHistoryRecord[]): number {
+  // selectBestTopic memakai skor yang sama; di sini cukup hitung ulang cepat.
+  const result = selectBestTopic([candidate], { history, minScore: 0 });
+  return result.ranked[0]?.score ?? 0;
+}
 
 export async function POST(req: Request) {
   try {
@@ -139,6 +144,8 @@ export async function POST(req: Request) {
       ? body.compressedMemories.slice(0, 10)
       : [];
     const episodeCount = Number(body.episodeCount || 0);
+    // Riwayat minimum dari judul lama → dipakai mesin anti-repetisi v10.
+    const history = historyFromPastTopics(pastTopics, Date.now());
 
     // 1. REAL TREND INTELLIGENCE: Fetch verified official GitHub releases & fresh community discussions!
     const trendReport = await fetchLiveAiTrends(90);
@@ -158,7 +165,8 @@ export async function POST(req: Request) {
       buildInstalledSkillsPrompt("autopilot");
 
     const systemPrompt = `Kamu adalah AI Creative Director & Kepala Trend Intelligence di "FAJREZZZ AI OFFICE".
-PRIORITAS MUTLAK: Konten TikTok Vertical 9:16 (20–60 detik) khusus topik AI AGENT, CLAUDE CODE, AI CODING, MULTI-AGENT SYSTEMS, AI AUTOMATION, TERMINAL & GITHUB WORKFLOW, serta UPDATE AI TERKINI.
+CAKUPAN TOPIK (WAJIB DINAMIS, BUKAN AI SAJA): pilih satu kategori paling relevan dari ${TOPIC_CATEGORIES.length} kategori berikut — ${TOPIC_CATEGORIES.map((c) => c.label).join("; ")}. Teknologi/AI hanya SALAH SATU kategori, bukan prioritas mutlak. Variasikan kategori antar episode: bila 3 episode terakhir didominasi satu kategori, pilih kategori lain yang punya sumber segar.
+Contoh cakupan: sains harian, sejarah, alam & iklim, edukasi, keamanan digital, psikologi, inovasi, ekonomi, isu sosial, produktivitas, mitos vs fakta, serta teknologi/AI sehari-hari.
 
 ${promptBlock}
 ${buildRecencyPromptBlock()}
@@ -171,18 +179,21 @@ ATURAN INTEGRITAS KETAT (WAJIB):
 3. DILARANG KERAS mengarang angka views, jumlah pencarian, atau janji viral!
 4. Jika tersedia daftar "TREN TERVERIFIKASI ONLINE" di bawah, pilih dan rujuk salah satu sumber resmi/komunitas yang belum dibahas di daftar topik lama, dan sertakan "sourceIndex" yang sesuai (0..N-1).
 5. Jika daftar tren kosong, fokus pada tutorial/eksperimen/perbandingan arsitektur AI Agent & Claude Code yang faktual dan tandai "sourceIndex": -1.
-6. DILARANG mengulang topik yang mirip dengan daftar topik sebelumnya.
+6. DILARANG mengulang topik, SUDUT, hook, dan struktur yang mirip dengan daftar topik sebelumnya. Mengganti judul saja tidak cukup.
+6b. DILARANG clickbait, hoaks, angka tanpa sumber, atau klaim "viral" tanpa data tren. Satu episode = satu ide utama.
 7. Pilih sumber yang paling SEGAR (≤ 30 hari) bila kualitasnya setara; kalau memakai sumber lebih tua, sebutkan umurnya di reasoning.
 8. Balas HANYA JSON valid:
 {
-  "theme": "Topik TikTok 9:16 spesifik 1 kalimat tentang AI Agent / Claude Code / AI Coding",
-  "niche": "Nama sub-niche singkat (misal: Claude Code Workflow / Breaking AI Agent)",
+  "theme": "Topik TikTok 9:16 spesifik 1 kalimat (boleh lintas kategori, bukan hanya AI)",
+  "category": "sains | sejarah | alam | edukasi | keamanan_digital | psikologi | inovasi | ekonomi | sosial | produktivitas | mitos_fakta | teknologi_ai",
+  "niche": "Nama sub-niche singkat sesuai kategori",
   "reasoning": "Alasan objektif pemilihan topik berdasarkan nilai edukasi & retensi penonton",
   "viralHookPreview": "Hook 0-2 detik pertama yang langsung menghentikan scrolling tanpa clickbait bohong",
   "contentFormat": "breaking_ai_news | ai_tools_must_know | claude_code_experiment | ai_agent_vs_human | before_after_automation | ai_coding_tutorial | ai_agent_builds_project | myth_vs_reality | surprising_experiment | feature_visual_demo",
   "visualStyle": "zine_glitch | dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
   "sourceIndex": 0
-}`;
+}
+CATATAN: field "category" WAJIB salah satu id kategori di atas.`;
 
     const trendBlock =
       topTrends.length > 0
@@ -231,19 +242,39 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
           : -1;
       const chosenSource = idx >= 0 ? topTrends[idx] : null;
 
-      const contentFormat: TikTokContentFormat = VALID_FORMATS.includes(
-        llm.parsed.contentFormat as TikTokContentFormat
-      )
-        ? (llm.parsed.contentFormat as TikTokContentFormat)
-        : chosenSource
-        ? "breaking_ai_news"
-        : "claude_code_experiment";
-
-      const visualStyle: VisualStyleId = VALID_STYLES.includes(
-        llm.parsed.visualStyle as VisualStyleId
-      )
-        ? (llm.parsed.visualStyle as VisualStyleId)
-        : "dark_ai_cinematic";
+      const themeText = llm.parsed.theme.trim().slice(0, 200);
+      const parsedCategory =
+        TOPIC_CATEGORIES.find((c) => c.id === llm.parsed.category)?.id ??
+        detectCategory(themeText) ??
+        "edukasi";
+      const llmCandidate: TopicCandidate = {
+        id: `llm-${Date.now()}`,
+        category: parsedCategory,
+        title: themeText,
+        angle: (llm.parsed.reasoning || themeText).slice(0, 160),
+        hook: (llm.parsed.viralHookPreview || themeText).slice(0, 160),
+        thesis: themeText,
+        keyFacts: [],
+        sources: chosenSource
+          ? [
+              {
+                name: chosenSource.sourceName,
+                url: chosenSource.sourceUrl,
+                publishedAt: chosenSource.publishedAt.slice(0, 10),
+                kind: "official",
+              },
+            ]
+          : [],
+        audienceImportance: 6,
+        clarity: 6,
+        curiosity: 7,
+        educationalValue: 6,
+        visualPotential: 6,
+        difficulty: 5,
+        durationFitSec: 45,
+        noveltyNotes: "Dipilih LLM dengan riwayat topik sebagai pembanding",
+      };
+      const plan = studioPlanFor(llmCandidate, history, episodeCount);
 
       return NextResponse.json({
         ok: true,
@@ -253,9 +284,13 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
         durationMs: llm.durationMs,
         activeSkillsUsed: activeSkillRepos,
         data: {
-          theme: llm.parsed.theme.trim().slice(0, 200),
+          theme: themeText,
           platform: "tiktok",
-          niche: (llm.parsed.niche || "AI Agent & Claude Code").trim().slice(0, 56),
+          category: categoryLabel(parsedCategory),
+          topicScore: plan.topicScore,
+          blueprintLine: plan.blueprintLine,
+          editingLine: plan.editingLine,
+          niche: (llm.parsed.niche || categoryLabel(parsedCategory)).trim().slice(0, 56),
           reasoning: (
             llm.parsed.reasoning ||
             "Dipilih oleh AI Creative Director berdasarkan relevansi teknis dan kejelasan visual untuk TikTok 9:16."
@@ -268,8 +303,8 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
           )
             .trim()
             .slice(0, 170),
-          contentFormat,
-          visualStyle,
+          contentFormat: plan.contentFormat,
+          visualStyle: plan.visualStyle,
           sourceName: chosenSource
             ? chosenSource.sourceName
             : "Belum diverifikasi online (topik edukasi faktual)",
@@ -282,7 +317,7 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
       });
     }
 
-    // Honest deterministic fallback using verified GitHub trend if available, else factual AI Agent topic
+    // Fallback 1: tren terverifikasi yang belum pernah dibahas.
     const lowerPast = pastTopics.map((p) => p.toLowerCase());
     const unusedTrend = topTrends.find(
       (t) => !lowerPast.some((p) => p.includes(t.title.toLowerCase().slice(0, 22)))
@@ -297,9 +332,10 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
         durationMs: 0,
         activeSkillsUsed: activeSkillRepos,
         data: {
-          theme: `${unusedTrend.title} — dampak praktis untuk workflow AI Agent & coding otomatis`,
+          theme: unusedTrend.title.slice(0, 200),
           platform: "tiktok",
-          niche: unusedTrend.tags[0] || "Breaking AI Agent",
+          category: "teknologi_ai",
+          niche: unusedTrend.tags[0] || "Update teknologi",
           reasoning: `Diambil langsung dari sumber terverifikasi (${unusedTrend.sourceName}, dipublikasikan ${unusedTrend.publishedAt.slice(0, 10)}).`,
           viralHookPreview: `Update resmi baru saja rilis: ${unusedTrend.title.slice(0, 90)}!`,
           contentFormat: "breaking_ai_news",
@@ -314,27 +350,58 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
       });
     }
 
-    const curated =
-      CURATED_AI_AGENT_FALLBACKS.find(
-        (f) => !lowerPast.some((p) => p.includes(f.niche.toLowerCase()))
-      ) ?? CURATED_AI_AGENT_FALLBACKS[episodeCount % CURATED_AI_AGENT_FALLBACKS.length];
+    // Fallback 2: bank kandidat lintas kategori + skor & anti-repetisi v10.
+    // Kalau tidak ada yang layak → JANGAN mengarang: minta riset ulang.
+    const selection = selectBestTopic(CANDIDATE_BANK, { history });
+    if (!selection.chosen) {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: "needs-fresh-research",
+          error:
+            "Tidak ada kandidat topik yang layak (skor < ambang atau terlalu mirip episode lama). " +
+            "Sistem menolak mengarang topik. Perlu riset/tren baru sebelum episode berikutnya.",
+          needsFreshResearch: true,
+          rejected: selection.rejected,
+          notes: selection.notes,
+          verifiedTrends: topTrends,
+          trendVerificationNote: trendReport.verificationNote,
+        },
+        { status: 409 }
+      );
+    }
+
+    const chosen = selection.chosen;
+    const plan = studioPlanFor(chosen, history, episodeCount);
 
     return NextResponse.json({
       ok: true,
-      source: "curated-fallback",
-      provider: "autopilot-fallback",
-      model: "ai-agent-editorial",
+      source: "candidate-bank-v10",
+      provider: "studio-topic-intelligence",
+      model: "topic-scoring-v10",
       durationMs: 0,
       activeSkillsUsed: activeSkillRepos,
       data: {
-        ...curated,
+        theme: chosen.title,
         platform: "tiktok",
-        sourceName: "Tren online belum dapat diverifikasi (edukasi faktual AI Agent)",
-        sourceUrl: "",
-        sourcePublishedAt: new Date().toISOString(),
-        sourceVerified: false,
+        category: categoryLabel(chosen.category),
+        topicScore: plan.topicScore,
+        blueprintLine: plan.blueprintLine,
+        editingLine: plan.editingLine,
+        niche: categoryLabel(chosen.category),
+        reasoning:
+          `Skor topik ${plan.topicScore}/100 · sudut: ${chosen.angle} · ` +
+          `dibandingkan dengan ${selection.comparedEpisodes} episode terakhir.`,
+        viralHookPreview: chosen.hook,
+        contentFormat: plan.contentFormat,
+        visualStyle: plan.visualStyle,
+        sourceName: chosen.sources[0]?.name ?? "Sumber belum terverifikasi",
+        sourceUrl: chosen.sources[0]?.url ?? "",
+        sourcePublishedAt: chosen.sources[0]?.publishedAt ?? new Date().toISOString(),
+        sourceVerified: (chosen.sources[0]?.kind ?? "") === "official",
         trendVerificationNote: trendReport.verificationNote,
         verifiedTrends: topTrends,
+        needsFreshResearch: false,
       } satisfies AutopilotTopicResponse,
     });
   } catch (err) {
