@@ -7,21 +7,26 @@ import {
   renderEditorialThumbnail,
   scheduleSceneTransitionsSfx,
   startAmbientSynthBed,
+  type EditorialEpisode,
 } from "@/lib/pipeline/motion-renderer";
-import {
-  fetchEpisodeBRollImages,
-  getCachedSceneBRoll,
-} from "@/lib/pipeline/scene-broll-client";
 import {
   fetchNeuralSpeechClip,
   getCachedNeuralClip,
   type CachedNeuralClip,
 } from "@/lib/pipeline/neural-tts-client";
+import {
+  computeSyncedSceneDuration,
+  computeWordTimings,
+  renderTikTokVideoV3,
+  type SceneAudioScheduleItem,
+} from "@/lib/pipeline/video-engine-v3";
 import type {
   EditingOutput,
+  ExportQualityPreset,
   MotionOutput,
   PipelineScene,
   RealEpisode,
+  RenderProgressSnapshot,
   SceneMotionFrame,
   SceneVoiceTrack,
   VoiceOutput,
@@ -29,7 +34,7 @@ import type {
 
 /**
  * DIVISI 4 — SUARA (Modern Natural Indonesian Neural Human Voice via `/api/tts`
- * Microsoft Edge Neural `id-ID-ArdiNeural` -> Google Neural fallback -> Web Speech last resort)
+ * Measures EXACT MP3 duration & computes syllable-weighted word timings for 0ms A/V sync!)
  */
 export async function runVoiceDivisionBrowser(
   scenes: PipelineScene[]
@@ -39,7 +44,6 @@ export async function runVoiceDivisionBrowser(
   }
 
   const neuralResults: Array<CachedNeuralClip | null> = [];
-  // Fetch in crisp batches of 2 so all scenes synthesize fast & reliably
   for (let i = 0; i < scenes.length; i += 2) {
     const batch = scenes.slice(i, i + 2);
     const clips = await Promise.all(
@@ -53,16 +57,22 @@ export async function runVoiceDivisionBrowser(
   if (firstNeural) {
     const sceneTracks: SceneVoiceTrack[] = scenes.map((scene, idx) => {
       const clip = neuralResults[idx];
-      const wordCount = scene.narration.trim().split(/\s+/).filter(Boolean).length;
-      const estimatedSec =
-        clip?.durationSec && clip.durationSec > 0.5
-          ? Math.max(scene.durationSec, clip.durationSec)
-          : Math.max(scene.durationSec, Math.ceil((wordCount / 2.6) * 10) / 10);
+      const measuredSec =
+        clip?.durationSec && clip.durationSec > 0.45 ? clip.durationSec : null;
+      const synced = computeSyncedSceneDuration(measuredSec, scene.durationSec);
+      const wordTimings = computeWordTimings(
+        scene.narration,
+        synced.speechOffsetSec,
+        synced.speechDurationSec
+      );
 
       return {
         sceneNumber: scene.sceneNumber,
         text: scene.narration,
-        estimatedSec: Math.round(estimatedSec * 10) / 10,
+        estimatedSec: synced.sceneDurationSec,
+        actualAudioSec: measuredSec ?? synced.speechDurationSec,
+        speechOffsetSec: synced.speechOffsetSec,
+        wordTimings,
         voiceName: clip?.voiceName ?? firstNeural.voiceName,
         lang: "id-ID",
         rate: 1.05,
@@ -99,12 +109,10 @@ export async function runVoiceDivisionBrowser(
       });
       voices = window.speechSynthesis.getVoices();
     }
-
     const idVoice =
       voices.find((v) => v.lang.toLowerCase().startsWith("id")) ??
       voices.find((v) => v.lang.toLowerCase().includes("ms")) ??
       voices[0];
-
     if (idVoice) {
       chosenVoiceName = idVoice.name;
       lang = idVoice.lang || "id-ID";
@@ -114,14 +122,19 @@ export async function runVoiceDivisionBrowser(
 
   const sceneTracks: SceneVoiceTrack[] = scenes.map((scene) => {
     const wordCount = scene.narration.trim().split(/\s+/).filter(Boolean).length;
-    const estimatedSec = Math.max(
-      scene.durationSec,
-      Math.ceil((wordCount / 2.5) * 10) / 10
-    );
+    const estSpeech = Math.max(2.6, Math.ceil((wordCount / 2.65) * 10) / 10);
+    const synced = computeSyncedSceneDuration(estSpeech, scene.durationSec);
     return {
       sceneNumber: scene.sceneNumber,
       text: scene.narration,
-      estimatedSec,
+      estimatedSec: synced.sceneDurationSec,
+      actualAudioSec: synced.speechDurationSec,
+      speechOffsetSec: synced.speechOffsetSec,
+      wordTimings: computeWordTimings(
+        scene.narration,
+        synced.speechOffsetSec,
+        synced.speechDurationSec
+      ),
       voiceName: chosenVoiceName,
       lang,
       rate: 1.04,
@@ -131,7 +144,6 @@ export async function runVoiceDivisionBrowser(
   });
 
   const totalEstimatedSec = sceneTracks.reduce((acc, s) => acc + s.estimatedSec, 0);
-
   return {
     engine,
     voiceName: chosenVoiceName,
@@ -142,8 +154,7 @@ export async function runVoiceDivisionBrowser(
 }
 
 /**
- * Play REAL Modern Natural Indonesian Neural Human Voice MP3 clips scene-by-scene
- * (automatically fetches from `/api/tts` if not yet cached, graceful fallback to Web Speech only if offline).
+ * Play a single scene track cleanly (used by "Dengar TTS" button per scene).
  */
 export function speakSceneTracks(
   tracks: SceneVoiceTrack[],
@@ -168,7 +179,6 @@ export function speakSceneTracks(
     }
 
     const track = tracks[idx];
-    // 1. Prefer cached or freshly synthesized Neural Human Voice MP3!
     const clip =
       getCachedNeuralClip(track.text, "ardi") ??
       (await fetchNeuralSpeechClip(track.text, "ardi"));
@@ -180,30 +190,25 @@ export function speakSceneTracks(
       const audio = new Audio(clip.objectUrl);
       activeAudio = audio;
       audio.volume = 1.0;
-
       const finish = () => {
         if (activeAudio === audio) activeAudio = null;
         if (!cancelled) void playIndex(idx + 1);
       };
-
       audio.onended = finish;
       audio.onerror = finish;
-
       try {
         await audio.play();
         return;
       } catch {
-        // Autoplay or audio decode error -> proceed cleanly to fallback
+        // fallback below
       }
     }
 
-    // 2. Fallback only if Neural MP3 unavailable
     if ("speechSynthesis" in window && !cancelled) {
       const voices = window.speechSynthesis.getVoices();
       const utter = new SpeechSynthesisUtterance(track.text);
       utter.lang = track.lang || "id-ID";
       utter.rate = track.rate || 1.04;
-      utter.pitch = track.pitch || 1.0;
       const match =
         voices.find((v) => v.lang.toLowerCase().startsWith("id")) ?? voices[0];
       if (match) utter.voice = match;
@@ -234,148 +239,50 @@ export function speakSceneTracks(
 }
 
 /**
- * DIVISI 5 — MOTION (Render keyframe motion-graphics viral style per adegan di HTML5 Canvas)
+ * SAMPLE-ACCURATE MASTER-CLOCK LIVE PREVIEW PLAYBACK!
+ * Fixes audio-text desync completely: decodes every scene's real neural MP3 first,
+ * locks every scene's duration & word timings to the exact decoded buffer length,
+ * schedules audio + auto-ducking + SFX on ONE Web Audio AudioContext clock,
+ * and drives the canvas at `elapsed = audioCtx.currentTime - baseAudioTime`!
  */
-export async function runMotionDivisionBrowser(
-  episode: RealEpisode,
-  format: VideoFormat
-): Promise<MotionOutput> {
-  if (typeof document === "undefined") {
-    throw new Error("Divisi Motion harus dijalankan di browser.");
-  }
-
-  const editorial = buildEditorialEpisode(episode);
-  if (!editorial) {
-    throw new Error("Naskah adegan belum tersedia untuk Divisi Motion.");
-  }
-
-  const width = format === "shorts" ? 720 : 1280;
-  const height = format === "shorts" ? 1280 : 720;
-
-  const previewW = format === "shorts" ? 270 : 426;
-  const previewH = format === "shorts" ? 480 : 240;
-  const canvas = document.createElement("canvas");
-  canvas.width = previewW;
-  canvas.height = previewH;
+export async function startSyncedLivePreview(options: {
+  episode: RealEpisode;
+  canvas: HTMLCanvasElement;
+  muted: boolean;
+  onTick?: (elapsedSec: number, totalSec: number, activeSceneNum: number) => void;
+  onEnd?: () => void;
+}): Promise<() => void> {
+  const { episode, canvas, muted, onTick, onEnd } = options;
   const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Canvas 2D context tidak tersedia di browser.");
+  const baseEditorial = buildEditorialEpisode(episode);
+  if (!ctx || !baseEditorial) {
+    onEnd?.();
+    return () => {};
   }
 
-  const sceneFrames: SceneMotionFrame[] = [];
-  // Fetch FREE Rp 0 AI Cinematic B-Roll images for every scene (MoneyPrinterTurbo + ComfyUI pattern)
-  const brollImages = await fetchEpisodeBRollImages(editorial, format);
-  let cursorSec = 0;
+  let stopped = false;
+  let rafId: number | null = null;
 
-  for (const scene of editorial.scenes) {
-    const sampleTime = cursorSec + scene.durationSec * 0.48;
-    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime, brollImages);
-    const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.78);
-    sceneFrames.push({
-      sceneNumber: scene.sceneNumber,
-      label: scene.label,
-      durationSec: scene.durationSec,
-      keyframeDataUrl,
-    });
-    cursorSec += scene.durationSec;
-    await new Promise((r) => window.setTimeout(r, 16));
-  }
-
-  return {
-    format,
-    width,
-    height,
-    fps: 30,
-    totalDurationSec: cursorSec,
-    sceneFrames,
-  };
-}
-
-/**
- * DIVISI 6 — EDITING (Gabung viral motion-graphics Canvas + REAL Neural Human Voice MP3 + ducked ambient bed -> Video `.webm` + HD Thumbnail 1280x720)
- */
-export async function runEditingDivisionBrowser(
-  episode: RealEpisode,
-  format: VideoFormat,
-  onProgress?: (pct: number) => void
-): Promise<{ output: EditingOutput; videoBlob: Blob }> {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    throw new Error("Divisi Editing hanya bisa berjalan di browser.");
-  }
-  if (typeof MediaRecorder === "undefined") {
-    throw new Error(
-      "Browser ini belum mendukung MediaRecorder. Gunakan Chrome/Edge/Firefox terbaru untuk ekspor video."
-    );
-  }
-
-  const editorial = buildEditorialEpisode(episode);
-  if (!editorial) {
-    throw new Error("Naskah & Motion belum siap untuk Editing.");
-  }
-
-  // Ensure AI Cinematic B-Roll images + Neural Human Voice MP3 clips are ready for muxing!
-  const cachedBroll = getCachedSceneBRoll(editorial, format);
-  const brollPromise = cachedBroll.some((img) => img !== null)
-    ? Promise.resolve(cachedBroll)
-    : fetchEpisodeBRollImages(editorial, format);
-
-  const [brollImages, sceneClips] = await Promise.all([
-    brollPromise,
-    Promise.all(
-      editorial.scenes.map(
-        (sc) =>
-          getCachedNeuralClip(sc.narration, "ardi") ??
-          fetchNeuralSpeechClip(sc.narration, "ardi")
-      )
-    ),
-  ]);
-
-  // Sync each scene duration so the neural narrator finishes naturally without getting cut off
-  const syncedScenes = editorial.scenes.map((sc, idx) => {
-    const clip = sceneClips[idx];
-    const naturalDur = clip?.durationSec ? Math.max(sc.durationSec, clip.durationSec + 0.35) : sc.durationSec;
-    return {
-      ...sc,
-      durationSec: Math.round(naturalDur * 10) / 10,
-    };
-  });
-  const syncedEditorial = { ...editorial, scenes: syncedScenes };
-
-  // 1. Render crisp 1280x720 Modern Editorial HD Thumbnail PNG
-  const thumbnailDataUrl = renderEditorialThumbnail(syncedEditorial);
-
-  // 2. Render & mux real Canvas video + REAL Neural Human Voice MP3s + ducked synth bed via MediaRecorder
-  const width = format === "shorts" ? 720 : 1280;
-  const height = format === "shorts" ? 1280 : 720;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Gagal membuat Canvas 2D untuk ekspor video.");
-  }
-
-  const totalSec = Math.max(
-    6,
-    syncedEditorial.scenes.reduce((acc, s) => acc + s.durationSec, 0)
+  // Fetch / retrieve cached neural MP3 clips for every scene first so timing is exact!
+  const clips = await Promise.all(
+    baseEditorial.scenes.map(
+      (sc) =>
+        getCachedNeuralClip(sc.narration, "ardi") ??
+        fetchNeuralSpeechClip(sc.narration, "ardi")
+    )
   );
-  const videoStream = canvas.captureStream(30);
-  // Subtle ducked background synth bed (0.045) so real human narrator shines crystal-clear!
-  const synthBed = startAmbientSynthBed(false, 0.045);
+  if (stopped) return () => {};
 
-  // Decode & schedule every scene's real Neural Human MP3 directly into the MediaRecorder audio track!
-  if (synthBed.audioCtx && synthBed.voiceBus) {
-    const audioCtx = synthBed.audioCtx;
-    const voiceBus = synthBed.voiceBus;
-    // Gently attempt AudioContext resume (non-blocking in zero-click Auto-Pilot mode)
+  const synth = !muted ? startAmbientSynthBed(true, 0.065) : null;
+  const audioCtx = synth?.audioCtx ?? null;
+
+  let decodedBuffers: Array<AudioBuffer | null> = clips.map(() => null);
+  if (audioCtx && synth?.voiceBus) {
     if (audioCtx.state === "suspended") {
-      await Promise.race([
-        audioCtx.resume().catch(() => {}),
-        new Promise<void>((resolve) => window.setTimeout(resolve, 250)),
-      ]);
+      await audioCtx.resume().catch(() => {});
     }
-    const decodedBuffers = await Promise.all(
-      sceneClips.map(async (clip) => {
+    decodedBuffers = await Promise.all(
+      clips.map(async (clip) => {
         if (!clip) return null;
         try {
           const arr = await clip.blob.arrayBuffer();
@@ -385,86 +292,257 @@ export async function runEditingDivisionBrowser(
         }
       })
     );
+  }
+  if (stopped) {
+    synth?.stop();
+    return () => {};
+  }
 
-    const baseAudioTime = audioCtx.currentTime + 0.12;
-    let sceneOffsetSec = 0;
+  // Rebuild editorial timeline using the EXACT decoded AudioBuffer durations!
+  const exactDurations = decodedBuffers.map((buf, idx) =>
+    buf ? buf.duration : clips[idx]?.durationSec ?? null
+  );
+  const syncedEditorial: EditorialEpisode =
+    buildEditorialEpisode(episode, exactDurations) ?? baseEditorial;
+  const totalSec = syncedEditorial.scenes.reduce((sum, sc) => sum + sc.durationSec, 0);
+
+  let baseAudioTime = 0;
+  const wallStartMs = performance.now();
+
+  if (audioCtx && synth?.voiceBus) {
+    baseAudioTime = audioCtx.currentTime + 0.08;
+    let cursorSec = 0;
     syncedEditorial.scenes.forEach((sc, idx) => {
       const buf = decodedBuffers[idx];
       if (buf) {
         const src = audioCtx.createBufferSource();
         src.buffer = buf;
-        src.connect(voiceBus);
-        src.start(baseAudioTime + sceneOffsetSec);
+        src.connect(synth.voiceBus!);
+        const startAt = baseAudioTime + cursorSec + sc.speechOffsetSec;
+        src.start(startAt);
+
+        // Real-time auto-ducking in live preview too!
+        if (synth.bgmGain) {
+          synth.bgmGain.gain.setTargetAtTime(0.024, Math.max(0, startAt - 0.04), 0.04);
+          synth.bgmGain.gain.setTargetAtTime(0.068, startAt + buf.duration, 0.09);
+        }
       }
-      sceneOffsetSec += sc.durationSec;
+      cursorSec += sc.durationSec;
     });
 
-    // Mix real Bass-Drop Hook, Airy Whoosh transitions & UI Pop SFX into the video audio!
     scheduleSceneTransitionsSfx(
       audioCtx,
-      voiceBus,
+      synth.voiceBus,
       baseAudioTime,
       syncedEditorial.scenes.map((s) => s.durationSec)
     );
   }
 
-  const combinedStream = new MediaStream();
-  videoStream.getVideoTracks().forEach((t) => combinedStream.addTrack(t));
-  if (synthBed.audioStream) {
-    synthBed.audioStream
-      .getAudioTracks()
-      .forEach((t) => combinedStream.addTrack(t));
-  }
-
-  const preferredMime = MediaRecorder.isTypeSupported(
-    "video/webm;codecs=vp9,opus"
-  )
-    ? "video/webm;codecs=vp9,opus"
-    : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
-    ? "video/webm;codecs=vp8,opus"
-    : "video/webm";
-
-  const recorder = new MediaRecorder(combinedStream, {
-    mimeType: preferredMime,
-    videoBitsPerSecond: 3_600_000,
-  });
-
-  const chunks: BlobPart[] = [];
-  recorder.ondataavailable = (ev) => {
-    if (ev.data.size > 0) chunks.push(ev.data);
+  const cleanup = () => {
+    stopped = true;
+    if (rafId !== null) {
+      window.cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    synth?.stop();
   };
 
-  const blobPromise = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () => {
-      synthBed.stop();
-      resolve(new Blob(chunks, { type: preferredMime }));
-    };
-    recorder.onerror = () => {
-      synthBed.stop();
-      reject(new Error("MediaRecorder gagal saat merekam video."));
-    };
-  });
+  const loop = (now: number) => {
+    if (stopped) return;
+    const elapsed = audioCtx
+      ? Math.max(0, audioCtx.currentTime - baseAudioTime)
+      : (now - wallStartMs) / 1000;
 
-  recorder.start(250);
-  const startTime = performance.now();
+    if (elapsed >= totalSec) {
+      renderEditorialFrame(ctx, canvas.width, canvas.height, syncedEditorial, totalSec - 0.01);
+      onTick?.(totalSec, totalSec, syncedEditorial.scenes.length);
+      cleanup();
+      onEnd?.();
+      return;
+    }
 
-  await new Promise<void>((resolve) => {
-    const tick = (now: number) => {
-      const elapsedSec = (now - startTime) / 1000;
-      if (elapsedSec >= totalSec) {
-        onProgress?.(100);
-        if (recorder.state !== "inactive") recorder.stop();
-        resolve();
-        return;
+    renderEditorialFrame(ctx, canvas.width, canvas.height, syncedEditorial, elapsed);
+
+    let acc = 0;
+    let activeNum = 1;
+    for (const sc of syncedEditorial.scenes) {
+      if (elapsed < acc + sc.durationSec) {
+        activeNum = sc.sceneNumber;
+        break;
       }
-      renderEditorialFrame(ctx, width, height, syncedEditorial, elapsedSec, brollImages);
-      onProgress?.(Math.min(99, Math.round((elapsedSec / totalSec) * 100)));
-      window.requestAnimationFrame(tick);
+      acc += sc.durationSec;
+    }
+    onTick?.(elapsed, totalSec, activeNum);
+    rafId = window.requestAnimationFrame(loop);
+  };
+
+  rafId = window.requestAnimationFrame(loop);
+  return cleanup;
+}
+
+/**
+ * DIVISI 5 — MOTION (Render TikTok 9:16 keyframe previews per scene)
+ */
+export async function runMotionDivisionBrowser(
+  episode: RealEpisode,
+  _format: VideoFormat
+): Promise<MotionOutput> {
+  void _format;
+  if (typeof document === "undefined") {
+    throw new Error("Divisi Motion harus dijalankan di browser.");
+  }
+
+  const editorial = buildEditorialEpisode(episode);
+  if (!editorial) {
+    throw new Error("Naskah adegan belum tersedia untuk Divisi Motion.");
+  }
+
+  // TikTok Vertical 9:16 is ALWAYS primary
+  const width = 1080;
+  const height = 1920;
+  const previewW = 270;
+  const previewH = 480;
+  const canvas = document.createElement("canvas");
+  canvas.width = previewW;
+  canvas.height = previewH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Canvas 2D context tidak tersedia di browser.");
+  }
+
+  const sceneFrames: SceneMotionFrame[] = [];
+  let cursorSec = 0;
+
+  for (const scene of editorial.scenes) {
+    const sampleTime = cursorSec + Math.min(scene.durationSec * 0.55, scene.durationSec - 0.35);
+    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime);
+    const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.86);
+    sceneFrames.push({
+      sceneNumber: scene.sceneNumber,
+      label: scene.label,
+      durationSec: scene.durationSec,
+      keyframeDataUrl,
+    });
+    cursorSec += scene.durationSec;
+    await new Promise((r) => window.setTimeout(r, 10));
+  }
+
+  return {
+    format: "shorts",
+    width,
+    height,
+    fps: 60,
+    totalDurationSec: Math.round(cursorSec * 10) / 10,
+    sceneFrames,
+  };
+}
+
+/**
+ * DIVISI 6 — EDITING V3 EXTREME QUALITY
+ * Uses WebCodecs H.264/H.265 MP4 + AAC 48kHz + OfflineAudioContext Auto-Ducking
+ * with automatic device capability probe, safe cancel, live ETA, and ACTUAL QC telemetry!
+ */
+export async function runEditingDivisionBrowser(
+  episode: RealEpisode,
+  _format: VideoFormat,
+  onProgress?: (pct: number, detail?: RenderProgressSnapshot) => void,
+  options?: {
+    qualityPreset?: ExportQualityPreset;
+    signal?: AbortSignal;
+  }
+): Promise<{ output: EditingOutput; videoBlob: Blob }> {
+  void _format;
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    throw new Error("Divisi Editing hanya bisa berjalan di browser.");
+  }
+
+  const baseEditorial = buildEditorialEpisode(episode);
+  if (!baseEditorial) {
+    throw new Error("Naskah & Motion belum siap untuk Editing.");
+  }
+
+  const preset: ExportQualityPreset = options?.qualityPreset ?? "ultra";
+
+  // 1. Fetch & decode every scene's real Indonesian neural MP3 for 0ms-drift sample-accurate timing!
+  const sceneClips = await Promise.all(
+    baseEditorial.scenes.map(
+      (sc) =>
+        getCachedNeuralClip(sc.narration, "ardi") ??
+        fetchNeuralSpeechClip(sc.narration, "ardi")
+    )
+  );
+
+  const AudioCtx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+  const decodedBuffers: Array<AudioBuffer | null> = [];
+  if (AudioCtx) {
+    const decodeCtx = new AudioCtx();
+    try {
+      for (const clip of sceneClips) {
+        if (!clip) {
+          decodedBuffers.push(null);
+          continue;
+        }
+        try {
+          const arr = await clip.blob.arrayBuffer();
+          decodedBuffers.push(await decodeCtx.decodeAudioData(arr.slice(0)));
+        } catch {
+          decodedBuffers.push(null);
+        }
+      }
+    } finally {
+      await decodeCtx.close().catch(() => {});
+    }
+  } else {
+    sceneClips.forEach(() => decodedBuffers.push(null));
+  }
+
+  // Build exact audio-locked editorial timeline (every scene & word synced to decoded MP3!)
+  const exactDurations = decodedBuffers.map((buf, idx) =>
+    buf ? buf.duration : sceneClips[idx]?.durationSec ?? null
+  );
+  const syncedEditorial =
+    buildEditorialEpisode(episode, exactDurations) ?? baseEditorial;
+
+  const totalSec = Math.max(
+    8,
+    syncedEditorial.scenes.reduce((acc, s) => acc + s.durationSec, 0)
+  );
+
+  // Build sample-accurate audio schedule
+  let sceneCursor = 0;
+  const schedule: SceneAudioScheduleItem[] = syncedEditorial.scenes.map((sc, idx) => {
+    const item: SceneAudioScheduleItem = {
+      sceneStartSec: sceneCursor,
+      sceneDurationSec: sc.durationSec,
+      speechOffsetSec: sc.speechOffsetSec,
+      speechDurationSec: sc.speechDurationSec,
+      audioBuffer: decodedBuffers[idx] ?? null,
+      templateName: sc.template,
     };
-    window.requestAnimationFrame(tick);
+    sceneCursor += sc.durationSec;
+    return item;
   });
 
-  const videoBlob = await blobPromise;
+  // 2. Render crisp TikTok 9:16 vertical cover PNG (1080x1920)
+  const thumbnailDataUrl = renderEditorialThumbnail(syncedEditorial);
+
+  // 3. Render video via V3 Extreme Quality Engine (WebCodecs MP4 primary -> MediaRecorder fallback)
+  const result = await renderTikTokVideoV3({
+    preset,
+    totalDurationSec: totalSec,
+    schedule,
+    signal: options?.signal,
+    renderFrame: (ctx, w, h, elapsedSec) => {
+      renderEditorialFrame(ctx, w, h, syncedEditorial, elapsedSec);
+    },
+    onProgress: (snap) => {
+      onProgress?.(snap.percent, snap);
+    },
+  });
+
   const safeSlug = syncedEditorial.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -472,15 +550,16 @@ export async function runEditingDivisionBrowser(
     .slice(0, 42);
 
   const output: EditingOutput = {
-    videoMimeType: videoBlob.type || preferredMime,
-    videoSizeBytes: videoBlob.size,
-    videoDurationSec: Math.round(totalSec * 10) / 10,
-    thumbnailWidth: 1280,
-    thumbnailHeight: 720,
+    videoMimeType: result.mimeType,
+    videoSizeBytes: result.blob.size,
+    videoDurationSec: result.telemetry.actualDurationSec,
+    thumbnailWidth: 1080,
+    thumbnailHeight: 1920,
     thumbnailDataUrl,
     exportedAt: new Date().toISOString(),
-    fileName: `ep-${episode.episodeNumber}-${safeSlug || "video"}.webm`,
+    fileName: `tiktok-ep-${episode.episodeNumber}-${safeSlug || "ai-agent"}.${result.extension}`,
+    qcTelemetry: result.telemetry,
   };
 
-  return { output, videoBlob };
+  return { output, videoBlob: result.blob };
 }

@@ -41,11 +41,12 @@ import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
 import {
   buildEditorialEpisode,
   renderEditorialFrame,
-  scheduleSceneTransitionsSfx,
-  startAmbientSynthBed,
 } from "@/lib/pipeline/motion-renderer";
-import { getCachedSceneBRoll } from "@/lib/pipeline/scene-broll-client";
-import { speakSceneTracks } from "@/lib/pipeline/browser-divisions";
+import {
+  speakSceneTracks,
+  startSyncedLivePreview,
+} from "@/lib/pipeline/browser-divisions";
+import { PRESET_META } from "@/lib/pipeline/video-engine-v3";
 import {
   buildScriptSummaryArchive,
   pickFreshVariationBlueprint,
@@ -53,6 +54,7 @@ import {
 import {
   hasBossOriginalElement,
   PIPELINE_DIVISIONS,
+  type ExportQualityPreset,
   type PipelineDivisionKey,
   type RealDivisionStatus,
 } from "@/types/pipeline";
@@ -84,24 +86,24 @@ const STATUS_BADGE: Record<
 
 const QUICK_THEMES: { label: string; theme: string; platform: PublishPlatform }[] = [
   {
-    label: "🤖 Tools AI Gratis",
-    theme: "3 tools AI gratis yang menghemat 5 jam kerja konten kreator tiap minggu",
-    platform: "youtube_shorts",
+    label: "🔥 Breaking AI Agent News",
+    theme: "Update terbaru Claude Code & AI coding agents yang bekerja langsung di terminal dan GitHub",
+    platform: "tiktok",
   },
   {
-    label: "💰 Bisnis & Keuangan",
-    theme: "Kesalahan umum anak muda mengatur gaji pertama dan cara memperbaikinya",
-    platform: "youtube_shorts",
+    label: "⚡ Claude Code Tutorial",
+    theme: "Tutorial alur kerja Claude Code di terminal: membaca repo, edit multi-file, dan cek build otomatis",
+    platform: "tiktok",
   },
   {
-    label: "🧠 Produktivitas & Fokus",
-    theme: "Eksperimen 7 hari kerja tanpa distraksi HP dan dampaknya ke hasil kerja",
-    platform: "youtube_landscape",
+    label: "🤖 Eksperimen AI Automation",
+    theme: "Eksperimen AI Agent vs workflow manual membangun fitur nyata sampai Pull Request GitHub",
+    platform: "tiktok",
   },
   {
-    label: "🌍 Fakta Teknologi Unik",
-    theme: "Bagaimana cara kerja algoritma rekomendasi video dan cara bikin konten yang bertahan lama",
-    platform: "youtube_shorts",
+    label: "🧠 Multi-Agent Virtual Office",
+    theme: "Cara kerja arsitektur multi-agent AI yang membagi tugas riset, coding, dan QA secara otonom",
+    platform: "tiktok",
   },
 ];
 
@@ -119,6 +121,10 @@ export function KidsStudioPanel() {
     setActiveEpisodeId,
     videoBlobUrls,
     editingProgressPct,
+    renderProgress,
+    exportQualityPreset,
+    setExportQualityPreset,
+    cancelActiveRender,
     runningDivision,
     autoPilotEnabled,
     setAutoPilotEnabled,
@@ -138,7 +144,7 @@ export function KidsStudioPanel() {
   } = useAgency();
 
   const [themeInput, setThemeInput] = useState("");
-  const [platform, setPlatform] = useState<PublishPlatform>("youtube_shorts");
+  const [platform, setPlatform] = useState<PublishPlatform>("tiktok");
   const [autoWatch3D, setAutoWatch3D] = useState(true);
   const [aiStatus, setAiStatus] = useState<AiServerStatus | null>(null);
   const [expandedDiv, setExpandedDiv] = useState<PipelineDivisionKey | null>(null);
@@ -155,15 +161,16 @@ export function KidsStudioPanel() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Playback & TTS preview refs
+  // Master-clock synced live preview refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const melodyStopRef = useRef<(() => void) | null>(null);
+  const previewStopRef = useRef<(() => void) | null>(null);
   const speechStopRef = useRef<(() => void) | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [playTime, setPlayTime] = useState(0);
+  const [syncedTotalDuration, setSyncedTotalDuration] = useState(0);
   const [speakingScene, setSpeakingScene] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -183,89 +190,74 @@ export function KidsStudioPanel() {
 
   const totalDuration = useMemo(
     () =>
-      renderableEpisode
-        ? renderableEpisode.scenes.reduce((s, x) => s + x.durationSec, 0)
+      syncedTotalDuration > 0
+        ? syncedTotalDuration
+        : renderableEpisode
+        ? Math.round(
+            renderableEpisode.scenes.reduce((s, x) => s + x.durationSec, 0) * 10
+          ) / 10
         : 0,
-    [renderableEpisode]
+    [renderableEpisode, syncedTotalDuration]
   );
 
   const stopPlayback = useCallback(() => {
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (melodyStopRef.current) {
-      melodyStopRef.current();
-      melodyStopRef.current = null;
+    if (previewStopRef.current) {
+      previewStopRef.current();
+      previewStopRef.current = null;
     }
     if (speechStopRef.current) {
       speechStopRef.current();
       speechStopRef.current = null;
     }
     setSpeakingScene(null);
+    setIsLoadingPreview(false);
     setIsPlaying(false);
   }, []);
 
   useEffect(() => {
     stopPlayback();
     setPlayTime(0);
+    setSyncedTotalDuration(0);
     const canvas = canvasRef.current;
     if (!canvas || !renderableEpisode || !activeEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
-    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8, broll);
+    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 1.45);
   }, [renderableEpisode, activeEpisode, stopPlayback]);
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
-  const togglePlayPreview = () => {
+  const togglePlayPreview = async () => {
     if (!renderableEpisode || !activeEpisode || !canvasRef.current) return;
-    if (isPlaying) {
+    if (isPlaying || isLoadingPreview) {
       stopPlayback();
       return;
     }
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
-
-    if (!isMuted) {
-      const synth = startAmbientSynthBed(true);
-      melodyStopRef.current = synth.stop;
-      if (synth.audioCtx && synth.voiceBus) {
-        scheduleSceneTransitionsSfx(
-          synth.audioCtx,
-          synth.voiceBus,
-          synth.audioCtx.currentTime + 0.08,
-          renderableEpisode.scenes.map((s) => s.durationSec)
-        );
-      }
-      const tracks = activeEpisode?.divisions.voice.output?.sceneTracks;
-      if (tracks && tracks.length > 0) {
-        speechStopRef.current = speakSceneTracks(tracks, (sn) =>
-          setSpeakingScene(sn)
-        );
-      }
+    setIsLoadingPreview(true);
+    try {
+      const stopFn = await startSyncedLivePreview({
+        episode: activeEpisode,
+        canvas: canvasRef.current,
+        muted: isMuted,
+        onTick: (elapsed, total, activeSceneNum) => {
+          setPlayTime(elapsed);
+          setSyncedTotalDuration(Math.round(total * 10) / 10);
+          setSpeakingScene(activeSceneNum);
+        },
+        onEnd: () => {
+          previewStopRef.current = null;
+          setSpeakingScene(null);
+          setIsPlaying(false);
+        },
+      });
+      previewStopRef.current = stopFn;
+      setIsLoadingPreview(false);
+      setIsPlaying(true);
+    } catch {
+      setIsLoadingPreview(false);
+      setIsPlaying(false);
     }
-
-    setIsPlaying(true);
-    const startMs = performance.now();
-
-    const loop = (now: number) => {
-      const elapsed = (now - startMs) / 1000;
-      if (elapsed >= totalDuration) {
-        setPlayTime(totalDuration);
-        stopPlayback();
-        return;
-      }
-      setPlayTime(elapsed);
-      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed, broll);
-      rafRef.current = window.requestAnimationFrame(loop);
-    };
-    rafRef.current = window.requestAnimationFrame(loop);
   };
 
   const handleSpeakScene = (sceneNumber: number) => {
@@ -361,13 +353,13 @@ export function KidsStudioPanel() {
               </span>
             </div>
             <h2 className="text-base font-black text-white sm:text-lg">
-              🤖 Studio Video Otonom — AI Kerja Sendiri Tanpa Ketik &amp; Tanpa Klik
+              🎬 TikTok 9:16 AI Agent &amp; Claude Code Cinematic Studio V3
             </h2>
             <p className="text-xs leading-relaxed text-slate-300">
-              AI CEO &amp; 7 Divisi otomatis memilih topik viral, menulis naskah, merekam{" "}
-              <strong className="text-cyan-200">suara neural Indonesia</strong>, menggambar{" "}
-              <strong className="text-violet-200">motion teks kinetik</strong>, dan merender{" "}
-              <strong className="text-emerald-200">video siap download/upload</strong> sepenuhnya mandiri.
+              Prioritas mutlak <strong className="text-amber-300">TikTok Vertical 9:16</strong>{" "}
+              — Trend Intelligence riset sumber resmi, <strong className="text-cyan-200">suara neural 0ms sinkron subtitle</strong>,{" "}
+              <strong className="text-violet-200">motion graphics 4K/2K/FHD</strong>, dan ekspor{" "}
+              <strong className="text-emerald-200">H.264 MP4 + AAC</strong> dengan QC metrik aktual.
             </p>
           </div>
 
@@ -442,16 +434,107 @@ export function KidsStudioPanel() {
             <div className="mt-2.5 rounded-xl border border-violet-500/25 bg-violet-950/20 px-3 py-2 text-[11px]">
               <div className="flex flex-wrap items-center justify-between gap-1 text-violet-200">
                 <span className="font-bold">
-                  🎯 Keputusan AI CEO ({lastAutoPilotTopic.provider}) · {lastAutoPilotTopic.niche}
+                  🎯 AI Creative Director ({lastAutoPilotTopic.provider}) · {lastAutoPilotTopic.niche}
                 </span>
-                <span className="font-mono text-[10px] text-slate-400">
-                  {lastAutoPilotTopic.decidedAt}
+                <span
+                  className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
+                    lastAutoPilotTopic.sourceVerified
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "bg-amber-500/20 text-amber-200"
+                  }`}
+                >
+                  {lastAutoPilotTopic.sourceVerified
+                    ? "✓ Sumber Online Terverifikasi"
+                    : "⚠ Tren Online Belum Terverifikasi (Faktual)"}
                 </span>
               </div>
               <p className="mt-1 font-semibold text-white">
                 &ldquo;{lastAutoPilotTopic.theme}&rdquo;
               </p>
               <p className="mt-0.5 text-slate-300">{lastAutoPilotTopic.reasoning}</p>
+              {lastAutoPilotTopic.sourceName && (
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-cyan-200/90">
+                  <span>Sumber: {lastAutoPilotTopic.sourceName}</span>
+                  {lastAutoPilotTopic.sourcePublishedAt && (
+                    <span className="font-mono text-slate-400">
+                      ({lastAutoPilotTopic.sourcePublishedAt.slice(0, 10)})
+                    </span>
+                  )}
+                  {lastAutoPilotTopic.sourceUrl && (
+                    <a
+                      href={lastAutoPilotTopic.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-white"
+                    >
+                      Buka Sumber ↗
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* V3 Export Quality Selector (ULTRA QUALITY Default / HIGH / BALANCED) */}
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800/80 pt-2.5">
+            <div className="text-[11px] font-bold text-slate-300">
+              🎞️ Profil Kualitas Ekspor TikTok 9:16:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["ultra", "high", "balanced"] as ExportQualityPreset[]).map((presetKey) => {
+                const meta = PRESET_META[presetKey];
+                const selected = exportQualityPreset === presetKey;
+                return (
+                  <button
+                    key={presetKey}
+                    type="button"
+                    disabled={runningDivision === "editing"}
+                    onClick={() => setExportQualityPreset(presetKey)}
+                    title={meta.targetDesc}
+                    className={`rounded-xl border px-2.5 py-1 text-[11px] font-black transition ${
+                      selected
+                        ? "border-amber-300 bg-amber-400 text-slate-950"
+                        : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-400/50"
+                    } disabled:opacity-50`}
+                  >
+                    {meta.shortLabel}
+                    {presetKey === "ultra" ? " (Default)" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Live Android-Safe Render Progress Bar + ETA + Safe Cancel */}
+          {runningDivision === "editing" && renderProgress && (
+            <div className="mt-2.5 rounded-xl border border-cyan-400/40 bg-cyan-950/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-bold text-cyan-200">
+                  {renderProgress.activeProfileLabel}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] text-white">
+                    {renderProgress.percent}%
+                    {renderProgress.totalFrames > 0
+                      ? ` · Frame ${renderProgress.currentFrame}/${renderProgress.totalFrames}`
+                      : ""}
+                    {renderProgress.etaSec !== null ? ` · ETA ~${renderProgress.etaSec}d` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={cancelActiveRender}
+                    className="rounded-lg border border-rose-400/60 bg-rose-500/20 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/35"
+                  >
+                    Batalkan Render
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-900">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-emerald-400 transition-all duration-200"
+                  style={{ width: `${Math.max(2, renderProgress.percent)}%` }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -562,27 +645,13 @@ export function KidsStudioPanel() {
 
           {manualOverrideOpen && (
             <form onSubmit={handleSubmitTheme} className="space-y-3 border-t border-slate-800 p-3.5">
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    { id: "youtube_shorts", label: "📱 YouTube Shorts (9:16)" },
-                    { id: "youtube_landscape", label: "📺 YouTube Video (16:9)" },
-                    { id: "tiktok", label: "🎵 TikTok / Reels (9:16)" },
-                  ] as { id: PublishPlatform; label: string }[]
-                ).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPlatform(p.id)}
-                    className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                      platform === p.id
-                        ? "border-amber-300 bg-amber-400 text-slate-950"
-                        : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500"
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-xl border border-amber-300 bg-amber-400 px-3 py-1.5 text-xs font-black text-slate-950">
+                  🎵 TikTok Vertical 9:16 (Mode Utama Terkunci)
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Mode YouTube 16:9 landscape dinonaktifkan sesuai fokus TikTok V3.
+                </span>
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -991,25 +1060,29 @@ export function KidsStudioPanel() {
                       <div className="flex justify-center overflow-hidden rounded-2xl border border-slate-800 bg-black">
                         <canvas
                           ref={canvasRef}
-                          width={activeEpisode.format === "shorts" ? 360 : 640}
-                          height={activeEpisode.format === "shorts" ? 640 : 360}
-                          className="max-h-[420px] w-auto object-contain"
+                          width={720}
+                          height={1280}
+                          className="max-h-[460px] w-auto object-contain"
                         />
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <button
                           type="button"
-                          onClick={togglePlayPreview}
+                          onClick={() => void togglePlayPreview()}
                           className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-amber-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-amber-300"
                         >
-                          {isPlaying ? (
+                          {isLoadingPreview ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" /> Sinkronisasi Audio...
+                            </>
+                          ) : isPlaying ? (
                             <>
                               <Pause className="h-4 w-4" /> Jeda Preview
                             </>
                           ) : (
                             <>
-                              <Play className="h-4 w-4" /> Putar Animasi + TTS
+                              <Play className="h-4 w-4" /> Putar 0ms-Sync + Suara
                             </>
                           )}
                         </button>
@@ -1028,17 +1101,37 @@ export function KidsStudioPanel() {
                         </button>
                       </div>
 
-                      {/* Real Editing Outputs: Video Blob + HD Thumbnail */}
+                      {/* Real Editing Outputs: Video Blob + Vertical Cover + Actual Telemetry */}
                       {editingOut && (
                         <div className="mt-4 space-y-2.5 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3">
-                          <div className="text-xs font-black text-emerald-200">
-                            ✅ File Ekspor Divisi Editing Siap
+                          <div className="flex flex-wrap items-center justify-between gap-1">
+                            <div className="text-xs font-black text-emerald-200">
+                              ✅ File Ekspor TikTok 9:16 Siap
+                            </div>
+                            {editingOut.qcTelemetry && (
+                              <span className="rounded-md bg-slate-950 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
+                                {editingOut.qcTelemetry.actualContainer.toUpperCase()} ·{" "}
+                                {editingOut.qcTelemetry.actualWidth}×{editingOut.qcTelemetry.actualHeight} @{" "}
+                                {editingOut.qcTelemetry.actualFps}fps
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-300">
-                            Video {(editingOut.videoSizeBytes / (1024 * 1024)).toFixed(2)}{" "}
-                            MB ({editingOut.videoDurationSec}d) · Thumbnail HD{" "}
-                            {editingOut.thumbnailWidth}×{editingOut.thumbnailHeight}
+                            Ukuran {(editingOut.videoSizeBytes / (1024 * 1024)).toFixed(2)} MB ·{" "}
+                            Durasi {editingOut.videoDurationSec}d
+                            {editingOut.qcTelemetry
+                              ? ` · Bitrate Aktual ${editingOut.qcTelemetry.actualBitrateMbps} Mbps · Drift A/V ${editingOut.qcTelemetry.avSyncDeltaMs}ms`
+                              : ""}
                           </div>
+                          {editingOut.qcTelemetry?.recommendedPresetIfBelowTarget && (
+                            <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-2 text-[10px] text-amber-200">
+                              ⚠ Kualitas aktual di bawah target preset. Disarankan render ulang dengan preset{" "}
+                              <strong>
+                                {editingOut.qcTelemetry.recommendedPresetIfBelowTarget.toUpperCase()}
+                              </strong>{" "}
+                              untuk stabilitas optimal perangkat ini.
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2">
                             {activeVideoUrl && (
                               <a
@@ -1047,17 +1140,17 @@ export function KidsStudioPanel() {
                                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-emerald-400 px-3.5 py-2 text-xs font-black text-slate-950 hover:bg-emerald-300"
                               >
                                 <Download className="h-4 w-4" />
-                                <span>Download Video</span>
+                                <span>Download Video ({editingOut.qcTelemetry?.actualContainer.toUpperCase() || "MP4"})</span>
                               </a>
                             )}
                             {editingOut.thumbnailDataUrl && (
                               <a
                                 href={editingOut.thumbnailDataUrl}
-                                download={`thumbnail-ep-${activeEpisode.episodeNumber}.png`}
+                                download={`cover-tiktok-ep-${activeEpisode.episodeNumber}.png`}
                                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-3.5 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/30"
                               >
                                 <ImageDown className="h-4 w-4" />
-                                <span>Download Thumbnail HD</span>
+                                <span>Cover 9:16</span>
                               </a>
                             )}
                           </div>
@@ -1147,6 +1240,47 @@ export function KidsStudioPanel() {
                       </div>
                       <div className="text-[11px] text-slate-400">
                         <strong>Tags:</strong> {seoOut.tags.join(", ")}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* AI CREATIVE DIRECTOR EDITORIAL BRIEF (SECTION 7) */}
+                {scriptOut?.creativeBrief && (
+                  <section className="rounded-3xl border border-violet-500/35 bg-violet-950/15 p-4 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-black tracking-wide text-violet-300 uppercase">
+                        🎬 Creative Director Brief (TikTok 9:16)
+                      </h3>
+                      <span className="rounded-full bg-violet-500/20 px-2.5 py-0.5 font-mono text-[10px] font-bold text-violet-200">
+                        {scriptOut.creativeBrief.contentFormat} · {scriptOut.creativeBrief.visualStyle}
+                      </span>
+                    </div>
+                    <div className="mt-2.5 grid gap-2 text-[11px] text-slate-300 sm:grid-cols-2">
+                      <div className="rounded-xl bg-slate-950/70 p-2.5">
+                        <div className="text-[10px] font-bold text-slate-400">Hook 0–2 Detik</div>
+                        <div className="mt-0.5 font-semibold text-white">
+                          &ldquo;{scriptOut.creativeBrief.hook0to2s}&rdquo;
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-950/70 p-2.5">
+                        <div className="text-[10px] font-bold text-slate-400">Alasan Topik Dipilih &amp; Audiens</div>
+                        <div className="mt-0.5 text-slate-200">
+                          {scriptOut.creativeBrief.whyChosen} ({scriptOut.creativeBrief.targetAudience})
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-950/70 p-2.5">
+                        <div className="text-[10px] font-bold text-slate-400">Sumber &amp; Verifikasi</div>
+                        <div className="mt-0.5 text-cyan-200">
+                          {scriptOut.creativeBrief.sourceVerified ? "✓ Terverifikasi: " : "⚠ "}
+                          {scriptOut.creativeBrief.sourceName} ({scriptOut.creativeBrief.sourcePublishedAt.slice(0, 10)})
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-slate-950/70 p-2.5">
+                        <div className="text-[10px] font-bold text-slate-400">Transisi Antar-Adegan</div>
+                        <div className="mt-0.5 font-mono text-amber-200">
+                          {scriptOut.creativeBrief.transitions.join(" → ")}
+                        </div>
                       </div>
                     </div>
                   </section>
@@ -1281,6 +1415,68 @@ export function KidsStudioPanel() {
                         </div>
                       ))}
                     </div>
+
+                    {/* V3 ACTUAL MEASURED VIDEO TELEMETRY TABLE (NEVER FAKE TARGETS) */}
+                    {(qcOut.videoTelemetry ?? editingOut?.qcTelemetry) && (() => {
+                      const vt = (qcOut.videoTelemetry ?? editingOut?.qcTelemetry)!;
+                      return (
+                        <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/85 p-3 text-[11px]">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="font-black text-cyan-300">
+                              📊 Laporan QC Video Aktual ({vt.encoderPath})
+                            </span>
+                            <span className="font-mono text-[10px] text-slate-400">
+                              Header: {vt.fileHeaderMagic}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">Resolusi Aktual</div>
+                              <div className="font-mono font-bold text-white">
+                                {vt.actualWidth}×{vt.actualHeight}
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">FPS Aktual</div>
+                              <div className="font-mono font-bold text-white">
+                                {vt.actualFps} fps
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">Bitrate Aktual</div>
+                              <div className="font-mono font-bold text-white">
+                                {vt.actualBitrateMbps} Mbps
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">Codec &amp; Audio</div>
+                              <div className="truncate font-mono font-bold text-emerald-300">
+                                {vt.actualCodec}
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">Drift A/V Sync</div>
+                              <div className="font-mono font-bold text-cyan-300">
+                                {vt.avSyncDeltaMs} ms
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-slate-900/90 p-2">
+                              <div className="text-[9px] text-slate-400">Drop / Black Frame</div>
+                              <div className="font-mono font-bold text-white">
+                                {vt.droppedFrames} drop · {vt.blackFrameCount} black
+                              </div>
+                            </div>
+                          </div>
+                          {vt.warnings.length > 0 && (
+                            <div className="mt-2 space-y-1 text-[10px] text-amber-300">
+                              {vt.warnings.map((w, i) => (
+                                <div key={i}>⚠ {w}</div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </section>
                 )}
 

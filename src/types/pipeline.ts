@@ -11,6 +11,117 @@ export type PipelineDivisionKey =
 
 export type RealDivisionStatus = "queued" | "running" | "done" | "failed";
 
+/** V3 TikTok Extreme Quality Export Presets (Default: ULTRA QUALITY) */
+export type ExportQualityPreset = "ultra" | "high" | "balanced";
+
+/** V3 AI Technology Auto-Selected Visual Styles (A-G) */
+export type VisualStyleId =
+  | "dark_ai_cinematic"
+  | "tech_documentary"
+  | "cyberpunk_dev"
+  | "clean_tutorial"
+  | "agent_3d_network"
+  | "minimal_kinetic"
+  | "high_energy_news";
+
+/** V3 TikTok Content Formats */
+export type TikTokContentFormat =
+  | "breaking_ai_news"
+  | "ai_tools_must_know"
+  | "claude_code_experiment"
+  | "ai_agent_vs_human"
+  | "before_after_automation"
+  | "ai_coding_tutorial"
+  | "ai_agent_builds_project"
+  | "myth_vs_reality"
+  | "surprising_experiment"
+  | "feature_visual_demo";
+
+/** Verified online trend source record (Trend Intelligence Division) */
+export interface TrendSourceRecord {
+  id: string;
+  title: string;
+  sourceName: string;
+  sourceUrl: string;
+  publishedAt: string;
+  freshnessDays: number;
+  classification: "official_release" | "community_discussion" | "opinion_rumor" | "unverified";
+  verified: boolean;
+  summary: string;
+  tags: string[];
+}
+
+/** Word-level subtitle cue synchronized to actual measured neural speech duration */
+export interface WordTimingCue {
+  word: string;
+  startSec: number;
+  endSec: number;
+  highlight: boolean;
+}
+
+/** AI Creative Director pre-render editorial brief (Section 7) */
+export interface CreativeDirectorBrief {
+  topic: string;
+  sourceName: string;
+  sourceUrl: string;
+  sourcePublishedAt: string;
+  sourceVerified: boolean;
+  whyChosen: string;
+  targetAudience: string;
+  hook0to2s: string;
+  contentFormat: TikTokContentFormat;
+  visualStyle: VisualStyleId;
+  transitions: string[];
+  tiktokTitle: string;
+  tiktokCaption: string;
+  tiktokHashtags: string[];
+}
+
+/** Actual measured video export QC telemetry (Section 9 — ACTUAL values, never fake targets) */
+export interface ActualVideoQcTelemetry {
+  requestedPreset: ExportQualityPreset;
+  targetWidth: number;
+  targetHeight: number;
+  targetFps: number;
+  targetBitrateMbps: number;
+  actualWidth: number;
+  actualHeight: number;
+  actualFps: number;
+  actualCodec: string;
+  actualContainer: "mp4" | "webm";
+  actualBitrateMbps: number;
+  actualDurationSec: number;
+  actualFileSizeBytes: number;
+  hasAudioTrack: boolean;
+  audioCodec: string;
+  avSyncDeltaMs: number;
+  encodedFrames: number;
+  droppedFrames: number;
+  blackFrameCount: number;
+  visualClippingWarnings: number;
+  subtitleClippingWarnings: number;
+  safeZoneTikTokPass: boolean;
+  brollAvailability: "vector_procedural_hd" | "hybrid_verified" | "missing";
+  renderErrorCount: number;
+  fileIntegrityPass: boolean;
+  fileHeaderMagic: string;
+  encoderPath: "webcodecs-mp4" | "mediarecorder-mp4" | "mediarecorder-webm";
+  fallbackReason: string | null;
+  renderedAt: string;
+  warnings: string[];
+  recommendedPresetIfBelowTarget: ExportQualityPreset | null;
+}
+
+export interface RenderProgressSnapshot {
+  phase: "probing" | "audio" | "rendering" | "muxing" | "qc" | "done" | "cancelled";
+  percent: number;
+  currentFrame: number;
+  totalFrames: number;
+  etaSec: number | null;
+  activeProfileLabel: string;
+  encoderPath: string;
+}
+
 export interface DivisionLogEntry {
   time: string;
   level: "info" | "success" | "warning" | "error";
@@ -47,6 +158,14 @@ export interface ResearchIdeaItem {
   moralLesson: string;
   hook3s: string;
   targetAge: string;
+  /** V3 Trend Intelligence & Creative Director metadata */
+  contentFormat?: TikTokContentFormat;
+  visualStyle?: VisualStyleId;
+  whyChosen?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  sourcePublishedAt?: string;
+  sourceVerified?: boolean;
 }
 
 export interface ResearchInput {
@@ -56,10 +175,13 @@ export interface ResearchInput {
   avoidStructures: string[];
   avoidSettings: string[];
   avoidCharacters: string[];
+  verifiedTrends?: TrendSourceRecord[];
 }
 
 export interface ResearchOutput {
   ideas: ResearchIdeaItem[];
+  trendIntelligenceNote?: string;
+  verifiedSourcesCount?: number;
 }
 
 /* ==================== 2. SEO ==================== */
@@ -85,6 +207,18 @@ export interface PipelineScene {
   subtitle: string;
   visualCue: string;
   mood: "intro" | "problem" | "action" | "solve" | "celebrate";
+  /** V3 Creative Director per-scene choreography */
+  visualTemplate?:
+    | "claude_terminal"
+    | "ai_network_flow"
+    | "github_pr_workflow"
+    | "bezier_chart"
+    | "cursor_cards"
+    | "split_contrast"
+    | "code_diff_editor"
+    | "cta_finale";
+  transitionIn?: "whip-up" | "iris-circle" | "zoom-through" | "whip-left" | "push-pull";
+  codeSnippet?: string;
 }
 
 export interface ScriptInput {
@@ -103,6 +237,9 @@ export interface ScriptOutput {
   moralLesson: string;
   totalDurationSec: number;
   scenes: PipelineScene[];
+  visualStyle?: VisualStyleId;
+  contentFormat?: TikTokContentFormat;
+  creativeBrief?: CreativeDirectorBrief;
 }
 
 /* ==================== 4. SUARA (TTS) ==================== */
@@ -110,6 +247,10 @@ export interface SceneVoiceTrack {
   sceneNumber: number;
   text: string;
   estimatedSec: number;
+  /** Exact measured audio clip duration in seconds (for 0ms A/V sync) */
+  actualAudioSec?: number;
+  speechOffsetSec?: number;
+  wordTimings?: WordTimingCue[];
   voiceName: string;
   lang: string;
   rate: number;
@@ -163,6 +304,7 @@ export interface EditingInput {
   episodeId: string;
   format: VideoFormat;
   totalDurationSec: number;
+  qualityPreset?: ExportQualityPreset;
 }
 
 export interface EditingOutput {
@@ -174,6 +316,8 @@ export interface EditingOutput {
   thumbnailDataUrl: string;
   exportedAt: string;
   fileName: string;
+  /** V3 Real Measured Video QC Telemetry (actual resolution/fps/codec/bitrate/sync) */
+  qcTelemetry?: ActualVideoQcTelemetry;
 }
 
 /* ==================== 7. QC ==================== */
@@ -194,6 +338,7 @@ export interface QcInput {
   supportingCharacter: string;
   moralLesson: string;
   scenes: PipelineScene[];
+  videoTelemetry?: ActualVideoQcTelemetry;
   previousEpisodes: {
     id: string;
     title: string;
@@ -212,6 +357,7 @@ export interface QcOutput {
   blockedReasons: string[];
   checks: QcCheckItem[];
   aiReviewNote?: string;
+  videoTelemetry?: ActualVideoQcTelemetry;
 }
 
 /* ==================== BOS ORISINALITAS & HASIL NYATA ==================== */
