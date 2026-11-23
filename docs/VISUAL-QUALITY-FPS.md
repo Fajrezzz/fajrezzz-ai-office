@@ -129,3 +129,35 @@ Arti status:
 > Catatan jujur: lingkungan build/CI hanya bisa memverifikasi tipe, lint, build, dan
 > unit test kebijakan (10 test). Angka FPS **aktual** wajib dibaca dari perangkat fisik
 > lewat Render Monitor — tidak ada klaim 120 FPS tanpa pengukuran di perangkat.
+
+---
+
+## 8. v8 — Ketajaman naik saat zoom in (zoom-aware resolution)
+
+Kebijakan baru (sesuai permintaan: *"semakin di zoom in/zoom out semakin HD"*):
+
+| Zoom (indikator HUD) | Pixel ratio render |
+| --- | --- |
+| ≥ 145% (dekat) | dasar tier × **1.45**, dibatasi `min(DPR perangkat, 3.0)` |
+| 115–144% | dasar tier × **1.22** |
+| < 115% | dasar tier (`high 2.5` / `balanced 2.0` / `eco 1.5`) |
+| Semua kondisi | **tidak pernah < 1.0** (tidak ada upscaling blur) |
+
+- Fungsi: `resolveZoomSharpenedPixelRatio(mode, devicePixelRatio, zoomPct)` di
+  `src/lib/perf/render-telemetry.ts` (ada unit test).
+- Diterapkan oleh `AdaptivePerformanceController` setiap kali zoom berubah, **hanya**
+  bila FPS terukur masih sehat (≥ 50 mobile / ≥ 80 desktop) agar HP tidak panas.
+- Zoom **out tidak pernah menurunkan** resolusi: nilainya tetap di dasar tier.
+- Nilai dibulatkan ke 0.05 supaya tidak ada lonjakan resolusi tiap frame.
+
+### Perbaikan visual v8 (3 lantai)
+
+1. **Lapangan badminton berwarna lagi** — pelat beton dekoratif di atap (y=0.02) yang
+   menutupi mat hijau, garis putih, helipad "H", dan RGB curb sudah di-nonaktifkan;
+   permukaan dek memakai pelat atap struktural L3.
+2. **Lampu RGB fasad depan kembali** — `InteriorActivityRooms` sebelumnya dipanggil
+   `showRoof={false}`, jadi 3 strip neon (cyan / violet / magenta) hilang.
+3. **Signage "FAJREZZZ AI OFFICE" pindah ke depan**, tepat di atas lantai 3 (z = +4.85).
+4. **L3 dipisah jelas**: kiri = 6 meja staf, kanan = meeting room (meja rapat) + ruang CEO.
+5. **Agen duduk saat ngopi** — semua staf punya `loungeWaypointId` berupa kursi asli
+   (`wp-seat-01..15`), jadi pose `seated` aktif (sebelumnya berdiri di koridor).

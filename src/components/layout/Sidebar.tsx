@@ -149,12 +149,12 @@ export function Sidebar({
           <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-[11px] text-cyan-100">
             <div className="flex items-center gap-1.5 font-bold">
               <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              <span>AI Gratis Rp 0 (Langsung Jalan)</span>
+              <span>3 API Gratis: Gemini · Groq · OpenRouter</span>
             </div>
             <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-              Langsung aktif gratis tanpa kartu kredit &amp; tanpa API key lewat
-              Pollinations AI. Opsional tambah key gratis Groq/Gemini di Vercel
-              untuk kecepatan lebih tinggi. Upload YouTube manual oleh Bos.
+              Kecepatan AI butuh API key gratis (tanpa kartu kredit): Gemini, Groq,
+              OpenRouter. Tanpa key, fitur AI berhenti dengan pesan jelas — tidak ada
+              lagi fallback keyless. Tempel key di Vercel Environment Variables.
             </p>
           </div>
         ) : (

@@ -140,7 +140,7 @@ export const INSTALLED_GITHUB_SKILLS: InstalledGitHubSkill[] = [
     url: "https://github.com/akitaonrails/ai-memory",
     license: "MIT",
     category: "memory_context",
-    summaryId: "Memori jangka panjang lintas penyedia AI (Groq ↔ Gemini ↔ Pollinations) & handoff konteks.",
+    summaryId: "Memori jangka panjang lintas penyedia AI (Groq ↔ Gemini ↔ OpenRouter) & handoff konteks.",
     assignedDivisions: ["autopilot", "think", "research", "qc"],
     assignedAgents: ["Reza (Manajer)", "Raka (Riset)", "Alya (QC)"],
     promptDirective:

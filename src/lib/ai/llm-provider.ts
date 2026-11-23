@@ -5,7 +5,7 @@
  *  1. Google Gemini (`GEMINI_API_KEY`) — Primary for complex reasoning, research, planning, strategy & agent decisions
  *  2. Groq (`GROQ_API_KEY`) — Primary for fast low-latency tasks, classification, summarization & text processing
  *  3. OpenRouter (`OPENROUTER_API_KEY`, https://openrouter.ai/api/v1) — Free-model (`:free`) alternative & fallback
- *  4. Pollinations.AI (Keyless fallback lane) — Optional final Rp 0 safety net
+ *  (Pollinations keyless DIHAPUS — fokus 3 API: Gemini, Groq, OpenRouter)
  *
  * Enterprise safeguards:
  *  - Task classification & complexity analysis -> deterministic provider/model selection
@@ -20,12 +20,11 @@
  * NEVER import this module in client components.
  */
 
-export type LlmProviderId =
-  | "gemini"
-  | "groq"
-  | "openrouter"
-  | "mistral"
-  | "pollinations";
+/**
+ * 3 provider saja (permintaan Bos): Gemini + Groq + OpenRouter.
+ * Pollinations (jalur keyless) DIHAPUS TOTAL — tidak ada fallback tanpa API key.
+ */
+export type LlmProviderId = "gemini" | "groq" | "openrouter";
 
 export type AiTaskType =
   | "reasoning"
@@ -93,7 +92,8 @@ export interface LlmCallError {
     | "ALL_PROVIDERS_RATE_LIMITED"
     | "ALL_PROVIDERS_FAILED"
     | "INVALID_JSON_RESPONSE"
-    | "PAID_MODEL_BLOCKED";
+    | "PAID_MODEL_BLOCKED"
+    | "NO_PROVIDER_CONFIGURED";
   error: string;
   hint: string;
   httpStatus: number;
@@ -205,23 +205,6 @@ const PROVIDER_TARGETS: Record<LlmProviderId, ProviderTarget> = {
       "X-Title": "FAJREZZZ AI Office",
     },
   },
-  mistral: {
-    provider: "mistral",
-    label: "Mistral AI (Optional)",
-    envVar: "MISTRAL_API_KEY",
-    endpoint: "https://api.mistral.ai/v1/chat/completions",
-    models: ["mistral-small-latest"],
-    role: "Optional Free Experiment Secondary",
-  },
-  pollinations: {
-    provider: "pollinations",
-    label: "Pollinations AI (Keyless Fallback)",
-    envVar: null,
-    keyless: true,
-    endpoint: "https://text.pollinations.ai/openai/chat/completions",
-    models: ["openai-fast", "openai"],
-    role: "Final Rp 0 Keyless Safety Net",
-  },
 };
 
 const FREE_TIER_SUMMARIES: Record<LlmProviderId, string> = {
@@ -231,8 +214,6 @@ const FREE_TIER_SUMMARIES: Record<LlmProviderId, string> = {
     "Primary ultra-fast latency/classification/summary (Llama 3.3 70B & 3.1 8B Free Tier)",
   openrouter:
     "Fallback & alternative via https://openrouter.ai/api/v1 (hanya model :free secara default)",
-  mistral: "Opsional Free Experiment mode",
-  pollinations: "Jalur cadangan terakhir tanpa API key (Rp 0)",
 };
 
 /* ============================================================================
@@ -332,7 +313,7 @@ export function classifyAiTask(options: {
       taskType: resolvedType,
       complexity,
       primaryProvider: "gemini",
-      fallbackChain: ["gemini", "groq", "openrouter", "mistral", "pollinations"],
+      fallbackChain: ["gemini", "groq", "openrouter"],
       reason,
     };
   }
@@ -341,7 +322,7 @@ export function classifyAiTask(options: {
     taskType: resolvedType,
     complexity,
     primaryProvider: "groq",
-    fallbackChain: ["groq", "gemini", "openrouter", "mistral", "pollinations"],
+    fallbackChain: ["groq", "gemini", "openrouter"],
     reason,
   };
 }
@@ -386,8 +367,6 @@ const providerStates: Record<LlmProviderId, InternalProviderState> = {
   gemini: createInitialProviderState(PROVIDER_TARGETS.gemini.models[0]),
   groq: createInitialProviderState(PROVIDER_TARGETS.groq.models[0]),
   openrouter: createInitialProviderState(PROVIDER_TARGETS.openrouter.models[0]),
-  mistral: createInitialProviderState(PROVIDER_TARGETS.mistral.models[0]),
-  pollinations: createInitialProviderState(PROVIDER_TARGETS.pollinations.models[0]),
 };
 
 function createInitialProviderState(defaultModel: string): InternalProviderState {
@@ -531,12 +510,7 @@ export function isProviderConfigured(provider: LlmProviderId): boolean {
 }
 
 export function getRouterTelemetrySnapshot(): RouterTelemetrySnapshot {
-  const orderedIds: LlmProviderId[] = [
-    "gemini",
-    "groq",
-    "openrouter",
-    "pollinations",
-  ];
+  const orderedIds: LlmProviderId[] = ["gemini", "groq", "openrouter"];
   const providers: ProviderHealthMetrics[] = orderedIds.map((id) => {
     const target = PROVIDER_TARGETS[id];
     const st = providerStates[id];
@@ -607,13 +581,7 @@ export function getConfiguredProvidersStatus(): {
   pricingNotice: string;
   routerTelemetry: RouterTelemetrySnapshot;
 } {
-  const orderedIds: LlmProviderId[] = [
-    "gemini",
-    "groq",
-    "openrouter",
-    "mistral",
-    "pollinations",
-  ];
+  const orderedIds: LlmProviderId[] = ["gemini", "groq", "openrouter"];
   const providers: ProviderConfigStatus[] = orderedIds.map((id) => {
     const t = PROVIDER_TARGETS[id];
     return {
@@ -633,7 +601,7 @@ export function getConfiguredProvidersStatus(): {
   const activeLabel =
     privateKeys.length > 0
       ? `${privateKeys.map((p) => p.id.toUpperCase()).join(" + ")}`
-      : "Pollinations Keyless Fallback";
+      : "Belum ada API key — pasang GEMINI/GROQ/OPENROUTER_API_KEY";
 
   return {
     anyConfigured: configuredCount > 0,
@@ -647,7 +615,7 @@ export function getConfiguredProvidersStatus(): {
       openrouter: isProviderConfigured("openrouter"),
     },
     pricingNotice:
-      "Central AI Router aktif: Gemini (reasoning/planning), Groq (fast/low-latency), OpenRouter (:free models only secara default), dengan circuit breaker, queue concurrency, dan fallback otomatis.",
+      "Central AI Router aktif dengan 3 API: Gemini (reasoning/planning), Groq (fast/low-latency), OpenRouter (:free models only). Tanpa API key tidak ada fallback keyless — pasang key di Vercel Environment Variables.",
     routerTelemetry: getRouterTelemetrySnapshot(),
   };
 }
@@ -805,6 +773,24 @@ export async function callCentralAIRouter<T = unknown>(
     .map((id) => PROVIDER_TARGETS[id])
     .filter((t) => Boolean(t && isProviderConfigured(t.provider)));
 
+  // Fast-fail jelas: tanpa API key TIDAK ada jalur keyless lagi (Pollinations dihapus).
+  // Ini mencegah UI menampilkan "502 / server antre" yang menyesatkan dan retry sia-sia.
+  if (activeTargets.length === 0) {
+    return {
+      ok: false,
+      code: "NO_PROVIDER_CONFIGURED",
+      error:
+        "Belum ada API key AI yang terpasang (GEMINI_API_KEY / GROQ_API_KEY / OPENROUTER_API_KEY).",
+      hint:
+        "Buka Vercel → Settings → Environment Variables → tambahkan minimal satu key " +
+        "(https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables), " +
+        "lalu Redeploy. Tanpa key, fitur AI memang tidak bisa jalan.",
+      httpStatus: 503,
+      attempts: [],
+      taskClassification: classification,
+    };
+  }
+
   const attempts: ProviderAttempt[] = [];
   let sawRateLimit = false;
   let lastParseError: string | null = null;
@@ -843,7 +829,8 @@ export async function callCentralAIRouter<T = unknown>(
 
       for (let mIdx = 0; mIdx < modelsToTry.length; mIdx += 1) {
         const model = modelsToTry[mIdx];
-        const maxRetries = 1; // Bounded retry (max 1 retry with exponential backoff)
+        // 2 retry untuk 5xx/429 (server gratis kadang antre sesaat), 0 untuk error non-transien
+        const maxRetries = 2;
 
         for (let retry = 0; retry <= maxRetries; retry += 1) {
           const start = Date.now();
@@ -861,16 +848,9 @@ export async function callCentralAIRouter<T = unknown>(
               ],
             };
 
-            if (target.provider === "pollinations") {
-              bodyPayload.seed = Math.floor(Math.random() * 900000) + 100000;
-            }
-
             if (
               expectJson &&
-              (target.provider === "groq" ||
-                target.provider === "gemini" ||
-                target.provider === "mistral" ||
-                target.provider === "pollinations")
+              (target.provider === "groq" || target.provider === "gemini")
             ) {
               bodyPayload.response_format = { type: "json_object" };
             }
@@ -920,8 +900,9 @@ export async function callCentralAIRouter<T = unknown>(
                 const retryAfterSec = Number(res.headers?.get?.("retry-after") || "0");
                 const backoffMs =
                   retryAfterSec > 0
-                    ? Math.min(retryAfterSec * 1000, 2500)
-                    : Math.min(600 * Math.pow(2, retry), 2000);
+                    ? Math.min(retryAfterSec * 1000, 6000)
+                    : Math.min(1200 * Math.pow(2, retry), 4800) +
+                      Math.floor(Math.random() * 400);
                 await sleepMs(backoffMs);
                 continue;
               }
@@ -1068,7 +1049,7 @@ export async function callCentralAIRouter<T = unknown>(
             });
 
             if (retry < maxRetries) {
-              await sleepMs(600);
+              await sleepMs(900 * (retry + 1));
               continue;
             }
             break;

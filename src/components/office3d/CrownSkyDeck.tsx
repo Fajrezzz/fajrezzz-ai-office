@@ -101,8 +101,14 @@ export function CrownSkyDeck({
       {/* ==================== CROWN SKY DECK (di atas L3) ==================== */}
       {showRoofDeck && (
         <group position={[0, ROOF_Y, 0]}>
-          {/* Pelat dek beton arsitektural (top surface, anti z-fighting dengan slab L3) */}
+          {/*
+           * CATATAN: TIDAK ada pelat dek tambahan di sini.
+           * Pelat atap struktural L3 (OfficeArchitecture, top = 11.79) adalah permukaan dek.
+           * Sebelumnya ada plat beton 0.04 tebal di y=0.02 yang MENUTUPI lapangan badminton,
+           * garis putih, helipad "H", dan RGB curb — sehingga atap terlihat putih polos.
+           */}
           <mesh
+            visible={false}
             position={[0, 0.02, -2.5]}
             geometry={sharedGeos.deckPlate}
             receiveShadow
@@ -245,20 +251,20 @@ export function CrownSkyDeck({
             </group>
           ))}
 
-          {/* Crown Signage menghadap depan (selatan) */}
-          <group position={[0, 0, -9.7]}>
+          {/* Crown Signage — sekarang di DEPAN, tepat di atas lantai 3, menghadap jalan */}
+          <group position={[0, 0, 4.85]}>
             {[-5.4, 5.4].map((lx, li) => (
-              <mesh key={`sign-leg-${li}`} position={[lx, 1.14, 0]} castShadow>
-                <boxGeometry args={[0.16, 2.28, 0.16]} />
+              <mesh key={`sign-leg-${li}`} position={[lx, 1.32, 0]} castShadow>
+                <boxGeometry args={[0.16, 2.64, 0.16]} />
                 <meshStandardMaterial color="#1b1f26" metalness={0.72} roughness={0.32} />
               </mesh>
             ))}
-            <group position={[0, 2.83, 0]}>
+            <group position={[0, 3.05, 0]}>
               <mesh castShadow>
                 <boxGeometry args={[12.4, 1.1, 0.22]} />
                 <meshStandardMaterial color="#111624" metalness={0.68} roughness={0.28} />
               </mesh>
-              <mesh position={[0, 0.57, 0.1]}>
+              <mesh position={[0, 0.57, 0.12]}>
                 <boxGeometry args={[12.45, 0.06, 0.06]} />
                 <meshStandardMaterial
                   color="#cffafe"
@@ -267,7 +273,7 @@ export function CrownSkyDeck({
                   toneMapped={!isNight}
                 />
               </mesh>
-              <mesh position={[0, -0.57, 0.1]}>
+              <mesh position={[0, -0.57, 0.12]}>
                 <boxGeometry args={[12.45, 0.06, 0.06]} />
                 <meshStandardMaterial
                   color="#f3e8ff"
@@ -277,7 +283,7 @@ export function CrownSkyDeck({
                 />
               </mesh>
               <Text
-                position={[0, 0, 0.14]}
+                position={[0, 0, 0.16]}
                 fontSize={0.72}
                 color="#e0f2fe"
                 letterSpacing={0.13}

@@ -222,8 +222,8 @@ function ApiKeySetupGuide() {
 
           <p className="text-[10px] text-slate-400">
             Lokal: <code className="font-mono text-cyan-300">cp .env.example .env.local</code> lalu{" "}
-            <code className="font-mono text-cyan-300">npm run dev</code>. Tanpa key pun aplikasi tetap jalan
-            lewat fallback Pollinations keyless (Rp 0). Panduan lengkap + troubleshooting:{" "}
+            <code className="font-mono text-cyan-300">npm run dev</code>. Tanpa key, fitur AI berhenti dengan
+            pesan jelas (tidak ada fallback keyless). Panduan lengkap + troubleshooting:{" "}
             <code className="font-mono text-cyan-300">docs/API-KEY-ROUTER.md</code>.
           </p>
         </div>

@@ -1004,7 +1004,7 @@ export function OfficeArchitecture({
           anchorX="center"
           anchorY="middle"
         >
-          EXECUTIVE HEADQUARTERS · 22 STAFF + BOS FAJREZ
+          EXECUTIVE HEADQUARTERS · 15 STAFF + BOS FAJREZ
         </Text>
 
         {/* West & East Luxury Lobby Lounge Sets (Sofas + Armrests + Pillows + Marble Tables) */}
@@ -1587,6 +1587,22 @@ export function OfficeArchitecture({
           <IndoorPlanter position={[-12.6, FLOOR_2_Y, 2.4]} />
           <IndoorPlanter position={[12.6, FLOOR_2_Y, 2.4]} />
 
+          {/* Balkon Tengah: 1 armchair tambahan (agen duduk ngopi di wp-seat-09) */}
+          <group position={[-1.6, FLOOR_2_Y, 4.5]}>
+            <mesh position={[0, 0.04, 0]}>
+              <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
+              <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
+            </mesh>
+            <mesh position={[0, 0.44, 0]} castShadow>
+              <boxGeometry args={[0.52, 0.1, 0.5]} />
+              <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
+            </mesh>
+            <mesh position={[0, 0.72, -0.22]} castShadow>
+              <boxGeometry args={[0.52, 0.48, 0.09]} />
+              <meshStandardMaterial color="#3c4a58" roughness={0.75} />
+            </mesh>
+          </group>
+
           {/* Warm Oak Acoustic Ceiling Beams + Recessed Architectural Cove Light Trays (L2) */}
           {[-9, -3, 3, 9].map((lx, i) => (
             <group key={i} position={[lx, FLOOR_3_Y - 0.18, -3.2]}>
@@ -1741,7 +1757,7 @@ export function OfficeArchitecture({
           ))}
 
           {/* Executive Boardroom Table with Open Laptops & 6 Leather Chairs */}
-          <group position={[-4.5, FLOOR_3_Y, -3.5]}>
+          <group position={[13.0, FLOOR_3_Y, -3.5]}>
             <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
               <boxGeometry args={[6.4, 0.1, 2.2]} />
               <meshStandardMaterial color="#5e3e24" roughness={0.32} metalness={0.08} />
@@ -1932,7 +1948,7 @@ export function OfficeArchitecture({
           )}
 
           {/* L3 Luxury Champagne-Gold Ceiling Cove Light Strips + Curtain Wall Transom + Planters */}
-          {[-4.5, 7.4].map((lx, i) => (
+          {[7.4, 13.0].map((lx, i) => (
             <mesh key={`l3-ceil-${i}`} position={[lx, FLOOR_3_Y + 3.45, -3.6]}>
               <boxGeometry args={[6.4, 0.06, 0.22]} />
               <meshStandardMaterial
@@ -1949,6 +1965,57 @@ export function OfficeArchitecture({
           </mesh>
           <IndoorPlanter position={[-12.4, FLOOR_3_Y, 2.2]} />
           <IndoorPlanter position={[0.4, FLOOR_3_Y, 2.2]} />
+
+          {/* ===== L3 STAFF COFFEE DECK (KIRI) — 6 armchair asli, agen DUDUK saat ngopi ===== */}
+          {[-15.0, -12.5, -10.0, -7.5, -5.0, -2.5].map((sx, si) => (
+            <group key={`l3-staff-seat-${si}`} position={[sx, FLOOR_3_Y, 3.2]}>
+              {/* base */}
+              <mesh position={[0, 0.04, 0]}>
+                <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
+                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
+              </mesh>
+              {/* seat */}
+              <mesh position={[0, 0.44, 0]} castShadow>
+                <boxGeometry args={[0.52, 0.1, 0.5]} />
+                <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
+              </mesh>
+              {/* backrest (menghadap -Z) */}
+              <mesh position={[0, 0.72, 0.22]} castShadow>
+                <boxGeometry args={[0.52, 0.48, 0.09]} />
+                <meshStandardMaterial color="#3c4a58" roughness={0.75} />
+              </mesh>
+              {/* sandaran tangan */}
+              {[-0.28, 0.28].map((ax, ai) => (
+                <mesh key={ai} position={[ax, 0.6, 0]}>
+                  <boxGeometry args={[0.07, 0.1, 0.44]} />
+                  <meshStandardMaterial color="#2b3542" roughness={0.65} />
+                </mesh>
+              ))}
+            </group>
+          ))}
+          {/* 2 meja kopi rendah */}
+          {[-13.75, -8.75].map((tx, ti) => (
+            <group key={`l3-staff-table-${ti}`} position={[tx, FLOOR_3_Y, 2.1]}>
+              <mesh position={[0, 0.4, 0]} castShadow>
+                <boxGeometry args={[1.9, 0.07, 0.8]} />
+                <meshStandardMaterial color="#8a6a4a" roughness={0.5} />
+              </mesh>
+              <mesh position={[0, 0.2, 0]}>
+                <boxGeometry args={[0.16, 0.4, 0.16]} />
+                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
+              </mesh>
+            </group>
+          ))}
+          {/* Neon strip hangat di atas staff coffee deck */}
+          <mesh position={[-8.0, FLOOR_3_Y + 2.35, 2.6]}>
+            <boxGeometry args={[13.2, 0.05, 0.05]} />
+            <meshStandardMaterial
+              color="#fff7ed"
+              emissive="#fb923c"
+              emissiveIntensity={isNight ? 1.9 : 0.65}
+              toneMapped={!isNight}
+            />
+          </mesh>
 
           {/* Luxury Walnut & Gold Feature Backdrop behind CEO Suite */}
           <mesh position={[7.4, FLOOR_3_Y + 1.85, -9.76]}>

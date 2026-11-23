@@ -22,10 +22,17 @@ const MOOD_STYLE: Record<string, string> = {
     "luxury modern golden-hour editorial cinema, warm gold and emerald accents, smooth shallow depth of field, sleek high-end commercial production",
 };
 
+/** Model image Gemini yang dipakai (bisa dioverride lewat env tanpa ubah kode). */
+const GEMINI_IMAGE_MODEL =
+  process.env.GEMINI_IMAGE_MODEL?.trim() || "gemini-2.5-flash-image";
+
 /**
- * FREE Rp 0 Cinematic AI B-Roll Scene Generator (MoneyPrinterTurbo + ComfyUI visual pipeline)
- * Generates tailored high-contrast editorial visuals per scene via Pollinations Flux/Turbo AI
- * with zero watermarks and zero garbled embedded text (so our kinetic typography overlays stay crisp).
+ * AI B-Roll scene image generator.
+ *
+ * Pollinations DIHAPUS (permintaan Bos: fokus 3 API — Gemini, Groq, OpenRouter).
+ * Satu-satunya penyedia yang bisa menghasilkan gambar dari 3 API tersebut adalah
+ * Gemini (image generation). Tanpa GEMINI_API_KEY endpoint ini mengembalikan 503
+ * yang jelas, dan renderer otomatis memakai fallback sinematik prosedural.
  */
 export async function POST(req: Request) {
   try {
@@ -38,59 +45,91 @@ export async function POST(req: Request) {
       );
     }
 
-    const format = body.format === "landscape" ? "landscape" : "shorts";
-    const width = format === "shorts" ? 576 : 960;
-    const height = format === "shorts" ? 1024 : 540;
-    const moodStyle = MOOD_STYLE[body.mood || "bright"] ?? MOOD_STYLE.bright;
-    const seed = Number.isFinite(body.seed)
-      ? Math.abs(Math.floor(Number(body.seed)))
-      : Math.floor(Math.random() * 99999);
+    const apiKey = process.env.GEMINI_API_KEY?.trim() ?? "";
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "NO_PROVIDER_CONFIGURED",
+          error:
+            "B-Roll AI butuh GEMINI_API_KEY (satu-satunya dari 3 API yang bisa generate gambar).",
+          hint:
+            "Pasang GEMINI_API_KEY di https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables lalu Redeploy. Tanpa key, renderer memakai fallback sinematik prosedural.",
+        },
+        { status: 503 }
+      );
+    }
 
+    const moodStyle = MOOD_STYLE[body.mood || "bright"] ?? MOOD_STYLE.bright;
     const engineeredPrompt = [
       rawPrompt.slice(0, 180),
       moodStyle,
       "cinematic commercial B-roll, 8k octane 3D motion design aesthetic, shallow depth of field, NO text, NO letters, NO watermark, NO logos",
     ].join(", ");
 
-    const encoded = encodeURIComponent(engineeredPrompt);
-    const urls = [
-      `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux`,
-      `https://image.pollinations.ai/prompt/${encoded}?width=${width}&height=${height}&seed=${seed}&nologo=true`,
-    ];
-
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, {
-          method: "GET",
-          signal: AbortSignal.timeout(13000),
-          headers: {
-            Accept: "image/*",
-            "User-Agent": "FajrezzzAIOffice/2.0",
-          },
-        });
-        if (!res.ok) continue;
-        const contentType = res.headers.get("content-type") || "image/jpeg";
-        if (!contentType.startsWith("image/")) continue;
-
-        const arrayBuf = await res.arrayBuffer();
-        if (arrayBuf.byteLength < 2500) continue;
-
-        const base64 = Buffer.from(arrayBuf).toString("base64");
-        return NextResponse.json({
-          ok: true,
-          provider: "pollinations-flux",
-          mimeType: contentType,
-          dataUrl: `data:${contentType};base64,${base64}`,
-        });
-      } catch {
-        // try next endpoint
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: engineeredPrompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"] },
+        }),
+        signal: AbortSignal.timeout(26000),
       }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return NextResponse.json(
+        {
+          ok: false,
+          code: res.status === 429 ? "ALL_PROVIDERS_RATE_LIMITED" : "IMAGE_PROVIDER_FAILED",
+          error: `Gemini image gagal (HTTP ${res.status}).`,
+          hint:
+            res.status === 429
+              ? "Kuota gambar Gemini habis sementara. Renderer memakai fallback prosedural; coba lagi beberapa menit."
+              : "Cek GEMINI_API_KEY / kuota. Renderer tetap jalan dengan fallback sinematik prosedural.",
+          detail: errText.slice(0, 200),
+        },
+        { status: res.status >= 500 ? 503 : res.status }
+      );
     }
 
-    return NextResponse.json(
-      { ok: false, error: "B-Roll AI sedang sibuk, memakai fallback sinematik prosedural." },
-      { status: 503 }
+    const json = (await res.json()) as {
+      candidates?: {
+        content?: {
+          parts?: { inlineData?: { mimeType?: string; data?: string } }[];
+        };
+      }[];
+    };
+
+    const part = json.candidates?.[0]?.content?.parts?.find(
+      (p) => p.inlineData?.data
     );
+    const base64 = part?.inlineData?.data;
+    const mimeType = part?.inlineData?.mimeType || "image/png";
+
+    if (!base64 || base64.length < 200) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Gemini tidak mengembalikan gambar; memakai fallback sinematik prosedural.",
+        },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      provider: "gemini-image",
+      mimeType,
+      dataUrl: `data:${mimeType};base64,${base64}`,
+    });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Scene image failed" },

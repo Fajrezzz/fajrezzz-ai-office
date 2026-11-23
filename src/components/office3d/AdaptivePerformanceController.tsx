@@ -4,12 +4,14 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useOffice } from "@/store/OfficeContext";
+import { useSimulator } from "@/store/SimulatorContext";
 import {
   TARGET_FPS,
   classifyRenderPerformance,
   detectDeviceCapability,
   estimateRefreshHz,
   resolvePixelRatio,
+  resolveZoomSharpenedPixelRatio,
   type DeviceCapability,
 } from "@/lib/perf/render-telemetry";
 
@@ -34,6 +36,8 @@ export function AdaptivePerformanceController() {
     setRenderTelemetry,
   } = useOffice();
 
+  const { zoomPct } = useSimulator();
+  const zoomRef = useRef(zoomPct);
   const modeRef = useRef(performanceMode);
   const capRef = useRef<DeviceCapability | null>(null);
 
@@ -63,6 +67,10 @@ export function AdaptivePerformanceController() {
     modeRef.current = performanceMode;
   }, [performanceMode]);
 
+  useEffect(() => {
+    zoomRef.current = zoomPct;
+  }, [zoomPct]);
+
   // Inisialisasi DPR & profil perangkat sekali (bukan per zoom)
   useEffect(() => {
     const cap = detectDeviceCapability();
@@ -86,6 +94,29 @@ export function AdaptivePerformanceController() {
     lowStreakRef.current = 0;
     highStreakRef.current = 0;
   }, [performanceMode, gl]);
+
+  /**
+   * ZOOM-AWARE SHARPNESS: makin di-zoom in, resolusi render ikut naik (maks. cap
+   * tier & DPR perangkat). Dibatasi agar tidak menurunkan FPS di bawah ambang sehat:
+   * hanya diterapkan bila FPS terukur masih >= 50 (mobile) / 80 (desktop).
+   */
+  useEffect(() => {
+    const cap = capRef.current;
+    if (!cap) return;
+    const healthyFps = cap.isMobileViewport || cap.isMobileUa ? 50 : 80;
+    if (emaFpsRef.current > 0 && emaFpsRef.current < healthyFps) return;
+
+    const target = resolveZoomSharpenedPixelRatio(
+      performanceMode,
+      cap.devicePixelRatio,
+      zoomPct
+    );
+    if (Math.abs(target - appliedDprRef.current) > 0.001) {
+      appliedDprRef.current = target;
+      gl.setPixelRatio(target);
+      lastDprChangeRef.current = performance.now();
+    }
+  }, [zoomPct, performanceMode, gl]);
 
   useFrame(() => {
     const now = performance.now();

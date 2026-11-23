@@ -36,6 +36,13 @@ const SEATED_WAYPOINT_IDS = new Set([
   "wp-ws-06",
   "wp-ws-07",
   "wp-ws-08",
+  "wp-ws-09",
+  "wp-ws-10",
+  "wp-ws-11",
+  "wp-ws-12",
+  "wp-ws-13",
+  "wp-ws-14",
+  "wp-ws-15",
   "wp-seat-01",
   "wp-seat-02",
   "wp-seat-03",
@@ -46,6 +53,14 @@ const SEATED_WAYPOINT_IDS = new Set([
   "wp-seat-08",
   "wp-l1-seat",
   "wp-l3-boardroom",
+  // Kursi ngopi tambahan (balkon L2 + staff coffee deck L3) — agen DUDUK, bukan berdiri
+  "wp-seat-09",
+  "wp-seat-10",
+  "wp-seat-11",
+  "wp-seat-12",
+  "wp-seat-13",
+  "wp-seat-14",
+  "wp-seat-15",
 ]);
 
 interface StaffVisualSpec {

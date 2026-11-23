@@ -34,7 +34,7 @@ export function TopHeader({
       .then((data) => {
         if (active && data?.ok) {
           setAiStatus({
-            activeLabel: String(data.activeLabel || "Pollinations Free (Rp 0)"),
+            activeLabel: String(data.activeLabel || "Belum ada API key"),
             pricingNotice: String(data.pricingNotice || ""),
           });
         }
