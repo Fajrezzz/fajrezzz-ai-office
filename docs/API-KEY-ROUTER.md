@@ -293,3 +293,37 @@ OPENROUTER_MODEL=nama-model:free
 ```
 
 Dijaga `tests/ai-model-recovery-v94.test.ts` (28 tes; 4 di antaranya v9.4d).
+
+---
+
+## 13. Katalog nyata Gemini & bug urutan kandidat (v9.4e)
+
+Katalog untuk key Bos mengembalikan **65 model**, dan Google mengurutkannya **abjad**, bukan
+berdasarkan kepintaran:
+
+```
+gemini-2.5-flash · gemini-2.5-pro · gemini-2.5-flash-preview-tts ·
+gemini-2.5-pro-preview-tts · gemma-4-26b-a4b-it · gemma-4-31b-it ·
+gemini-flash-latest · gemini-flash-lite-latest
+```
+
+Dua bug yang terbongkar dari tabel itu:
+
+| Bug | Akibat | Perbaikan |
+| --- | --- | --- |
+| Daftar hasil `/models` dipakai apa adanya (tanpa skor prioritas) | Kandidat didominasi model 2.5 yang ditutup untuk project baru | `sortModelsByPreference()` dipakai router **dan** halaman katalog |
+| Anggaran kandidat hanya 6 | `gemini-flash-latest` (posisi 7) **tidak pernah dicoba** | Anggaran 8 kandidat + model yang pernah sukses didahulukan |
+| Model `-tts`, gambar, embedding ikut jadi kandidat | Slot kandidat habis untuk model yang tidak bisa chat | `isChatCapableModel()` menyaring TTS/embedding/image/imagen/veo/live |
+
+Urutan kandidat sekarang:
+
+1. `gemini-flash-latest` (alias resmi ke Flash terbaru)
+2. generasi 3.x flash (kalau ada)
+3. `gemma-4-31b-it` → `gemma-4-*`
+4. `gemini-2.5-flash` → `gemini-2.5-pro`
+5. sisanya
+
+Halaman katalog kini juga meringkas **“✅ LULUS uji: …”** di atas tabel, jadi tidak perlu
+membaca semua baris untuk tahu model mana yang hidup.
+
+Dijaga `tests/ai-model-recovery-v94.test.ts` (34 tes; 5 di antaranya v9.4e).

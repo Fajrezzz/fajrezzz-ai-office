@@ -4,6 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import {
   callGeminiNative,
+  isChatCapableModel,
+  sortModelsByPreference,
   classifyProviderError,
   cooldownMsForFailure,
   describeErrorClass,
@@ -414,4 +416,64 @@ test("v9.4d: katalog menguji jalur native di v1beta DAN v1", () => {
   assert.match(route, /"v1beta"/);
   assert.match(route, /"v1"/);
   assert.match(route, /probeNativeVersion\(model, apiKey, "v1"\)/);
+});
+
+/* ============================================================================
+ * v9.4e — KATALOG NYATA dari key Bos (65 model, urut abjad dari Google):
+ *   gemini-2.5-flash · gemini-2.5-pro · …-preview-tts · gemma-4-26b-a4b-it ·
+ *   gemma-4-31b-it · gemini-flash-latest · gemini-flash-lite-latest
+ * Dua bug terbongkar: daftar mentah dipakai apa adanya (tanpa skor) dan
+ * dipotong 6 kandidat → `gemini-flash-latest` tidak pernah dicoba.
+ * ========================================================================== */
+
+const GEMINI_CATALOG = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash-preview-tts",
+  "gemini-2.5-pro-preview-tts",
+  "gemma-4-26b-a4b-it",
+  "gemma-4-31b-it",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+];
+
+test("v9.4e: model TTS/gambar/embedding tidak dianggap model chat", () => {
+  assert.equal(isChatCapableModel("gemini", "gemini-2.5-flash-preview-tts"), false);
+  assert.equal(isChatCapableModel("gemini", "text-embedding-004"), false);
+  assert.equal(isChatCapableModel("gemini", "gemini-2.5-flash-image"), false);
+  assert.equal(isChatCapableModel("gemini", "imagen-4.0-generate-001"), false);
+  assert.equal(isChatCapableModel("gemini", "gemini-2.5-flash"), true);
+  assert.equal(isChatCapableModel("gemini", "gemma-4-31b-it"), true);
+});
+
+test("v9.4e: kandidat Gemini diurutkan, alias flash-latest jadi nomor satu", () => {
+  const sorted = sortModelsByPreference("gemini", GEMINI_CATALOG);
+  assert.equal(sorted[0], "gemini-flash-latest");
+  // TTS tidak ikut mendesak alias yang hidup
+  assert.ok(!sorted.slice(0, 4).some((m) => /tts/i.test(m)));
+  const playlist = resolveProviderModels("gemini", GEMINI_CATALOG);
+  assert.equal(playlist[0], "gemini-flash-latest");
+  assert.ok(playlist.length <= GEMINI_CATALOG.length + 3);
+});
+
+test("v9.4e: alias hidup tidak lagi terpotong oleh anggaran kandidat", () => {
+  const playlist = resolveProviderModels("gemini", GEMINI_CATALOG);
+  const idx = playlist.indexOf("gemini-flash-latest");
+  assert.ok(idx >= 0 && idx < 8, `alias berada di posisi ${idx} (di luar 8 kandidat)`);
+  const source = read("src/lib/ai/llm-provider.ts");
+  assert.match(source, /modelsToTry\.slice\(0, 8\)/);
+});
+
+test("v9.4e: model yang pernah sukses dicoba paling depan", () => {
+  const source = read("src/lib/ai/llm-provider.ts");
+  assert.match(source, /known\.successCount > 0 && known\.activeModel/);
+  assert.match(source, /modelsToTry = \[good, \.\.\.modelsToTry\.filter/);
+});
+
+test("v9.4e: halaman katalog memakai urutan yang sama & meringkas hasil uji", () => {
+  const route = read("src/app/api/ai/model-catalog/route.ts");
+  assert.match(route, /function winnerBox/);
+  assert.match(route, /LULUS uji/);
+  assert.match(route, /candidates\.slice\(0, 6\)/);
+  assert.match(route, /resolveProviderModels/);
 });

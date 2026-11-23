@@ -511,9 +511,12 @@ export function resolveProviderModels(
     .map((m) => m.trim())
     .filter(Boolean);
   const curated = [...PROVIDER_TARGETS[provider].models];
+  const live = sortModelsByPreference(
+    provider,
+    discovered.filter((m) => isChatCapableModel(provider, m))
+  );
   // Env override = pengganti penuh (Bos yang menentukan), bukan tambahan.
-  const ordered =
-    fromEnv.length > 0 ? fromEnv : [...discovered.filter(Boolean), ...curated];
+  const ordered = fromEnv.length > 0 ? fromEnv : [...live, ...curated];
   const filtered = ordered
     .filter((m) => !isKnownBogusModel(m))
     .filter((m) => (provider === "openrouter" ? isOpenRouterFreeModel(m) : true));
@@ -648,15 +651,24 @@ const DISCOVERY_ENDPOINTS: Record<LlmProviderId, string> = {
 
 /** Urutan prioritas model murah/cepat per provider saat discovery berhasil. */
 const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
-  // v9.4c — generasi terbaru lebih dulu. Gemini 2.5 sudah "no longer available
-  // to new users" untuk project baru, jadi jangan taruh di depan lagi.
+  /*
+   * v9.4e — urutan ini hasil pembacaan KATALOG NYATA key Bos (65 model):
+   *   gemini-2.5-flash, gemini-2.5-pro, …-tts, gemma-4-26b-a4b-it, gemma-4-31b-it,
+   *   gemini-flash-latest, gemini-flash-lite-latest
+   * Google mengembalikan daftar itu urut abjad, bukan urut kepintaran. Dulu daftar
+   * mentah itu dipakai apa adanya lalu dipotong 6 kandidat → `gemini-flash-latest`
+   * (alias resmi ke Flash terbaru) justru TIDAK PERNAH dicoba, dan yang dicoba
+   * hanya model yang memang ditutup untuk project baru.
+   */
   gemini: [
+    /^gemini-flash-latest$/i,
     /gemini-3(\.\d+)?[^:]*flash(?!-lite)/i,
+    /gemma-4-31b[^:]*it$/i,
+    /gemma-4[^:]*it$/i,
+    /gemini-2\.5-flash(?!-lite)/i,
+    /gemini-2\.5-pro/i,
     /flash-latest/i,
     /flash(?!-lite)/i,
-    /flash/i,
-    /gemini-2\.5-flash/i,
-    /gemini-2\.0-flash/i,
   ],
   groq: [/gpt-oss-120b/i, /qwen3?/i, /qwen/i, /llama-3\.3-70b/i, /llama-3\.1-8b/i, /llama/i],
   // v9.4c — jangan terpaku llama/gemma yang sudah di-delist; pilih :free yang
@@ -672,6 +684,32 @@ const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
     /:free/i,
   ],
 };
+
+/** Model yang bukan untuk percakapan teks (TTS, gambar, embedding, audio, dsb). */
+const NON_CHAT_MODEL =
+  /(^|[-_/])(tts|embedding|embed|embeddings|image|imagen|vision|veo|aqa|live|native-audio|audio|computer-use|robotics|guard)([-_/]|$)/i;
+
+export function isChatCapableModel(provider: LlmProviderId, model: string): boolean {
+  if (NON_CHAT_MODEL.test(model)) return false;
+  // `*-preview-tts`, `*-tts` sudah tercakup di atas; jaga juga `-image-` dkk.
+  if (provider === "gemini" && /-image(-|$)/i.test(model)) return false;
+  return true;
+}
+
+/**
+ * Urutkan model hasil discovery sesuai preferensi router (v9.4e).
+ * Dipakai router DAN halaman katalog supaya "kandidat router" yang ditampilkan
+ * benar-benar sama dengan yang dicoba.
+ */
+export function sortModelsByPreference(
+  provider: LlmProviderId,
+  models: string[]
+): string[] {
+  return [...new Set(models.filter(Boolean))].sort((a, b) => {
+    const diff = scoreDiscoveredModel(provider, a) - scoreDiscoveredModel(provider, b);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+}
 
 function scoreDiscoveredModel(provider: LlmProviderId, model: string): number {
   const list = DISCOVERY_PRIORITY[provider];
@@ -727,9 +765,12 @@ export async function discoverLiveModels(
         .filter((id) => /gemini/i.test(id));
     }
 
-    models = [...new Set(models)]
-      .sort((a, b) => scoreDiscoveredModel(provider, a) - scoreDiscoveredModel(provider, b))
-      .slice(0, 8);
+    // v9.4e — TTS/gambar/embedding dibuang lebih dulu supaya tidak memakan slot
+    // kandidat (dulu `gemini-2.5-flash-preview-tts` ikut mendesak alias yang hidup).
+    models = sortModelsByPreference(
+      provider,
+      models.filter((m) => isChatCapableModel(provider, m))
+    ).slice(0, 8);
 
     LIVE_MODEL_CACHE.set(provider, { fetchedAtMs: nowMs, models });
     return models;
@@ -1497,6 +1538,21 @@ export async function callCentralAIRouter<T = unknown>(
           ? [preferredModel]
           : resolveProviderModels(target.provider, liveModels);
 
+      /*
+       * v9.4e — kalau provider ini pernah sukses dengan model tertentu, model itu
+       * dicoba paling depan. Tanpa ini router mengulang 404 yang sama setiap
+       * request padahal sudah tahu model mana yang jalan.
+       */
+      if (!(preferredProvider === target.provider && preferredModel)) {
+        const known = providerStates[target.provider];
+        if (known.successCount > 0 && known.activeModel) {
+          const good = known.activeModel.replace(/\s*\(native\)$/, "");
+          if (modelsToTry.includes(good)) {
+            modelsToTry = [good, ...modelsToTry.filter((m) => m !== good)];
+          }
+        }
+      }
+
       if (target.provider === "openrouter" && !allowPaidOpenRouter) {
         modelsToTry = modelsToTry.filter((m) => isOpenRouterFreeModel(m));
       }
@@ -1516,7 +1572,9 @@ export async function callCentralAIRouter<T = unknown>(
             : resolveProviderModels(target.provider, liveModels)
         ).slice(0, 1);
       } else {
-        modelsToTry = modelsToTry.slice(0, 6);
+        // v9.4e — 6 kandidat terlalu sempit untuk Gemini (daftar 65 model):
+        // alias yang hidup bisa berada di luar 6 nama pertama.
+        modelsToTry = modelsToTry.slice(0, 8);
       }
 
       // v9.4c — kuota gratis harian sifatnya per AKUN, bukan per model.

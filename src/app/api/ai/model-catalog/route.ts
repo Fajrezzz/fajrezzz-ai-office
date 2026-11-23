@@ -227,6 +227,21 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** v9.4e — ringkasan satu kalimat: model mana yang benar-benar bisa dipakai. */
+function winnerBox(probes: ProbeRow[]): string {
+  const okModels = [...new Set(probes.filter((p) => p.ok).map((p) => p.model))];
+  const triedModels = [...new Set(probes.map((p) => p.model))];
+  const dead = triedModels.filter((m) => !okModels.includes(m));
+  if (okModels.length > 0) {
+    return `<div class="box ok">✅ LULUS uji: <span class="m">${okModels
+      .map(escapeHtml)
+      .join(", ")}</span>${
+      dead.length ? ` · ditolak: <span class="m">${dead.map(escapeHtml).join(", ")}</span>` : ""
+    }<br>Router otomatis memakai model pertama yang lulus (urutan di atas). Untuk mengunci permanen, set <code>GEMINI_MODEL</code>.</div>`;
+  }
+  return `<div class="box warn">⚠️ Tidak ada model yang lulus dari ${triedModels.length} kandidat pertama. Lihat pesan di tabel 2 — kalau semuanya "no longer available to new users", berarti project Google-nya yang perlu diganti, bukan kodenya.</div>`;
+}
+
 function renderHtml(payload: {
   provider: LlmProviderId;
   keyPresent: boolean;
@@ -276,6 +291,7 @@ th{color:#7dd3fc;font-weight:600}td.ok{color:#6ee7b7;font-weight:700}td.bad{colo
 td.m{font-family:ui-monospace,monospace;color:#fde68a}td.e{color:#f0abfc}td.msg{color:#cbd5e1}
 .box{border:1px solid #334155;border-radius:10px;padding:8px 10px;margin:8px 0;background:#0b1220}
 .warn{border-color:#f59e0b55;background:#2a1a05;color:#fcd34d}
+.ok{border-color:#10b98155;background:#04231a;color:#6ee7b7}
 </style></head><body>
 <h1>Katalog model: ${payload.provider}</h1>
 <p class="sub">${new Date().toISOString()} · key: ${payload.keyPresent ? "terpasang (nilai tidak ditampilkan)" : "TIDAK ADA"}</p>
@@ -283,7 +299,8 @@ ${!payload.keyPresent ? `<div class="box warn">Env var provider ini belum terpas
 <div class="box">Endpoint katalog: <code>${escapeHtml(payload.catalog.endpoint)}</code> · hasil: ${
     payload.catalog.ok ? `${payload.catalog.models.length} model` : "GAGAL"
   }${payload.catalog.error ? ` · ${escapeHtml(payload.catalog.error).slice(0, 240)}` : ""}</div>
-${payload.candidates.length ? `<div class="box">Kandidat router sekarang: <span class="m">${payload.candidates.map(escapeHtml).join(" → ")}</span></div>` : ""}
+${payload.candidates.length ? `<div class="box">Kandidat router sekarang (urut percobaan): <span class="m">${payload.candidates.map(escapeHtml).join(" → ")}</span></div>` : ""}
+${winnerBox(payload.probes)}
 
 <h2>1. Model yang dilaporkan provider untuk key ini</h2>
 <table><thead><tr><th style="width:62%">id model</th><th>method</th></tr></thead><tbody>${
@@ -332,7 +349,7 @@ export async function GET(request: Request) {
   const probes: ProbeRow[] = [];
   if (keyPresent) {
     // Uji sampaiar 5 kandidat teratas — cukup untuk tahu mana yang benar-benar hidup.
-    for (const model of candidates.slice(0, 4)) {
+    for (const model of candidates.slice(0, 6)) {
       if (provider === "gemini") {
         probes.push(await probeNativeVersion(model, apiKey, "v1beta"));
         // Hanya uji v1 kalau v1beta gagal — supaya tidak membuang kuota.
