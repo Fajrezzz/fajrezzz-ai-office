@@ -23,21 +23,45 @@ function hasBinary(binName: string): boolean {
   }
 }
 
-function readPackageVersion(pkgName: string): string | null {
+function readRootPackageDependencies(): Record<string, string> {
   try {
-    const pkgPath = path.join(process.cwd(), "node_modules", pkgName, "package.json");
-    if (!fs.existsSync(pkgPath)) return null;
-    const raw = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as { version?: string };
-    return raw.version ?? null;
+    const rootPkg = path.join(process.cwd(), "package.json");
+    if (!fs.existsSync(rootPkg)) return {};
+    const parsed = JSON.parse(fs.readFileSync(rootPkg, "utf8")) as {
+      dependencies?: Record<string, string>;
+    };
+    return parsed.dependencies ?? {};
   } catch {
-    return null;
+    return {};
   }
 }
 
+function readPackageVersion(
+  pkgName: string,
+  rootDeps: Record<string, string>
+): string | null {
+  try {
+    const pkgPath = path.join(process.cwd(), "node_modules", pkgName, "package.json");
+    if (fs.existsSync(pkgPath)) {
+      const raw = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as { version?: string };
+      if (raw.version) return raw.version;
+    }
+  } catch {
+    // Fall through to root package.json check (Vercel Serverless tree-shakes client-only packages out of API Lambdas)
+  }
+
+  const declared = rootDeps[pkgName];
+  if (declared) {
+    return declared.replace(/^[\^~]/, "");
+  }
+  return null;
+}
+
 export async function GET() {
-  const remotionVersion = readPackageVersion("remotion");
-  const gsapVersion = readPackageVersion("gsap");
-  const mp4MuxerVersion = readPackageVersion("mp4-muxer");
+  const rootDeps = readRootPackageDependencies();
+  const remotionVersion = readPackageVersion("remotion", rootDeps);
+  const gsapVersion = readPackageVersion("gsap", rootDeps);
+  const mp4MuxerVersion = readPackageVersion("mp4-muxer", rootDeps);
   const hindsight = getHindsightStatus();
 
   const probe: RuntimeCapabilityProbe = {

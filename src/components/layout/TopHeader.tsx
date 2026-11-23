@@ -8,7 +8,7 @@ import type { NavSection } from "@/types/office";
 const SECTION_TITLES: Record<NavSection, string> = {
   dashboard: "📱 Komando Bos & Pipeline 7 Divisi",
   office: "🏢 Kantor 3D & Bos FAJREZ",
-  studio: "📊 Hasil Nyata, YPP & KPI Tim",
+  studio: "📊 Telemetry Operasional & KPI 15 Karyawan",
   agents: "👥 Tim 7 Divisi AI & Log Kerja",
   tasks: "👥 Tim 7 Divisi AI & Log Kerja",
   activity: "👥 Tim 7 Divisi AI & Log Kerja",

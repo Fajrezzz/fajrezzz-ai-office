@@ -41,14 +41,14 @@ const NAV_ITEMS: {
   },
   {
     id: "studio",
-    label: "Hasil & KPI YPP",
-    shortLabel: "Hasil YPP",
+    label: "Telemetry & KPI",
+    shortLabel: "Telemetry",
     icon: BarChart3,
   },
   {
     id: "agents",
-    label: "Tim 7 Divisi",
-    shortLabel: "Tim 7",
+    label: "Tim 15 Karyawan",
+    shortLabel: "Tim 15",
     icon: Users,
   },
 ];

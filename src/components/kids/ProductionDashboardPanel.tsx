@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAgency } from "@/store/AgencyContext";
 import { buildEditorialEpisode } from "@/lib/pipeline/motion-renderer";
+import { ReferenceStyleAnalyzerCard } from "@/components/kids/ReferenceStyleAnalyzerCard";
 import { RemotionTikTokPreview } from "@/components/kids/RemotionTikTokPreview";
 import type { RankedTrendSourceRecord } from "@/lib/ai/trend-intelligence";
 import type {
@@ -614,6 +615,9 @@ export function ProductionDashboardPanel() {
           </div>
         </section>
       </div>
+
+      {/* SECTION E: Reference Video Style Analyzer & Original Fajrezzz Style Presets */}
+      <ReferenceStyleAnalyzerCard />
     </div>
   );
 }
