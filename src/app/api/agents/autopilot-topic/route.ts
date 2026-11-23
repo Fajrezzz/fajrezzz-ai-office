@@ -191,6 +191,7 @@ Pilih 1 topik TikTok 9:16 paling menarik, faktual, dan berbeda dari episode sebe
     const llm = await callFreeTierLLM<
       Partial<AutopilotTopicResponse> & { sourceIndex?: number }
     >({
+      taskType: "research",
       systemPrompt,
       userPrompt,
       expectJson: true,

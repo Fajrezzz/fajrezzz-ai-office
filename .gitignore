@@ -22,6 +22,8 @@ pnpm-debug.log*
 
 # Env files (never commit secrets)
 .env
+.env.*
+!.env.example
 .env*.local
 
 # TypeScript

@@ -12,6 +12,7 @@ import {
   SPEECH_START_OFFSET_SEC,
 } from "./video-engine-v3.ts";
 import { evaluateGsapSceneTimeline } from "./gsap-timeline-choreographer.ts";
+import { autoSelectCinematicPresetForTopic } from "./cinematic-presets.ts";
 
 /* ============================================================================
    FAJREZZZ AI OFFICE — V3 TIKTOK AI AGENT & CLAUDE CODE MOTION ENGINE
@@ -213,13 +214,11 @@ export function resolveVisualStyle(
   textHint: string
 ): VisualStyleId {
   if (explicit && VALID_STYLES.includes(explicit)) return explicit;
-  const low = textHint.toLowerCase();
-  if (/breaking|resmi|rilis|update|baru|openai|anthropic/.test(low)) return "high_energy_news";
-  if (/tutorial|cara|step|panduan|belajar|install/.test(low)) return "clean_tutorial";
-  if (/multi-agent|network|orkestrasi|virtual|karyawan/.test(low)) return "agent_3d_network";
-  if (/cyber|hack|terminal|cli|github/.test(low)) return "cyberpunk_dev";
-  if (/mitos|fakta|vs|perbandingan|eksperimen/.test(low)) return "tech_documentary";
-  return "dark_ai_cinematic";
+  const presetMatch = textHint.match(/Style:\s*([a-z0-9_]+)/i);
+  if (presetMatch && VALID_STYLES.includes(presetMatch[1] as VisualStyleId)) {
+    return presetMatch[1] as VisualStyleId;
+  }
+  return autoSelectCinematicPresetForTopic(textHint).mappedVisualStyle;
 }
 
 function chooseSceneTemplate(

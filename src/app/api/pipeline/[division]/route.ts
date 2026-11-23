@@ -411,6 +411,7 @@ Hasilkan tepat 5 ide TikTok 9:16 tentang AI Agent / Claude Code yang tajam, fakt
       const llm = await callFreeTierLLM<{
         ideas?: Array<Partial<ResearchIdeaItem> & { sourceIndex?: number }>;
       }>({
+        taskType: "research",
         systemPrompt,
         userPrompt,
         expectJson: true,
@@ -528,6 +529,7 @@ Ide Episode: ${JSON.stringify(input.idea)}
 Buat metadata TikTok Bahasa Indonesia yang profesional, informatif, dan non-spammy.`;
 
       const llm = await callFreeTierLLM<Partial<SeoOutput>>({
+        taskType: "classification",
         systemPrompt,
         userPrompt,
         expectJson: true,
@@ -666,6 +668,7 @@ ${JSON.stringify((input.previousSummaries ?? []).slice(0, 6))}
 Tulis storyboard lengkap 5-6 adegan (total 28-48 detik) dengan variasi template visual & transisi antar-adegan yang presisi.`;
 
       const llm = await callFreeTierLLM<Partial<ScriptOutput>>({
+        taskType: "creative_script",
         systemPrompt,
         userPrompt,
         expectJson: true,
@@ -827,6 +830,7 @@ Tulis storyboard lengkap 5-6 adegan (total 28-48 detik) dengan variasi template 
         editorialNote?: string;
         concerns?: string[];
       }>({
+        taskType: "fast",
         systemPrompt: `Anda adalah Auditor QC Konten TikTok AI Technology profesional. Evaluasi kejelasan informasi, kejujuran klaim teknis, dan anti-clickbait secara objektif.
 Balas HANYA JSON: { "policySafe": true/false, "editorialNote": "catatan singkat 1-2 kalimat", "concerns": [] }`,
         userPrompt: `Judul: ${input.title}
