@@ -3,7 +3,7 @@ import {
   callCentralAIRouter,
   classifyAiTask,
   classifyProviderError,
-  describeErrorClass,
+  describeProviderError,
   getConfiguredProvidersStatus,
   isProviderConfigured,
   summarizeProviderFailures,
@@ -105,6 +105,13 @@ export async function POST(request: Request) {
     } else {
       const lastFailure = [...res.attempts].reverse().find((a) => !a.ok);
       const errorClass = classifyProviderError(lastFailure?.status, lastFailure?.error ?? res.error);
+      // v9.4c — pesan 429 kuota gratis harian tidak boleh terbaca "key rusak".
+      const detail = describeProviderError(
+        lastFailure?.status,
+        [lastFailure?.error, res.error, ...(res.attempts ?? []).map((a) => a.error ?? "")]
+          .filter(Boolean)
+          .join(" | ")
+      );
       results.push({
         provider,
         configured: true,
@@ -115,7 +122,7 @@ export async function POST(request: Request) {
         replyPreview: null,
         error: res.error,
         errorClass,
-        errorHint: describeErrorClass(errorClass),
+        errorHint: detail.hint,
         attempts: res.attempts,
       });
     }

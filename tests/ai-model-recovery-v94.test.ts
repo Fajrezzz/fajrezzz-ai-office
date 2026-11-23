@@ -5,7 +5,12 @@ import test from "node:test";
 import {
   callGeminiNative,
   classifyProviderError,
+  cooldownMsForFailure,
   describeErrorClass,
+  describeProviderError,
+  isDailyFreeQuotaError,
+  isKnownBogusModel,
+  OPENROUTER_FREE_MODELS,
   isTransientErrorClass,
   getRouterTelemetrySnapshot,
   isModelDeprecated,
@@ -177,9 +182,10 @@ test("v9.4: telemetry menyertakan model mati + env var pengganti model", () => {
   resetDeprecatedModels();
 });
 
-test("v9.4: router mencoba model live SETELAH model kurasi & melewati model mati", () => {
+test("v9.4c: router memakai model live DULU & melewati model mati", () => {
   const source = read("src/lib/ai/llm-provider.ts");
-  assert.match(source, /const merged = \[\.\.\.modelsToTry, \.\.\.liveModels\];/);
+  // v9.4c: discovery diambil sebelum kandidat disusun (dulu ditambahkan di belakang)
+  assert.match(source, /resolveProviderModels\(target\.provider, liveModels\)/);
   assert.match(source, /if \(modelMissing\) \{\s*markModelDeprecated\(target\.provider, model\);/);
   assert.match(source, /target\.provider === "gemini" && modelMissing && apiKey/);
   assert.match(source, /native \$\{native\.status\}/);
@@ -255,4 +261,101 @@ test("v9.4b: panel menampilkan status key sehat + penjelasan error provider sibu
   assert.match(panel, /Cara baca panel ini/);
   assert.match(panel, /Provider sibuk:/);
   assert.match(panel, /bukan kerusakan API key|API key tetap sehat/i);
+});
+
+/* ============================================================================
+ * v9.4c — screenshot 23:31: OpenRouter 0/9 (model :free sudah delist + 429
+ * `free-models-per-day`), Gemini 404 "no longer available to new users".
+ * Inti perbaikan: model LIVE dari /models didahulukan, ID palsu dibuang, dan
+ * kuota gratis HARIAN tidak lagi disamakan dengan "key rusak".
+ * ========================================================================== */
+
+test("v9.4c: `openrouter/free` (ID palsu, selalu 404) tidak pernah dikirim ke provider", () => {
+  assert.equal(isKnownBogusModel("openrouter/free"), true);
+  assert.equal(isKnownBogusModel("meta-llama/llama-3.3-70b-instruct:free"), false);
+  assert.ok(
+    !(OPENROUTER_FREE_MODELS as readonly string[]).includes("openrouter/free"),
+    "daftar statis masih memuat openrouter/free"
+  );
+  const models = resolveProviderModels("openrouter");
+  assert.ok(!models.includes("openrouter/free"));
+  assert.ok(models.every((m) => m.endsWith(":free")));
+});
+
+test("v9.4c: model hasil discovery didahulukan di atas daftar statis", () => {
+  const live = ["qwen/qwen3-235b-a22b:free", "deepseek/deepseek-chat:free"];
+  const models = resolveProviderModels("openrouter", live);
+  assert.deepEqual(models.slice(0, 2), live);
+  assert.ok(models.includes("meta-llama/llama-3.3-70b-instruct:free"));
+  assert.equal(new Set(models).size, models.length);
+
+  const gemini = resolveProviderModels("gemini", ["gemini-3-flash-preview"]);
+  assert.equal(gemini[0], "gemini-3-flash-preview");
+  assert.ok(gemini.includes("gemini-flash-latest"));
+});
+
+test("v9.4c: env override tetap menang di atas discovery & daftar statis", () => {
+  const original = process.env.OPENROUTER_MODEL;
+  process.env.OPENROUTER_MODEL = "some-vendor/model:free";
+  try {
+    const models = resolveProviderModels("openrouter", ["qwen/qwen3-8b:free"]);
+    assert.equal(models[0], "some-vendor/model:free");
+  } finally {
+    if (original === undefined) delete process.env.OPENROUTER_MODEL;
+    else process.env.OPENROUTER_MODEL = original;
+  }
+});
+
+test("v9.4c: 429 `free-models-per-day` dikenali sebagai kuota HARIAN", () => {
+  const msg =
+    'HTTP 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day"}}';
+  assert.equal(isDailyFreeQuotaError(msg), true);
+  assert.equal(isDailyFreeQuotaError("daily quota reached"), true);
+  assert.equal(isDailyFreeQuotaError("This model is currently experiencing high demand"), false);
+  assert.equal(isDailyFreeQuotaError("HTTP 429: too many requests"), false);
+});
+
+test("v9.4c: pesan kuota harian tidak lagi menyebut key bermasalah", () => {
+  const { errorClass, hint } = describeProviderError(
+    429,
+    "Rate limit exceeded: free-models-per-day."
+  );
+  assert.equal(errorClass, "RATE_LIMIT");
+  assert.match(hint, /kuota gratis HARIAN/i);
+  assert.match(hint, /bukan API key rusak/i);
+  assert.match(hint, /1\.000 request\/hari/i);
+  assert.match(hint, /00:00 UTC/);
+
+  // 503 tetap memakai penjelasan "provider sibuk"
+  const overloaded = describeProviderError(503, "This model is experiencing high demand");
+  assert.equal(overloaded.errorClass, "OVERLOADED");
+  assert.match(overloaded.hint, /bukan kerusakan API key/i);
+});
+
+test("v9.4c: cooldown kuota harian 30 menit, transient tetap 8 detik", () => {
+  assert.equal(cooldownMsForFailure("RATE_LIMIT", true), 30 * 60_000);
+  assert.equal(cooldownMsForFailure("RATE_LIMIT", false), 8_000);
+  assert.equal(cooldownMsForFailure("OVERLOADED", false), 8_000);
+  assert.equal(cooldownMsForFailure("KEY_INVALID", false), 5 * 60_000);
+  assert.equal(cooldownMsForFailure("MODEL_GONE", false), 12_000);
+});
+
+test("v9.4c: router berhenti mencoba model lain saat kuota akun habis", () => {
+  const source = read("src/lib/ai/llm-provider.ts");
+  // discovery diambil SEBELUM daftar model disusun (bukan ditambahkan di belakang)
+  assert.match(source, /const liveModels = apiKey[\s\S]{0,120}discoverLiveModels/);
+  assert.match(source, /resolveProviderModels\(target\.provider, liveModels\)/);
+  // kuota harian menghentikan seluruh provider, bukan cuma satu model
+  assert.match(source, /quotaExhaustedForProvider = true/);
+  assert.match(source, /if \(quotaExhaustedForProvider\) break;/);
+  assert.match(source, /CIRCUIT_COOLDOWN_DAILY_QUOTA_MS = 30 \* 60_000/);
+});
+
+test("v9.4c: panel punya badge kuota harian & contoh model per provider", () => {
+  const panel = read("src/components/dashboard/AiRouterMonitoringPanel.tsx");
+  assert.match(panel, /KUOTA HARIAN HABIS/);
+  assert.match(panel, /Kuota gratis harian habis \(bukan key rusak\)/);
+  assert.match(panel, /function modelEnvExample/);
+  assert.match(panel, /function freeModelsPerDay/);
+  assert.match(panel, /1\.000 req\/hari/);
 });

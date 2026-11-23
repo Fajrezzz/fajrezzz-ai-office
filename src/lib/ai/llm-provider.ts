@@ -143,6 +143,8 @@ export interface ProviderHealthMetrics {
   keyHealthy: boolean;
   /** true kalau error terakhir hanya transient (provider sibuk / rate limit). */
   transientOnly: boolean;
+  /** v9.4c — kuota gratis HARIAN provider ini sudah habis (429 free-models-per-day). */
+  dailyQuotaExhausted: boolean;
   /** Model yang dibalas 404 oleh provider (di-skip sementara, 15 menit). */
   deprecatedModels: string[];
   /** Env var untuk mengganti model tanpa deploy (GEMINI_MODEL / GROQ_MODEL / OPENROUTER_MODEL). */
@@ -182,12 +184,28 @@ interface ProviderTarget {
   extraHeaders?: Record<string, string>;
 }
 
+/**
+ * v9.4c — daftar ini hanya CADANGAN, bukan sumber kebenaran.
+ *
+ * Pelajaran dari telemetry Bos: ID model `:free` di OpenRouter cepat sekali
+ * di-delist (llama-3.3-70b-instruct:free, gemma-3-27b-it:free, qwen3-coder:free
+ * semuanya 404), dan `openrouter/free` memang BUKAN ID model yang ada — dia
+ * selalu 404. Router sekarang mengutamakan hasil `discoverLiveModels()`
+ * (GET https://openrouter.ai/api/v1/models) dan baru memakai daftar ini kalau
+ * discovery gagal.
+ */
 export const OPENROUTER_FREE_MODELS = [
-  "openrouter/free",
   "meta-llama/llama-3.3-70b-instruct:free",
   "google/gemma-3-27b-it:free",
   "qwen/qwen3-coder:free",
 ] as const;
+
+/** ID yang dikenal buruk / bukan model nyata — jangan pernah dikirim ke provider. */
+const KNOWN_BOGUS_MODELS = new Set(["openrouter/free"]);
+
+export function isKnownBogusModel(model: string): boolean {
+  return KNOWN_BOGUS_MODELS.has(model.trim().toLowerCase());
+}
 
 const PROVIDER_TARGETS: Record<LlmProviderId, ProviderTarget> = {
   gemini: {
@@ -396,6 +414,21 @@ export function classifyProviderError(
   return "UNKNOWN";
 }
 
+/**
+ * v9.4c — OpenRouter punya 429 khusus: `free-models-per-day`.
+ * Itu BUKAN rate limit detik-an dan BUKAN key rusak; kuota gratis HARIAN
+ * sudah habis dan baru pulih saat kuota reset (00:00 UTC) — atau langsung
+ * naik ke 1.000 req/hari kalau akun pernah beli ≥10 kredit.
+ */
+export function isDailyFreeQuotaError(message: string): boolean {
+  const msg = message || "";
+  return (
+    /free-models-per-day/i.test(msg) ||
+    /free model requests per (day|24 ?h)/i.test(msg) ||
+    /daily (free )?quota/i.test(msg)
+  );
+}
+
 /** Error yang wajar terjadi sesaat (bukan tanda API key rusak). */
 export function isTransientErrorClass(cls: ProviderErrorClass): boolean {
   return cls === "OVERLOADED" || cls === "RATE_LIMIT" || cls === "TIMEOUT";
@@ -419,6 +452,28 @@ export function describeErrorClass(cls: ProviderErrorClass): string {
   }
 }
 
+/**
+ * Keterangan lengkap (kelas + kalimat manusiawi) untuk satu kegagalan provider.
+ * Dipakai panel telemetry & endpoint Tes Live Provider supaya pesan 429 kuota
+ * harian tidak lagi dibaca sebagai "API key rusak".
+ */
+export function describeProviderError(
+  status: number | undefined,
+  message: string
+): { errorClass: ProviderErrorClass; hint: string } {
+  const errorClass = classifyProviderError(status, message);
+  if (errorClass === "RATE_LIMIT" && isDailyFreeQuotaError(message)) {
+    return {
+      errorClass,
+      hint:
+        "Kuota gratis HARIAN provider ini sudah habis (bukan API key rusak, bukan limit per detik). " +
+        "Pulih sendiri saat kuota reset (00:00 UTC) — atau langsung naik limitnya di OpenRouter " +
+        "dengan membeli kredit ≥10 USD (kuota gratis jadi 1.000 request/hari).",
+    };
+  }
+  return { errorClass, hint: describeErrorClass(errorClass) };
+}
+
 /** Pesan provider yang menandakan model tidak ada / sudah dipensiunkan. */
 export function isModelNotFoundError(status: number | undefined, message: string): boolean {
   return classifyProviderError(status, message) === "MODEL_GONE";
@@ -426,18 +481,28 @@ export function isModelNotFoundError(status: number | undefined, message: string
 
 /**
  * Daftar model yang dipakai router untuk satu provider.
- * Urutan: env override (kalau ada) → alias stabil → model statis lama.
- * OpenRouter tetap dijaga hanya model `:free`.
+ *
+ * v9.4c — urutan berubah: env override → model LIVE dari discovery → model
+ * statis. Dulu statis didahulukan, akibatnya router menghabiskan seluruh
+ * jatah percobaan ke nama model yang sudah pensiun (404) sebelum menyentuh
+ * model yang benar-benar hidup.
  */
-export function resolveProviderModels(provider: LlmProviderId): string[] {
+export function resolveProviderModels(
+  provider: LlmProviderId,
+  discovered: string[] = []
+): string[] {
   const envName = MODEL_ENV[provider];
   const fromEnv = (process.env[envName] ?? "")
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
-  const base = fromEnv.length > 0 ? fromEnv : [...PROVIDER_TARGETS[provider].models];
-  const filtered =
-    provider === "openrouter" ? base.filter((m) => isOpenRouterFreeModel(m)) : base;
+  const curated = [...PROVIDER_TARGETS[provider].models];
+  // Env override = pengganti penuh (Bos yang menentukan), bukan tambahan.
+  const ordered =
+    fromEnv.length > 0 ? fromEnv : [...discovered.filter(Boolean), ...curated];
+  const filtered = ordered
+    .filter((m) => !isKnownBogusModel(m))
+    .filter((m) => (provider === "openrouter" ? isOpenRouterFreeModel(m) : true));
   return [...new Set(filtered)];
 }
 
@@ -569,9 +634,29 @@ const DISCOVERY_ENDPOINTS: Record<LlmProviderId, string> = {
 
 /** Urutan prioritas model murah/cepat per provider saat discovery berhasil. */
 const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
-  gemini: [/flash-latest/i, /gemini-2\.5-flash-lite/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /flash/i],
+  // v9.4c — generasi terbaru lebih dulu. Gemini 2.5 sudah "no longer available
+  // to new users" untuk project baru, jadi jangan taruh di depan lagi.
+  gemini: [
+    /gemini-3(\.\d+)?[^:]*flash(?!-lite)/i,
+    /flash-latest/i,
+    /flash(?!-lite)/i,
+    /flash/i,
+    /gemini-2\.5-flash/i,
+    /gemini-2\.0-flash/i,
+  ],
   groq: [/gpt-oss-120b/i, /qwen3?/i, /qwen/i, /llama-3\.3-70b/i, /llama-3\.1-8b/i, /llama/i],
-  openrouter: [/llama-3\.3-70b[^:]*:free/i, /gemma-3[^:]*:free/i, /qwen[^:]*:free/i, /:free/i],
+  // v9.4c — jangan terpaku llama/gemma yang sudah di-delist; pilih :free yang
+  // benar-benar muncul di /models, dengan model instruksi besar didahulukan.
+  openrouter: [
+    /gpt-oss-120b[^:]*:free/i,
+    /qwen3[^:]*instruct[^:]*:free/i,
+    /qwen3[^:]*:free/i,
+    /deepseek[^:]*:free/i,
+    /llama-3\.3-70b[^:]*:free/i,
+    /gemma-3[^:]*:free/i,
+    /instruct[^:]*:free/i,
+    /:free/i,
+  ],
 };
 
 function scoreDiscoveredModel(provider: LlmProviderId, model: string): number {
@@ -752,6 +837,25 @@ const CIRCUIT_COOLDOWN_MS = 45_000;
 const CIRCUIT_COOLDOWN_TRANSIENT_MS = 8_000;
 const CIRCUIT_COOLDOWN_KEY_INVALID_MS = 5 * 60_000;
 const CIRCUIT_COOLDOWN_MODEL_GONE_MS = 12_000;
+/**
+ * v9.4c — kuota gratis HARIAN habis. Mengulang tiap 8 detik cuma membuang
+ * waktu serverless (dan menutupi provider lain yang sebenarnya sehat), jadi
+ * provider diistirahatkan 30 menit. Tetap < 1 hari supaya otomatis pulih
+ * begitu kuota reset (00:00 UTC) tanpa perlu redeploy.
+ */
+const CIRCUIT_COOLDOWN_DAILY_QUOTA_MS = 30 * 60_000;
+
+/** Lama cooldown untuk satu kelas kegagalan (dipisah supaya bisa diuji). */
+export function cooldownMsForFailure(
+  errorClass: ProviderErrorClass,
+  dailyQuotaExhausted = false
+): number {
+  if (dailyQuotaExhausted) return CIRCUIT_COOLDOWN_DAILY_QUOTA_MS;
+  if (errorClass === "KEY_INVALID") return CIRCUIT_COOLDOWN_KEY_INVALID_MS;
+  if (errorClass === "MODEL_GONE") return CIRCUIT_COOLDOWN_MODEL_GONE_MS;
+  if (isTransientErrorClass(errorClass)) return CIRCUIT_COOLDOWN_TRANSIENT_MS;
+  return CIRCUIT_COOLDOWN_MS;
+}
 const CACHE_TTL_MS = 5 * 60_000;
 const MAX_CACHE_ENTRIES = 64;
 const MAX_SAFE_TOKEN_BUDGET = 4096;
@@ -776,6 +880,7 @@ interface InternalProviderState {
   rateLimitReset: string | null;
   lastErrorClass: ProviderErrorClass | null;
   everRejectedKey: boolean;
+  dailyQuotaExhausted: boolean;
 }
 
 interface CacheRecord {
@@ -810,6 +915,7 @@ function createInitialProviderState(defaultModel: string): InternalProviderState
     rateLimitReset: null,
     lastErrorClass: null,
     everRejectedKey: false,
+    dailyQuotaExhausted: false,
   };
 }
 
@@ -890,6 +996,7 @@ function recordProviderSuccess(
   st.lastLatencyMs = durationMs;
   st.totalTokens += usage.totalTokens;
   st.lastError = null;
+  st.dailyQuotaExhausted = false;
   const nowIso = new Date().toISOString();
   st.lastSuccessAt = nowIso;
   st.lastCheckedAt = nowIso;
@@ -910,11 +1017,13 @@ function recordProviderFailure(
   durationMs: number,
   errorMsg: string,
   isRateLimit: boolean,
-  status?: number
+  status?: number,
+  dailyQuotaExhausted = false
 ): void {
   const st = providerStates[provider];
   const safeMsg = sanitizeErrorMessage(errorMsg);
   const errorClass = classifyProviderError(status, safeMsg);
+  const quotaGone = dailyQuotaExhausted || isDailyFreeQuotaError(safeMsg);
 
   st.failureCount += 1;
   st.consecutiveFailures += 1;
@@ -922,20 +1031,13 @@ function recordProviderFailure(
   st.lastErrorClass = errorClass;
   if (isRateLimit || errorClass === "RATE_LIMIT") st.rateLimitHits += 1;
   if (errorClass === "KEY_INVALID") st.everRejectedKey = true;
+  if (quotaGone) st.dailyQuotaExhausted = true;
   st.lastError = safeMsg;
   st.lastCheckedAt = new Date().toISOString();
 
   if (st.consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
     st.circuitState = "OPEN";
-    const cooldown =
-      errorClass === "KEY_INVALID"
-        ? CIRCUIT_COOLDOWN_KEY_INVALID_MS
-        : errorClass === "MODEL_GONE"
-          ? CIRCUIT_COOLDOWN_MODEL_GONE_MS
-          : isTransientErrorClass(errorClass)
-            ? CIRCUIT_COOLDOWN_TRANSIENT_MS
-            : CIRCUIT_COOLDOWN_MS;
-    st.circuitOpenedUntilMs = Date.now() + cooldown;
+    st.circuitOpenedUntilMs = Date.now() + cooldownMsForFailure(errorClass, quotaGone);
   }
 }
 
@@ -983,15 +1085,20 @@ export function getRouterTelemetrySnapshot(): RouterTelemetrySnapshot {
       rateLimitRemaining: st.rateLimitRemaining,
       rateLimitReset: st.rateLimitReset,
       lastErrorClass: st.lastErrorClass,
-      lastErrorHuman: st.lastErrorClass ? describeErrorClass(st.lastErrorClass) : null,
+      lastErrorHuman: st.lastErrorClass
+        ? st.dailyQuotaExhausted
+          ? describeProviderError(429, "free-models-per-day").hint
+          : describeErrorClass(st.lastErrorClass)
+        : null,
       keyHealthy: !st.everRejectedKey,
       transientOnly:
         st.failureCount > 0 &&
         st.successCount === 0 &&
         (st.lastErrorClass === null || isTransientErrorClass(st.lastErrorClass)),
+      dailyQuotaExhausted: st.dailyQuotaExhausted,
       deprecatedModels: getDeprecatedModels(id).map((entry) => entry.split(":").slice(1).join(":")),
       modelEnvVar: MODEL_ENV[id],
-      preferredModels: resolveProviderModels(id),
+      preferredModels: resolveProviderModels(id, LIVE_MODEL_CACHE.get(id)?.models ?? []),
     };
   });
 
@@ -1359,11 +1466,22 @@ export async function callCentralAIRouter<T = unknown>(
 
       const apiKey = target.envVar ? process.env[target.envVar]?.trim() ?? "" : "";
 
-      // Resolve candidate models for this provider (env override > alias stabil > statis)
+      /*
+       * v9.4c — urutan kandidat model dibalik: env override → model LIVE dari
+       * `/models` provider → daftar statis sebagai cadangan.
+       *
+       * Kenapa: daftar statis cepat basi. Telemetry Bos menunjukkan OpenRouter
+       * dibombardir 404 (llama-3.3:free, gemma-3:free, qwen3-coder:free) dan
+       * Gemini 2.5-flash "no longer available to new users", sehingga router
+       * menghabiskan seluruh jatah percobaan sebelum menyentuh model hidup.
+       */
+      const liveModels = apiKey
+        ? await discoverLiveModels(target.provider, apiKey, fetchImpl)
+        : [];
       let modelsToTry =
         preferredProvider === target.provider && preferredModel
           ? [preferredModel]
-          : resolveProviderModels(target.provider);
+          : resolveProviderModels(target.provider, liveModels);
 
       if (target.provider === "openrouter" && !allowPaidOpenRouter) {
         modelsToTry = modelsToTry.filter((m) => isOpenRouterFreeModel(m));
@@ -1375,23 +1493,24 @@ export async function callCentralAIRouter<T = unknown>(
       );
       modelsToTry = modelsToTry.filter((m) => !isModelDeprecated(target.provider, m));
 
-      // Model statis bisa sudah di-deprecate. Tambahkan model live dari /models
-      // SETELAH daftar pilihan utama supaya kurasi kita tetap diutamakan.
-      if (apiKey) {
-        const liveModels = await discoverLiveModels(target.provider, apiKey, fetchImpl);
-        if (liveModels.length > 0) {
-          const merged = [...modelsToTry, ...liveModels];
-          modelsToTry = [...new Set(merged)].slice(0, 6);
-        }
-      }
-
       // Semua kandidat pernah 404 → tetap coba satu (mungkin 404-nya sementara),
       // dan catat ke telemetry supaya Bos tahu harus set env model.
       if (modelsToTry.length === 0) {
-        modelsToTry = (deprecatedHere.length > 0 ? deprecatedHere : resolveProviderModels(target.provider)).slice(0, 1);
+        modelsToTry = (
+          deprecatedHere.length > 0
+            ? deprecatedHere
+            : resolveProviderModels(target.provider, liveModels)
+        ).slice(0, 1);
+      } else {
+        modelsToTry = modelsToTry.slice(0, 6);
       }
 
+      // v9.4c — kuota gratis harian sifatnya per AKUN, bukan per model.
+      // Begitu kena, semua kandidat model lain akan kena hal yang sama.
+      let quotaExhaustedForProvider = false;
+
       for (let mIdx = 0; mIdx < modelsToTry.length; mIdx += 1) {
+        if (quotaExhaustedForProvider) break;
         const model = modelsToTry[mIdx];
         // 1 retry untuk 5xx/429 (server gratis kadang antre sesaat), 0 untuk error non-transien.
         // Dibatasi supaya total waktu tetap di bawah batas fungsi serverless.
@@ -1525,12 +1644,14 @@ export async function callCentralAIRouter<T = unknown>(
                 markModelDeprecated(target.provider, model);
               }
 
+              const dailyQuotaGone = isDailyFreeQuotaError(shortErr);
               recordProviderFailure(
                 target.provider,
                 durationMs,
                 `HTTP ${res.status}: ${shortErr}`,
                 isRateLimit,
-                res.status
+                res.status,
+                dailyQuotaGone
               );
 
               attempts.push({
@@ -1542,6 +1663,16 @@ export async function callCentralAIRouter<T = unknown>(
                 rateLimited: isRateLimit,
                 error: `HTTP ${res.status}: ${shortErr}`,
               });
+
+              /*
+               * v9.4c — 429 kuota gratis HARIAN (OpenRouter `free-models-per-day`).
+               * Model lain di akun yang sama pasti kena juga, jadi jangan
+               * buang waktu: hentikan provider ini, biarkan router pindah.
+               */
+              if (dailyQuotaGone) {
+                quotaExhaustedForProvider = true;
+                break;
+              }
 
               /*
                * Retry hanya untuk gangguan yang benar-benar sesaat.
@@ -1668,12 +1799,21 @@ export async function callCentralAIRouter<T = unknown>(
     totalFailures += 1;
 
     if (sawRateLimit) {
+      const quotaProviders = (["gemini", "groq", "openrouter"] as LlmProviderId[])
+        .filter((id) => providerStates[id].dailyQuotaExhausted)
+        .map((id) => PROVIDER_TARGETS[id].label);
       return {
         ok: false,
         code: "ALL_PROVIDERS_RATE_LIMITED",
         error:
-          "Seluruh provider AI sedang terkena rate limit sementara (HTTP 429).",
-        hint: "Tunggu 15–30 detik lalu coba lagi, atau pastikan GEMINI_API_KEY, GROQ_API_KEY, dan OPENROUTER_API_KEY aktif di Vercel.",
+          quotaProviders.length > 0
+            ? `Kuota gratis HARIAN habis: ${quotaProviders.join(", ")} (HTTP 429).`
+            : "Seluruh provider AI sedang terkena rate limit sementara (HTTP 429).",
+        hint:
+          quotaProviders.length > 0
+            ? "Ini bukan API key rusak. Kuota gratis harian pulih sendiri saat reset (00:00 UTC); " +
+              "di OpenRouter limit naik ke 1.000 request/hari kalau akun pernah membeli kredit ≥10 USD."
+            : "Tunggu 15–30 detik lalu coba lagi, atau pastikan GEMINI_API_KEY, GROQ_API_KEY, dan OPENROUTER_API_KEY aktif di Vercel.",
         httpStatus: 429,
         attempts,
         taskClassification: classification,

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Bot,
   CheckCircle2,
+  Clock,
   Cpu,
   ExternalLink,
   FlaskConical,
@@ -23,6 +24,29 @@ import type {
   RouterTelemetrySnapshot,
 } from "@/lib/ai/llm-provider";
 import type { AutonomousTaskExecutionReport } from "@/lib/ai/autonomous-agent-engine";
+
+/**
+ * v9.4c — contoh nama model yang benar per provider. Sebelumnya panel selalu
+ * menyarankan `gemini-flash-latest`, bahkan untuk OpenRouter (salah alamat).
+ */
+function modelEnvExample(provider: string): string {
+  switch (provider) {
+    case "gemini":
+      return "gemini-flash-latest";
+    case "groq":
+      return "openai/gpt-oss-120b";
+    case "openrouter":
+      return "lihat model :free yang masih hidup di openrouter.ai/models";
+    default:
+      return "nama model dari halaman /models provider";
+  }
+}
+
+/** 429 kuota gratis harian (OpenRouter `free-models-per-day`) — bukan key rusak. */
+function freeModelsPerDay(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return /free-models-per-day|free model requests per (day|24 ?h)|daily (free )?quota/i.test(text);
+}
 
 interface AiStatusApiResponse {
   ok: boolean;
@@ -487,18 +511,26 @@ export function AiRouterMonitoringPanel() {
                 </div>
               )}
 
+              {p.dailyQuotaExhausted && (
+                <div className="mt-1 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-200">
+                  <Clock className="h-3 w-3" /> KUOTA HARIAN HABIS
+                </div>
+              )}
+
               {p.lastErrorHuman && p.lastErrorClass && (
                 <div className="mt-2 rounded-lg border border-slate-500/25 bg-slate-900/60 px-2 py-1.5 text-[10px] text-slate-200">
                   <strong className="font-bold text-white">
-                    {p.lastErrorClass === "OVERLOADED"
-                      ? "Provider sibuk:"
-                      : p.lastErrorClass === "RATE_LIMIT"
-                        ? "Kuota sementara habis:"
-                        : p.lastErrorClass === "MODEL_GONE"
-                          ? "Nama model tidak ada:"
-                          : p.lastErrorClass === "KEY_INVALID"
-                            ? "Key ditolak:"
-                            : "Error:"}
+                    {p.dailyQuotaExhausted
+                      ? "Kuota gratis harian habis (bukan key rusak):"
+                      : p.lastErrorClass === "OVERLOADED"
+                        ? "Provider sibuk:"
+                        : p.lastErrorClass === "RATE_LIMIT"
+                          ? "Kuota sementara habis:"
+                          : p.lastErrorClass === "MODEL_GONE"
+                            ? "Nama model tidak ada:"
+                            : p.lastErrorClass === "KEY_INVALID"
+                              ? "Key ditolak:"
+                              : "Error:"}
                   </strong>{" "}
                   {p.lastErrorHuman}
                 </div>
@@ -553,7 +585,11 @@ export function AiRouterMonitoringPanel() {
                     model pengganti. Router otomatis pindah model. Kalau perlu ganti permanen,
                     set{" "}
                     <code className="font-mono font-bold">{p.modelEnvVar}</code> di Vercel
-                    (contoh: <code className="font-mono">gemini-flash-latest</code>).
+                    (contoh: <code className="font-mono">{modelEnvExample(p.provider)}</code>).
+                    <br />
+                    Router juga sudah otomatis memakai daftar model <em>live</em> dari{" "}
+                    <code className="font-mono">/models</code> provider, jadi nama basi seperti
+                    daftar di atas tidak dicoba lagi.
                   </span>
                 </div>
               )}
@@ -564,9 +600,15 @@ export function AiRouterMonitoringPanel() {
                   title={p.lastError}
                 >
                   <span className="line-clamp-2 break-words">Last error: {p.lastError}</span>
-                  {/\b404\b|not found|is not supported/i.test(p.lastError) && (
+                  {/\b(404)\b|not found|is not supported/i.test(p.lastError) && (
                     <span className="mt-1 block font-semibold text-amber-200">
                       Model ini tidak dikenali provider → lihat catatan model 404 di atas.
+                    </span>
+                  )}
+                  {freeModelsPerDay(p.lastError) && (
+                    <span className="mt-1 block font-semibold text-amber-200">
+                      Kuota gratis harian habis (429) — bukan key rusak. Reset 00:00 UTC atau
+                      beli kredit ≥10 USD di OpenRouter untuk 1.000 req/hari.
                     </span>
                   )}
                 </div>

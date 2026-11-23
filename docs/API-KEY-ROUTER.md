@@ -219,3 +219,35 @@ Tambahan v9.4b:
 - Hasil **Tes Live Provider** kini menyertakan kelas error + saran perbaikan di bawah nama model.
 
 Dijaga `tests/ai-model-recovery-v94.test.ts` (16 tes).
+
+---
+
+## 11. Kuota gratis HARIAN habis (429 `free-models-per-day`) — v9.4c
+
+Screenshot 23:31 menunjukkan OpenRouter `0/9` dengan dua sebab yang **berbeda**:
+
+1. **Nama model basi (404)** — `meta-llama/llama-3.3-70b-instruct:free`,
+   `google/gemma-3-27b-it:free`, `qwen/qwen3-coder:free` sudah di-delist OpenRouter,
+   dan `openrouter/free` memang **bukan ID model** (selalu 404). ID palsu itu sudah dibuang.
+2. **Kuota harian habis (429)** —
+   `Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day`.
+
+Kuota gratis OpenRouter dihitung **per hari per akun**, bukan per detik dan bukan per model:
+kalau habis, semua model `:free` ikut kena sampai reset (00:00 UTC). Menambah kredit ≥10 USD
+menaikkan jatah menjadi 1.000 request/hari. **Ini bukan kerusakan API key.**
+
+### Yang diubah di kode (v9.4c)
+
+| Sebelum | Sesudah |
+| --- | --- |
+| Kandidat model: daftar statis dulu, hasil `/models` ditambahkan di belakang | **Hasil `/models` (live) didahulukan**, daftar statis hanya cadangan |
+| `openrouter/free` ikut dikirim → selalu 404 | ID palsu dibuang (`isKnownBogusModel`) |
+| 429 kuota harian diperlakukan seperti rate limit biasa → dicoba ke semua model | Begitu kena, provider **dihentikan** (kuota milik akun, bukan model) |
+| Cooldown 8 detik untuk semua 429 | Kuota harian → cooldown **30 menit**; gangguan sesaat tetap 8 detik |
+| Panel menulis "kuota sementara habis" | Badge **KUOTA HARIAN HABIS** + saran reset 00:00 UTC / 10 kredit |
+| Saran env di panel selalu `gemini-flash-latest` (juga untuk OpenRouter) | Contoh per provider (`modelEnvExample`) |
+
+Provider yang circuit-nya terbuka karena kuota harian **tidak dikunci sehari penuh** — 30 menit,
+supaya otomatis pulih setelah kuota reset tanpa perlu redeploy.
+
+Dijaga `tests/ai-model-recovery-v94.test.ts` (24 tes, 8 di antaranya v9.4c).
