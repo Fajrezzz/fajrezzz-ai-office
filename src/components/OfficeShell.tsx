@@ -10,6 +10,7 @@ import { RealResultsDashboard } from "@/components/dashboard/RealResultsDashboar
 import { KidsStudioPanel } from "@/components/kids/KidsStudioPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
 import { OfficeProvider, useOffice } from "@/store/OfficeContext";
+import { SimulatorProvider } from "@/store/SimulatorContext";
 import { AgencyProvider, useAgency } from "@/store/AgencyContext";
 import { PIPELINE_DIVISIONS } from "@/types/pipeline";
 
@@ -97,9 +98,11 @@ function OfficeWorkspace() {
 export function OfficeShell() {
   return (
     <OfficeProvider>
-      <AgencyProvider>
-        <OfficeWorkspace />
-      </AgencyProvider>
+      <SimulatorProvider>
+        <AgencyProvider>
+          <OfficeWorkspace />
+        </AgencyProvider>
+      </SimulatorProvider>
     </OfficeProvider>
   );
 }
