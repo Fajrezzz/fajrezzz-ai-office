@@ -250,10 +250,10 @@ Diubah:
 
 ## L. Commit terbaru
 
-- Commit fitur (kode + tes + dashboard + seluruh bukti run): **`9ba2a9b`**
-  ("feat(studio): v10 topic intelligence, creative blueprint, script audit, dan audit skill
-  berbasis bukti").
-- Commit laporan (angka SHA di bagian ini): **`81f32fe`**.
+- PR #30 (mesin topik/blueprint/naskah/audit skill): merge `abee999`, commit `9ba2a9b` + `81f32fe` + `c25fc56`.
+- **PR ini (render MP4 nyata + verifikasi ffprobe): `bb47cb8`** — branch
+  `arena/238496d9-fajrezzz-ai-office`.
+- Basis PR ini: `abee999` (merge #30). Merge ke `main` menunggu izin Bos.
 - Basis: `8313262` (merge PR #29). Branch `arena/e690331b-fajrezzz-ai-office` **belum di-merge**
   ke `main`; merge menunggu izin Bos.
 
