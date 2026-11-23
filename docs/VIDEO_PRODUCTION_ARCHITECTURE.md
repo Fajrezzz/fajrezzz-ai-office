@@ -114,3 +114,9 @@ Preview cepat tanpa browser (memakai `@napi-rs/canvas`):
 npm run preview:zine -- "KANTOR AI INI KERJA SENDIRI"
 # → .zine-preview/*.png (7 frame: hook, transisi, artwork, scene hitam, CTA)
 ```
+
+Contoh hasil (frame hook, artwork B-roll, dan scene dominan hitam):
+
+![Hook zine](../docs/preview/zine-hook.png)
+![Artwork B-roll kolase](../docs/preview/zine-artwork.png)
+![Scene dominan hitam](../docs/preview/zine-black-scene.png)
