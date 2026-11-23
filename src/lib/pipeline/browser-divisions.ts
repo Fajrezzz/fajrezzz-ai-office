@@ -22,6 +22,11 @@ import {
 } from "@/lib/pipeline/video-engine-v3";
 import { trimAudioBufferDeadAir } from "@/lib/pipeline/auto-editor-pacing";
 import {
+  detectSpeechSegments,
+  planUploadedTimeline,
+  type UploadedTimelinePlan,
+} from "@/lib/pipeline/uploaded-audio-plan";
+import {
   fetchEpisodeBRollImages,
   getCachedSceneBRoll,
 } from "@/lib/pipeline/scene-broll-client";
@@ -36,6 +41,23 @@ import type {
   SceneVoiceTrack,
   VoiceOutput,
 } from "@/types/pipeline";
+
+/** Potong AudioBuffer [startSec, endSec) jadi buffer mandiri (tanpa AudioContext). */
+function sliceAudioBuffer(buffer: AudioBuffer, startSec: number, endSec: number): AudioBuffer {
+  const rate = buffer.sampleRate;
+  const start = Math.max(0, Math.floor(startSec * rate));
+  const end = Math.min(buffer.length, Math.ceil(endSec * rate));
+  const length = Math.max(1, end - start);
+  const out = new AudioBuffer({
+    length,
+    sampleRate: rate,
+    numberOfChannels: buffer.numberOfChannels,
+  });
+  for (let ch = 0; ch < buffer.numberOfChannels; ch += 1) {
+    out.copyToChannel(buffer.getChannelData(ch).slice(start, end), ch);
+  }
+  return out;
+}
 
 /**
  * DIVISI 4 — SUARA (Modern Natural Indonesian Neural Human Voice via `/api/tts`
@@ -461,6 +483,12 @@ export async function runEditingDivisionBrowser(
   options?: {
     qualityPreset?: ExportQualityPreset;
     signal?: AbortSignal;
+    /**
+     * Rekaman suara Bos sendiri (fallback "edit dari audio"). Kalau diisi,
+     * TTS neural tidak dipanggil sama sekali: rekaman dipotong per adegan
+     * mengikuti jeda hening, lalu frame zine episodenya tetap dipakai.
+     */
+    voiceTrack?: AudioBuffer | null;
   }
 ): Promise<{ output: EditingOutput; videoBlob: Blob }> {
   void _format;
@@ -475,55 +503,82 @@ export async function runEditingDivisionBrowser(
 
   const preset: ExportQualityPreset = options?.qualityPreset ?? "ultra";
 
-  // 1. Fetch & decode every scene's real Indonesian neural MP3 for 0ms-drift sample-accurate timing!
-  const sceneClips = await Promise.all(
-    baseEditorial.scenes.map(
-      (sc) =>
-        getCachedNeuralClip(sc.narration, "ardi") ??
-        fetchNeuralSpeechClip(sc.narration, "ardi")
-    )
-  );
+  const uploadedVoice = options?.voiceTrack ?? null;
 
-  const AudioCtx =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  let decodedBuffers: Array<AudioBuffer | null> = [];
+  let exactDurations: Array<number | null> = [];
+  let uploadedPlan: UploadedTimelinePlan | null = null;
 
-  const decodedBuffers: Array<AudioBuffer | null> = [];
-  if (AudioCtx) {
-    const decodeCtx = new AudioCtx();
-    try {
-      for (const clip of sceneClips) {
-        if (!clip) {
-          decodedBuffers.push(null);
-          continue;
-        }
-        try {
-          const arr = await clip.blob.arrayBuffer();
-          const rawBuf = await decodeCtx.decodeAudioData(arr.slice(0));
-          // Smart PCM dead-air silence trimming before timeline lock (auto-editor pacing!)
-          decodedBuffers.push(
-            trimAudioBufferDeadAir(decodeCtx, rawBuf, {
-              thresholdDb: -40,
-              marginSec: 0.06,
-            }).buffer
-          );
-        } catch {
-          decodedBuffers.push(null);
-        }
-      }
-    } finally {
-      await decodeCtx.close().catch(() => {});
-    }
+  if (uploadedVoice && uploadedVoice.duration > 0.5) {
+    // === MODE "EDIT DARI AUDIO": rekaman Bos jadi voice track ===
+    // 1. Deteksi bagian bersuara → titik potong aman (tidak memotong kata).
+    const mono = uploadedVoice.getChannelData(0);
+    const segments = detectSpeechSegments(mono, uploadedVoice.sampleRate);
+    uploadedPlan = planUploadedTimeline({
+      durationSec: uploadedVoice.duration,
+      sceneTexts: baseEditorial.scenes.map((sc) => sc.narration || sc.onScreenText || ""),
+      segments,
+    });
+
+    // 2. Potong rekaman per adegan sesuai plan (bukan per kalimat TTS).
+    //    cutsSec = N titik (cut terakhir = durasi rekaman) → N potongan, bukan N−1.
+    const cuts = uploadedPlan.cutsSec;
+    decodedBuffers = uploadedPlan.durationsSec.map((_, idx) =>
+      sliceAudioBuffer(uploadedVoice, idx === 0 ? 0 : cuts[idx - 1], cuts[idx])
+    );
+    exactDurations = decodedBuffers.map((buf) => (buf ? buf.duration : null));
   } else {
-    sceneClips.forEach(() => decodedBuffers.push(null));
+    // 1. Fetch & decode every scene's real Indonesian neural MP3 for 0ms-drift sample-accurate timing!
+    const sceneClips = await Promise.all(
+      baseEditorial.scenes.map(
+        (sc) =>
+          getCachedNeuralClip(sc.narration, "ardi") ??
+          fetchNeuralSpeechClip(sc.narration, "ardi")
+      )
+    );
+
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+    if (AudioCtx) {
+      const decodeCtx = new AudioCtx();
+      try {
+        for (const clip of sceneClips) {
+          if (!clip) {
+            decodedBuffers.push(null);
+            continue;
+          }
+          try {
+            const arr = await clip.blob.arrayBuffer();
+            const rawBuf = await decodeCtx.decodeAudioData(arr.slice(0));
+            // Smart PCM dead-air silence trimming before timeline lock (auto-editor pacing!)
+            decodedBuffers.push(
+              trimAudioBufferDeadAir(decodeCtx, rawBuf, {
+                thresholdDb: -40,
+                marginSec: 0.06,
+              }).buffer
+            );
+          } catch {
+            decodedBuffers.push(null);
+          }
+        }
+      } finally {
+        await decodeCtx.close().catch(() => {});
+      }
+    } else {
+      sceneClips.forEach(() => decodedBuffers.push(null));
+    }
+
+    exactDurations = decodedBuffers.map((buf, idx) =>
+      buf ? buf.duration : sceneClips[idx]?.durationSec ?? null
+    );
   }
 
-  // Build exact audio-locked editorial timeline (every scene & word synced to decoded MP3!)
-  const exactDurations = decodedBuffers.map((buf, idx) =>
-    buf ? buf.duration : sceneClips[idx]?.durationSec ?? null
-  );
+  // Build exact audio-locked editorial timeline (every scene & word synced to real audio!)
   const syncedEditorial =
     buildEditorialEpisode(episode, exactDurations) ?? baseEditorial;
+
 
   // v9 — artwork kolase per scene (soft-fail: tanpa API key panel ink digambar sendiri)
   const sceneArtwork = await fetchEpisodeBRollImages(
@@ -582,7 +637,9 @@ export async function runEditingDivisionBrowser(
     thumbnailHeight: 1920,
     thumbnailDataUrl,
     exportedAt: new Date().toISOString(),
-    fileName: `tiktok-ep-${episode.episodeNumber}-${safeSlug || "ai-agent"}.${result.extension}`,
+    fileName: `${uploadedPlan ? "audio-bos" : "tiktok"}-ep-${episode.episodeNumber}-${
+      safeSlug || "ai-agent"
+    }.${result.extension}`,
     qcTelemetry: result.telemetry,
   };
 
