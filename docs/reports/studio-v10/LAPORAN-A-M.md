@@ -220,7 +220,7 @@ Diubah:
 - Commit fitur (kode + tes + dashboard + seluruh bukti run): **`9ba2a9b`**
   ("feat(studio): v10 topic intelligence, creative blueprint, script audit, dan audit skill
   berbasis bukti").
-- Commit laporan (penyempurnaan angka SHA ini): commit berikutnya di branch yang sama.
+- Commit laporan (angka SHA di bagian ini): **`81f32fe`**.
 - Basis: `8313262` (merge PR #29). Branch `arena/e690331b-fajrezzz-ai-office` **belum di-merge**
   ke `main`; merge menunggu izin Bos.
 
