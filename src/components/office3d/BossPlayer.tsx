@@ -8,6 +8,7 @@ import {
   BOSS_FLOOR_ELEVATIONS,
   useOffice,
 } from "@/store/OfficeContext";
+import { useSimulator } from "@/store/SimulatorContext";
 import type { BossActionState, Vector3Tuple } from "@/types/office";
 
 // Exact pool cavity bounds (matches CyberOutdoorCampus pool opening!)
@@ -30,8 +31,11 @@ export function BossPlayer() {
   } = useOffice();
 
   const { camera } = useThree();
+  const { activeVehicleId, walkToTargetRef } = useSimulator();
 
   const rootRef = useRef<THREE.Group>(null);
+  const jumpOffsetRef = useRef(0);
+  const jumpVelRef = useRef(0);
   const bodyPivotRef = useRef<THREE.Group>(null);
   const torsoRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
@@ -101,6 +105,23 @@ export function BossPlayer() {
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
 
+    // Hide Boss standing body cleanly while seated inside a driven vehicle
+    root.visible = !activeVehicleId;
+    if (activeVehicleId) return;
+
+    // Spacebar Jump Physics (when not swimming)
+    if (isBossMode && keysRef.current.has(" ") && jumpOffsetRef.current <= 0.01 && swimDepthRef.current < 0.1) {
+      jumpVelRef.current = 5.4;
+    }
+    if (jumpOffsetRef.current > 0 || jumpVelRef.current > 0) {
+      jumpOffsetRef.current += jumpVelRef.current * dt;
+      jumpVelRef.current -= 14.5 * dt;
+      if (jumpOffsetRef.current <= 0) {
+        jumpOffsetRef.current = 0;
+        jumpVelRef.current = 0;
+      }
+    }
+
     bossDistAccumRef.current += dt;
     if (bossDistAccumRef.current > 0.2) {
       bossDistAccumRef.current = 0;
@@ -168,16 +189,16 @@ export function BossPlayer() {
 
         // Smoothly clamp walkable world boundaries per floor
         if (bossFloor === 1) {
-          // Full L1 lobby + outdoor pool deck + supercar bay + garden promenade
-          posRef.current.x = Math.max(-15.4, Math.min(15.4, posRef.current.x));
-          posRef.current.z = Math.max(-9.3, Math.min(18.2, posRef.current.z));
+          // Full L1 lobby + outdoor pool deck + supercar bay + west/east parking lots
+          posRef.current.x = Math.max(-34.0, Math.min(34.0, posRef.current.x));
+          posRef.current.z = Math.max(-9.3, Math.min(24.0, posRef.current.z));
         } else if (bossFloor === 2 || bossFloor === 3) {
-          // Full L2 / L3 interior + cantilevered front glass balcony!
-          posRef.current.x = Math.max(-13.4, Math.min(13.4, posRef.current.x));
+          // Full L2 / L3 interior (widened 38m HQ) + cantilevered front glass balcony!
+          posRef.current.x = Math.max(-18.2, Math.min(18.2, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(4.8, posRef.current.z));
         } else {
           // Rooftop Helipad + Padel Court + Sky Terrace
-          posRef.current.x = Math.max(-13.8, Math.min(13.8, posRef.current.x));
+          posRef.current.x = Math.max(-18.4, Math.min(18.4, posRef.current.x));
           posRef.current.z = Math.max(-9.5, Math.min(4.8, posRef.current.z));
         }
 
@@ -187,10 +208,24 @@ export function BossPlayer() {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         yawRef.current += diff * Math.min(1, dt * 12);
+        walkToTargetRef.current = null;
+      }
+    } else if (walkToTargetRef.current) {
+      const [wx, , wz] = walkToTargetRef.current;
+      const dx = wx - posRef.current.x;
+      const dz = wz - posRef.current.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.35) {
+        const step = Math.min(dist, 3.6 * dt);
+        posRef.current.x += (dx / dist) * step;
+        posRef.current.z += (dz / dist) * step;
+        yawRef.current = Math.atan2(dx, dz);
+      } else {
+        walkToTargetRef.current = null;
       }
     }
 
-    // 4. Smooth floor elevation + swimming immersion depth
+    // 4. Smooth floor elevation + swimming immersion depth + jump height
     const baseFloorY = BOSS_FLOOR_ELEVATIONS[bossFloor];
     const targetSwimDepth = inPool ? 0.92 : 0;
     swimDepthRef.current +=
@@ -216,16 +251,16 @@ export function BossPlayer() {
         ? Math.sin(t * 2.8) * 0.035
         : 0;
 
-    posRef.current.y = baseFloorY;
+    posRef.current.y = baseFloorY + jumpOffsetRef.current;
     bossPositionRef.current = [
       posRef.current.x,
-      baseFloorY - swimDepthRef.current * 0.65,
+      baseFloorY + jumpOffsetRef.current - swimDepthRef.current * 0.65,
       posRef.current.z,
     ];
 
     root.position.set(
       posRef.current.x,
-      baseFloorY - swimDepthRef.current + walkBob,
+      baseFloorY + jumpOffsetRef.current - swimDepthRef.current + walkBob,
       posRef.current.z
     );
     root.rotation.y = yawRef.current;

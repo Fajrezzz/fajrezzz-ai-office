@@ -36,15 +36,6 @@ interface SpireSpec {
   h: number;
 }
 
-interface BillboardSpec {
-  pos: [number, number, number];
-  size: [number, number];
-  rotY: number;
-  colorA: string;
-  colorB: string;
-  seed: number;
-}
-
 const SKYLINE_VERTEX_SHADER = /* glsl */ `
   varying vec3 vWorldPos;
   varying vec3 vWorldNormal;
@@ -136,17 +127,13 @@ const SKYLINE_FRAGMENT_SHADER = /* glsl */ `
     float faceShade = 0.82 + 0.24 * max(dot(vWorldNormal, normalize(vec3(0.5, 0.7, 0.5))), 0.0);
     baseCol *= faceShade;
 
-    // Lit window palette: warm office gold, bright white, cyber cyan & rare magenta floors
+    // Realistic real-world skyscraper window lights: ONLY warm yellow/gold & crisp office white
     float palettePick = hash21(cell + vec2(9.1, 4.7));
-    vec3 winCol = vec3(1.0, 0.86, 0.58); // warm gold
-    if (palettePick > 0.72) {
-      winCol = vec3(0.75, 0.94, 1.0); // cool office white-cyan
-    } else if (palettePick > 0.52) {
-      winCol = vec3(1.0, 0.96, 0.86); // crisp bright white
-    } else if (palettePick < 0.09 && uNight > 0.5) {
-      winCol = vec3(0.95, 0.42, 0.92); // subtle cyberpunk magenta accent suite
-    } else if (palettePick < 0.2 && uNight > 0.5) {
-      winCol = vec3(0.22, 0.88, 1.0); // subtle cyberpunk cyan accent suite
+    vec3 winCol = vec3(1.0, 0.85, 0.48); // warm architectural yellow
+    if (palettePick > 0.66) {
+      winCol = vec3(0.96, 0.97, 1.0); // crisp clean white office
+    } else if (palettePick > 0.36) {
+      winCol = vec3(1.0, 0.93, 0.72); // soft warm cream-white
     }
 
     // Gentle living shimmer on a tiny fraction of windows
@@ -165,199 +152,14 @@ const SKYLINE_FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-const HOLOGRAM_VERTEX_SHADER = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const HOLOGRAM_FRAGMENT_SHADER = /* glsl */ `
-  uniform float uTime;
-  uniform float uIntensity;
-  uniform vec3 uColorA;
-  uniform vec3 uColorB;
-  uniform float uSeed;
-  varying vec2 vUv;
-
-  void main() {
-    // Crisp cyber scanlines & animated data bars
-    float scan = 0.72 + 0.28 * sin(vUv.y * 55.0 - uTime * 3.5 + uSeed);
-    float border = step(0.05, vUv.x) * step(vUv.x, 0.95) * step(0.08, vUv.y) * step(vUv.y, 0.92);
-    float frameGlow = 1.0 - border;
-
-    // Animated graphic equalizer / cyber wave inside hologram
-    float wave = smoothstep(0.06, 0.0, abs(vUv.y - (0.5 + 0.22 * sin(vUv.x * 12.0 + uTime * 2.2 + uSeed))));
-    float bars = step(0.45, fract(vUv.x * 9.0 + uSeed)) * step(vUv.y, 0.35 + 0.35 * sin(floor(vUv.x * 9.0) * 2.3 + uTime * 1.8));
-    float sweep = smoothstep(0.14, 0.0, abs(fract(vUv.y - uTime * 0.22 + uSeed) - 0.5));
-
-    vec3 col = mix(uColorA, uColorB, vUv.x + 0.25 * sin(uTime + uSeed));
-    float pattern = max(frameGlow * 1.35, max(wave * 1.2, bars * 0.65) + sweep * 0.45 + 0.16);
-    float flicker = 0.92 + 0.08 * sin(uTime * 11.0 + uSeed * 7.0);
-
-    vec3 outCol = col * pattern * scan * flicker * uIntensity;
-    float alpha = clamp((0.28 + pattern * 0.52) * clamp(uIntensity, 0.18, 1.0), 0.12, 0.88);
-    gl_FragColor = vec4(outCol, alpha);
-  }
-`;
-
-function HoloBillboard({
-  spec,
-  isNight,
-  isSunset,
-}: {
-  spec: BillboardSpec;
-  isNight: boolean;
-  isSunset: boolean;
-}) {
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uIntensity: { value: 1.0 },
-      uColorA: { value: new THREE.Color(spec.colorA) },
-      uColorB: { value: new THREE.Color(spec.colorB) },
-      uSeed: { value: spec.seed },
-    }),
-    [spec.colorA, spec.colorB, spec.seed]
-  );
-
-  useFrame((state) => {
-    if (!matRef.current) return;
-    matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-    matRef.current.uniforms.uIntensity.value = isNight
-      ? 1.85
-      : isSunset
-      ? 1.15
-      : 0.32;
-  });
-
-  return (
-    <mesh position={spec.pos} rotation={[0, spec.rotY, 0]}>
-      <planeGeometry args={spec.size} />
-      <shaderMaterial
-        ref={matRef}
-        vertexShader={HOLOGRAM_VERTEX_SHADER}
-        fragmentShader={HOLOGRAM_FRAGMENT_SHADER}
-        uniforms={uniforms}
-        transparent
-        depthWrite={false}
-        blending={isNight || isSunset ? THREE.AdditiveBlending : THREE.NormalBlending}
-        side={THREE.DoubleSide}
-        toneMapped={false}
-      />
-    </mesh>
-  );
-}
-
-/** Instanced Flying Cars / Cyber Drones with Glowing Light Trails cruising between skyline towers */
-function FlyingSkyTraffic({
-  isNight,
-  isSunset,
-  isEco,
-}: {
-  isNight: boolean;
-  isSunset: boolean;
-  isEco: boolean;
-}) {
-  const count = isEco ? 6 : 12;
-  const bodyMeshRef = useRef<THREE.InstancedMesh>(null);
-  const trailMeshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-
-  const vehicles = useMemo(
-    () =>
-      Array.from({ length: 12 }).map((_, i) => ({
-        laneZ: -44 - (i % 3) * 14,
-        y: 19 + (i % 4) * 6.5,
-        speed: (7.5 + (i % 5) * 2.4) * (i % 2 === 0 ? 1 : -1),
-        offset: ((i * 23) % 140) - 70,
-        isCyan: i % 2 === 0,
-      })),
-    []
-  );
-
-  useEffect(() => {
-    const body = bodyMeshRef.current;
-    const trail = trailMeshRef.current;
-    if (!body || !trail) return;
-    const cCyan = new THREE.Color("#22d3ee");
-    const cMag = new THREE.Color("#f472b6");
-    const cWhite = new THREE.Color("#f8fafc");
-    for (let i = 0; i < count; i++) {
-      body.setColorAt(i, cWhite);
-      trail.setColorAt(i, vehicles[i].isCyan ? cCyan : cMag);
-    }
-    if (body.instanceColor) body.instanceColor.needsUpdate = true;
-    if (trail.instanceColor) trail.instanceColor.needsUpdate = true;
-  }, [count, vehicles]);
-
-  useFrame((state) => {
-    const body = bodyMeshRef.current;
-    const trail = trailMeshRef.current;
-    if (!body || !trail) return;
-
-    const t = state.clock.elapsedTime;
-    const span = 156;
-
-    for (let i = 0; i < count; i++) {
-      const v = vehicles[i];
-      const rawX = v.offset + t * v.speed;
-      const wrappedX = ((((rawX + span / 2) % span) + span) % span) - span / 2;
-      const bobY = v.y + Math.sin(t * 2.2 + i) * 0.35;
-      const dir = v.speed >= 0 ? 1 : -1;
-
-      dummy.position.set(wrappedX, bobY, v.laneZ);
-      dummy.rotation.set(0, dir > 0 ? 0 : Math.PI, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      body.setMatrixAt(i, dummy.matrix);
-
-      // Stretched luminous light trail behind each vehicle
-      dummy.position.set(wrappedX - dir * 3.1, bobY, v.laneZ);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      trail.setMatrixAt(i, dummy.matrix);
-    }
-    body.instanceMatrix.needsUpdate = true;
-    trail.instanceMatrix.needsUpdate = true;
-  });
-
-  const trailOpacity = isNight ? 0.85 : isSunset ? 0.58 : 0.22;
-
-  return (
-    <group>
-      <instancedMesh ref={bodyMeshRef} args={[undefined, undefined, count]}>
-        <boxGeometry args={[1.35, 0.36, 0.65]} />
-        <meshBasicMaterial color="#ffffff" toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={trailMeshRef} args={[undefined, undefined, count]}>
-        <boxGeometry args={[5.4, 0.14, 0.18]} />
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={trailOpacity}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </instancedMesh>
-    </group>
-  );
-}
-
 export function CyberpunkSkyline({
   lightingPreset,
-  performanceMode,
 }: CyberpunkSkylineProps) {
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
-  const isEco = performanceMode === "eco";
 
   // Build a varied 24-tower metropolis with stepped architectural setbacks, varied materials & heights
-  const { tiers, crowns, spires, billboards } = useMemo(() => {
+  const { tiers, crowns, spires } = useMemo(() => {
     const rawTowers: {
       x: number;
       z: number;
@@ -399,7 +201,7 @@ export function CyberpunkSkyline({
     const crownList: TowerCrown[] = [];
     const spireList: SpireSpec[] = [];
 
-    const crownPalette = ["#22d3ee", "#e879f9", "#fbbf24", "#38bdf8"];
+    const crownPalette = ["#fde68a", "#f8fafc", "#fef3c7", "#fffbeb"];
 
     rawTowers.forEach((t, idx) => {
       if (t.setbacks === 0) {
@@ -501,20 +303,10 @@ export function CyberpunkSkyline({
       }
     });
 
-    // 5 Glowing Holographic Cyberpunk Skyscraper Billboards
-    const holoList: BillboardSpec[] = [
-      { pos: [-26, 28, -54.5], size: [8.8, 4.6], rotY: 0.12, colorA: "#22d3ee", colorB: "#e879f9", seed: 1.2 },
-      { pos: [-1, 34, -58.2], size: [9.4, 5.0], rotY: 0, colorA: "#38bdf8", colorB: "#fbbf24", seed: 2.7 },
-      { pos: [25, 25, -52.8], size: [8.4, 4.4], rotY: -0.12, colorA: "#e879f9", colorB: "#22d3ee", seed: 4.1 },
-      { pos: [-50, 22, -48.8], size: [7.6, 4.0], rotY: 0.2, colorA: "#34d399", colorB: "#38bdf8", seed: 5.5 },
-      { pos: [51, 29, -50.2], size: [8.2, 4.2], rotY: -0.2, colorA: "#f472b6", colorB: "#fbbf24", seed: 7.3 },
-    ];
-
     return {
       tiers: tierList,
       crowns: crownList,
       spires: spireList,
-      billboards: holoList,
     };
   }, []);
 
@@ -664,23 +456,6 @@ export function CyberpunkSkyline({
           <meshBasicMaterial color="#ff3344" toneMapped={false} />
         </instancedMesh>
       )}
-
-      {/* Holographic Cyberpunk Billboards Mounted on Skyline Towers */}
-      {billboards.map((spec, idx) => (
-        <HoloBillboard
-          key={idx}
-          spec={spec}
-          isNight={isNight}
-          isSunset={isSunset}
-        />
-      ))}
-
-      {/* Instanced Drones / Flying Cars with Glowing Cyan & Magenta Light Trails */}
-      <FlyingSkyTraffic
-        isNight={isNight}
-        isSunset={isSunset}
-        isEco={isEco}
-      />
     </group>
   );
 }

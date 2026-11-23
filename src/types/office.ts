@@ -6,7 +6,12 @@ export type NavSection =
   | "tasks"
   | "activity";
 
-export type RobotAnimationState = "idle" | "working" | "walking" | "standby";
+export type RobotAnimationState =
+  | "idle"
+  | "working"
+  | "walking"
+  | "standby"
+  | "error";
 
 export type PerformanceMode = "eco" | "balanced" | "high";
 
@@ -68,10 +73,15 @@ export interface Workstation {
 export interface AvatarAppearance {
   skinColor: string;
   hairColor: string;
-  hairStyle: "short" | "bob" | "ponytail" | "executive";
+  hairStyle: "short" | "bob" | "ponytail" | "executive" | "hijab";
   suitColor: string;
   shirtColor: string;
   pantsColor: string;
+  sleeveColor?: string;
+  outfitStyle?: "hoodie" | "shirt" | "varsity" | "blouse" | "formal";
+  hasGlasses?: boolean;
+  hasNeckHeadphones?: boolean;
+  tieColor?: string;
 }
 
 export interface OfficeAgent {
@@ -86,6 +96,8 @@ export interface OfficeAgent {
   /** Explicit flag ensuring UI always communicates visual placeholder status in Phase 1 */
   isVisualPlaceholder: true;
   status: RobotAnimationState;
+  /** Target real status applied once agent finishes walking to destination */
+  pendingWorkState?: "idle" | "working" | "error";
   assignedWorkstationId: string;
   currentWaypointId: string;
   targetWaypointId: string;
