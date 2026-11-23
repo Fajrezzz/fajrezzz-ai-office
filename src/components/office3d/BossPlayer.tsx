@@ -316,12 +316,14 @@ export function BossPlayer() {
         />
       </mesh>
 
-      {/* Photorealistic 1.78m Executive Human Avatar for BOS FAJREZ */}
+      {/* Photorealistic 1.78m Center-Lead Fajrezzz Jacket Avatar for BOS FAJREZ (from Team Photo) */}
       <RealisticHumanAvatar
         variant="rb_male_b"
         pose={avatarPose}
-        topColor="#131926"
-        pantsColor="#0b101b"
+        topColor="#131628"
+        pantsColor="#0b0e18"
+        hairColor="#121318"
+        fajrezzzBadgeColor="#a855f7"
         targetHeight={1.78}
         phaseOffset={0.2}
         animSpeed={avatarPose === "running" ? 1.25 : 1.05}

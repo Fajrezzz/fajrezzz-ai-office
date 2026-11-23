@@ -19,7 +19,12 @@ interface SeatedOrStandingPerson {
   variant: HumanAvatarVariant;
   keepOriginalOutfit?: boolean;
   showHeadwear?: boolean;
-  isSecurity?: boolean;
+  hasGlasses?: boolean;
+  hasHijab?: boolean;
+  hasNeckHeadphones?: boolean;
+  tieColor?: string;
+  fajrezzzBadgeColor?: string;
+  hairColor: string;
   floor: 1 | 3;
   position: [number, number, number];
   rotationY: number;
@@ -30,21 +35,28 @@ interface SeatedOrStandingPerson {
   hasLaptop?: boolean;
 }
 
+/**
+ * 12 Executive, Security, Reception & Lobby Staff — styled individually after the
+ * Fajrezzz "Our Team · 22 Amazing People (13 Men · 9 Women)" team portrait.
+ */
 const EXTRA_STAFF: SeatedOrStandingPerson[] = [
-  // ================= LANTAI 3 — EKSEKUTIF FAJREZZZ (CEO, MANAJER, SEKRETARIS, CFO) =================
+  // ================= LANTAI 3 — EKSEKUTIF FAJREZZZ =================
   {
     id: "vip-ceo",
     name: "Hendra Wijaya",
     title: "CEO Eksekutif",
     gender: "male",
     variant: "rb_male_b",
+    hairColor: "#121318",
     floor: 3,
     position: [7.4, FLOOR_3_Y, -5.22],
     rotationY: 0,
     pose: "seated",
     suitColor: "#141824",
     pantsColor: "#0e121b",
-    badgeColor: "#7c3aed",
+    tieColor: "#1e3a8a",
+    hasGlasses: true,
+    badgeColor: "#8b5cf6",
   },
   {
     id: "vip-manager",
@@ -52,26 +64,31 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     title: "Manajer Senior",
     gender: "male",
     variant: "rpm_male",
+    hairColor: "#16161b",
     floor: 3,
     position: [-4.5, FLOOR_3_Y, -5.0],
     rotationY: 0,
     pose: "seated",
     suitColor: "#1e3a5f",
     pantsColor: "#111827",
-    badgeColor: "#6366f1",
+    tieColor: "#38bdf8",
+    hasGlasses: true,
+    badgeColor: "#38bdf8",
   },
   {
     id: "vip-secretary",
     name: "Putri Larasati",
     title: "Sekretaris Eksekutif",
     gender: "female",
-    variant: "michelle",
-    keepOriginalOutfit: true,
+    variant: "rpm_female",
+    hairColor: "#1b1412",
     floor: 3,
     position: [-2.7, FLOOR_3_Y, -5.0],
     rotationY: 0,
     pose: "seated",
-    suitColor: "#a78bfa",
+    suitColor: "#f8fafc",
+    pantsColor: "#181a24",
+    fajrezzzBadgeColor: "#8b5cf6",
     badgeColor: "#a78bfa",
   },
   {
@@ -80,61 +97,68 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     title: "Direktur Keuangan",
     gender: "male",
     variant: "rb_male_a",
+    hairColor: "#1c1918",
     floor: 3,
     position: [-6.3, FLOOR_3_Y, -2.0],
     rotationY: Math.PI,
     pose: "seated",
     suitColor: "#27272e",
     pantsColor: "#14161f",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#6366f1",
     badgeColor: "#8b5cf6",
   },
 
-  // ================= LANTAI 1 — SECURITY COWOK (PINTU UTAMA), RESEPSIONIS & TIM FAJREZZZ LOBBY =================
+  // ================= LANTAI 1 — SECURITY, RESEPSIONIS & TIM FAJREZZZ LOBBY =================
   {
     id: "l1-security-1",
     name: "Bambang Suryo",
     title: "Security Pintu Utama",
     gender: "male",
     variant: "rpm_male",
+    hairColor: "#121216",
     showHeadwear: true,
-    isSecurity: true,
     floor: 1,
     position: [-3.8, FLOOR_1_Y, 4.5],
     rotationY: 0,
     pose: "standing",
     suitColor: "#0f2442",
     pantsColor: "#0c1526",
-    badgeColor: "#f59e0b",
+    tieColor: "#0f172a",
+    badgeColor: "#00f0ff",
   },
   {
     id: "l1-security-2",
     name: "Hendro Wibowo",
     title: "Security Lobby",
     gender: "male",
-    variant: "rpm_male",
-    showHeadwear: true,
-    isSecurity: true,
+    variant: "rb_male_a",
+    hairColor: "#181719",
     floor: 1,
     position: [3.8, FLOOR_1_Y, 4.5],
     rotationY: 0,
     pose: "standing",
-    suitColor: "#0f2442",
+    suitColor: "#132a4f",
     pantsColor: "#0c1526",
-    badgeColor: "#f59e0b",
+    tieColor: "#0f172a",
+    badgeColor: "#00f0ff",
   },
   {
     id: "l1-recep-1",
     name: "Nabila Sari",
     title: "Resepsionis L1",
     gender: "female",
-    variant: "rb_female",
+    variant: "rpm_female_b",
+    hairColor: "#211612",
     floor: 1,
     position: [-1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
     pose: "standing",
-    suitColor: "#e2e8f0",
-    pantsColor: "#1e293b",
-    badgeColor: "#7c3aed",
+    suitColor: "#f8fafc",
+    pantsColor: "#161924",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#8b5cf6",
+    badgeColor: "#a855f7",
   },
   {
     id: "l1-recep-2",
@@ -142,26 +166,31 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     title: "Admin Lobby L1",
     gender: "male",
     variant: "rb_male_b",
+    hairColor: "#141418",
     floor: 1,
     position: [1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
     pose: "standing",
-    suitColor: "#334155",
-    pantsColor: "#0f172a",
-    badgeColor: "#6366f1",
+    suitColor: "#eef2f6",
+    pantsColor: "#141824",
+    tieColor: "#1e3a8a",
+    fajrezzzBadgeColor: "#6366f1",
+    badgeColor: "#38bdf8",
   },
   {
     id: "l1-sofa-w1",
     name: "Dina Oktavia",
     title: "Staf CS L1",
     gender: "female",
-    variant: "michelle",
-    keepOriginalOutfit: true,
+    variant: "rb_female",
+    hairColor: "#462a1c",
     floor: 1,
     position: [-9.2, FLOOR_1_Y, -2.7],
     rotationY: 0.14,
     pose: "seated",
-    suitColor: "#171a24",
+    suitColor: "#181a24",
+    pantsColor: "#334155",
+    fajrezzzBadgeColor: "#8b5cf6",
     badgeColor: "#8b5cf6",
     hasLaptop: true,
   },
@@ -171,27 +200,33 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     title: "Staf Admin L1",
     gender: "male",
     variant: "rb_male_a",
+    hairColor: "#151417",
     floor: 1,
     position: [-7.55, FLOOR_1_Y, -2.7],
     rotationY: -0.18,
     pose: "seated",
-    suitColor: "#2e2459",
+    suitColor: "#2e1065",
     pantsColor: "#111827",
-    badgeColor: "#7c3aed",
+    hasNeckHeadphones: true,
+    fajrezzzBadgeColor: "#a855f7",
+    badgeColor: "#a855f7",
   },
   {
     id: "l1-sofa-e1",
     name: "Maya Kusuma",
     title: "Staf Kreatif L1",
     gender: "female",
-    variant: "rb_female",
+    variant: "rpm_female",
+    hairColor: "#261813",
     floor: 1,
     position: [7.55, FLOOR_1_Y, -2.7],
     rotationY: 0.18,
     pose: "seated",
-    suitColor: "#7c3aed",
+    suitColor: "#8b5cf6",
     pantsColor: "#181a24",
-    badgeColor: "#a78bfa",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#c4b5fd",
+    badgeColor: "#c084fc",
     hasLaptop: true,
   },
   {
@@ -200,13 +235,15 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     title: "Staf Media L1",
     gender: "male",
     variant: "rpm_male",
+    hairColor: "#161518",
     floor: 1,
     position: [9.2, FLOOR_1_Y, -2.7],
     rotationY: -0.14,
     pose: "seated",
     suitColor: "#2563eb",
     pantsColor: "#0f172a",
-    badgeColor: "#3b82f6",
+    fajrezzzBadgeColor: "#38bdf8",
+    badgeColor: "#38bdf8",
   },
 ];
 
@@ -248,14 +285,19 @@ function StaffFigure({
 
   return (
     <group position={person.position} rotation={[0, person.rotationY, 0]}>
-      {/* Photorealistic Rigged 3D Human Avatar (.glb + Mixamo MoCap) */}
       <RealisticHumanAvatar
         variant={person.variant}
         pose={isSeated ? (person.hasLaptop ? "typing" : "seated") : "idle"}
         topColor={person.suitColor}
         pantsColor={person.pantsColor ?? "#111827"}
+        hairColor={person.hairColor}
         keepOriginalOutfit={person.keepOriginalOutfit}
         showHeadwear={person.showHeadwear}
+        hasGlasses={person.hasGlasses}
+        hasHijab={person.hasHijab}
+        hasNeckHeadphones={person.hasNeckHeadphones}
+        tieColor={person.tieColor}
+        fajrezzzBadgeColor={person.fajrezzzBadgeColor}
         targetHeight={
           person.id === "vip-ceo"
             ? 1.78
@@ -267,7 +309,6 @@ function StaffFigure({
         isSimulationRunning={isSimulationRunning}
       />
 
-      {/* Sleek Laptop on Lap for Sofa Staff */}
       {isSeated && person.hasLaptop && (
         <group position={[0, 0.64, 0.34]}>
           <mesh castShadow>
@@ -282,20 +323,18 @@ function StaffFigure({
             <planeGeometry args={[0.28, 0.17]} />
             <meshStandardMaterial
               color="#0f172a"
-              emissive="#38bdf8"
-              emissiveIntensity={0.65}
+              emissive="#00f0ff"
+              emissiveIntensity={0.85}
             />
           </mesh>
         </group>
       )}
 
-      {/* Subtle Role-Colored Ground Presence Ring */}
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.3, 0.36, 20]} />
         <meshBasicMaterial color={person.badgeColor} transparent opacity={0.36} />
       </mesh>
 
-      {/* Clean Distance-Scaled Floating Name & Executive Title Pill */}
       {showLabels && labelTier !== "far" && (
         <Html
           position={[0, labelY + (index % 2) * 0.08, 0]}

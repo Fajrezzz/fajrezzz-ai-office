@@ -77,6 +77,21 @@ export interface BossJoystickState {
   y: number; // -1 (backward) to +1 (forward)
 }
 
+export interface AgentAutonomousThoughtRecord {
+  agentId: string;
+  agentName: string;
+  agentRole: string;
+  thought: string;
+  decision: "work_desk" | "collaborate" | "coffee_break" | "director_briefing";
+  actionLabel: string;
+  chatBubble: string;
+  deliverableTitle: string;
+  deliverableOutput: string;
+  provider: string;
+  model: string;
+  timestamp: string;
+}
+
 interface OfficeContextValue {
   activeSection: NavSection;
   setActiveSection: (section: NavSection) => void;
@@ -158,6 +173,13 @@ interface OfficeContextValue {
     zone?: string
   ) => void;
   clearActivities: () => void;
+  // Autonomous Real-AI Thinking Loop (Groq / Gemini per Staff)
+  autonomousAiEnabled: boolean;
+  setAutonomousAiEnabled: (enabled: boolean) => void;
+  thinkingAgentId: string | null;
+  agentThoughts: Record<string, AgentAutonomousThoughtRecord>;
+  latestAiThought: AgentAutonomousThoughtRecord | null;
+  triggerAgentThink: (agentId?: string) => Promise<void>;
 }
 
 const OfficeContext = createContext<OfficeContextValue | null>(null);
@@ -971,6 +993,166 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     setWorkOrders((prev) => prev.filter((o) => o.id !== orderId));
   }, []);
 
+  // =========================================================================
+  // AUTONOMOUS REAL-AI AGENT BRAIN (Each Staff Thinks Independently via Groq/Gemini)
+  // =========================================================================
+  const [autonomousAiEnabled, setAutonomousAiEnabled] = useState<boolean>(true);
+  const [thinkingAgentId, setThinkingAgentId] = useState<string | null>(null);
+  const [agentThoughts, setAgentThoughts] = useState<
+    Record<string, AgentAutonomousThoughtRecord>
+  >({});
+  const [latestAiThought, setLatestAiThought] =
+    useState<AgentAutonomousThoughtRecord | null>(null);
+
+  const agentsRef = useRef<OfficeAgent[]>(agents);
+  agentsRef.current = agents;
+  const activitiesRef = useRef<ActivityEvent[]>(activities);
+  activitiesRef.current = activities;
+  const thinkCursorRef = useRef<number>(0);
+  const thinkInFlightRef = useRef<boolean>(false);
+
+  const triggerAgentThink = useCallback(
+    async (explicitAgentId?: string) => {
+      if (thinkInFlightRef.current) return;
+      const list = agentsRef.current;
+      if (list.length === 0) return;
+
+      const targetAgent = explicitAgentId
+        ? list.find((a) => a.id === explicitAgentId)
+        : list[thinkCursorRef.current % list.length];
+      if (!targetAgent) return;
+
+      if (!explicitAgentId) {
+        thinkCursorRef.current = (thinkCursorRef.current + 1) % list.length;
+      }
+
+      thinkInFlightRef.current = true;
+      setThinkingAgentId(targetAgent.id);
+
+      try {
+        const recentMemory = activitiesRef.current
+          .slice(0, 5)
+          .map((ev) => `[${ev.actor}] ${ev.message}`);
+        const wp = OFFICE_WAYPOINTS[targetAgent.currentWaypointId];
+
+        const res = await fetch("/api/agents/think", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentId: targetAgent.id,
+            agentName: targetAgent.name,
+            agentRole: targetAgent.role,
+            currentStatus: targetAgent.status,
+            currentLocation: wp?.label ?? `Lantai ${targetAgent.floor}`,
+            recentMemory,
+          }),
+        });
+
+        const payload = (await res.json()) as {
+          ok?: boolean;
+          provider?: string;
+          model?: string;
+          timestamp?: string;
+          data?: {
+            thought: string;
+            decision: "work_desk" | "collaborate" | "coffee_break" | "director_briefing";
+            actionLabel: string;
+            chatBubble: string;
+            deliverableTitle: string;
+            deliverableOutput: string;
+          };
+        };
+
+        if (!res.ok || !payload.ok || !payload.data) return;
+
+        const d = payload.data;
+        const record: AgentAutonomousThoughtRecord = {
+          agentId: targetAgent.id,
+          agentName: targetAgent.name,
+          agentRole: targetAgent.role,
+          thought: d.thought,
+          decision: d.decision,
+          actionLabel: d.actionLabel,
+          chatBubble: d.chatBubble,
+          deliverableTitle: d.deliverableTitle,
+          deliverableOutput: d.deliverableOutput,
+          provider: (payload.provider || "ai").toUpperCase(),
+          model: payload.model || "free-llm",
+          timestamp: formatClock(new Date()),
+        };
+
+        setAgentThoughts((prev) => ({ ...prev, [targetAgent.id]: record }));
+        setLatestAiThought(record);
+
+        // Execute the agent's autonomous physical decision in the 3D office!
+        const assignedWs = workstations.find(
+          (w) => w.id === targetAgent.assignedWorkstationId
+        );
+        let destWp = targetAgent.currentWaypointId;
+        let destMode: "working" | "idle" = "working";
+
+        if (d.decision === "work_desk") {
+          destWp = assignedWs?.waypointId ?? targetAgent.currentWaypointId;
+          destMode = "working";
+        } else if (d.decision === "coffee_break") {
+          destWp = IDLE_LOUNGE_WAYPOINTS[targetAgent.id] ?? "wp-l2-lounge";
+          destMode = "idle";
+        } else if (d.decision === "director_briefing") {
+          destWp = targetAgent.floor === 3 ? "wp-l3-boardroom" : "wp-l2-hub";
+          destMode = "working";
+        } else {
+          // collaborate
+          destWp =
+            targetAgent.floor === 2
+              ? "wp-l2-promenade"
+              : targetAgent.floor === 3
+              ? "wp-l3-lounge"
+              : "wp-l1-reception";
+          destMode = "working";
+        }
+
+        dispatchAgentRealWork(
+          targetAgent.id,
+          destMode,
+          destWp,
+          `🧠 ${d.actionLabel}`
+        );
+
+        addActivity(
+          `${targetAgent.name} (${record.provider})`,
+          "robot-placeholder",
+          `💡 ${d.deliverableTitle}: ${d.deliverableOutput}`,
+          "success",
+          `Otak AI · ${targetAgent.role}`
+        );
+      } catch {
+        // Silent resilience if user is temporarily offline
+      } finally {
+        thinkInFlightRef.current = false;
+        setThinkingAgentId(null);
+      }
+    },
+    [addActivity, dispatchAgentRealWork, workstations]
+  );
+
+  // Autonomous periodic thinking timer (1 staff thinks via Groq/Gemini every 30s)
+  useEffect(() => {
+    if (!autonomousAiEnabled || !isSimulationRunning) return;
+
+    const initialTimer = window.setTimeout(() => {
+      void triggerAgentThink();
+    }, 4500);
+
+    const intervalId = window.setInterval(() => {
+      void triggerAgentThink();
+    }, 30000);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(intervalId);
+    };
+  }, [autonomousAiEnabled, isSimulationRunning, triggerAgentThink]);
+
   const value = useMemo<OfficeContextValue>(
     () => ({
       activeSection,
@@ -1030,6 +1212,12 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       deleteTask,
       addActivity,
       clearActivities,
+      autonomousAiEnabled,
+      setAutonomousAiEnabled,
+      thinkingAgentId,
+      agentThoughts,
+      latestAiThought,
+      triggerAgentThink,
     }),
     [
       activeSection,
@@ -1077,6 +1265,11 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       deleteTask,
       addActivity,
       clearActivities,
+      autonomousAiEnabled,
+      thinkingAgentId,
+      agentThoughts,
+      latestAiThought,
+      triggerAgentThink,
     ]
   );
 

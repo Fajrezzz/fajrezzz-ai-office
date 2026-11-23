@@ -10,6 +10,8 @@ export type HumanAvatarVariant =
   | "rpm_male"
   | "rb_male_a"
   | "rb_male_b"
+  | "rpm_female"
+  | "rpm_female_b"
   | "rb_female"
   | "michelle";
 
@@ -26,8 +28,14 @@ export interface RealisticHumanAvatarProps {
   pose: HumanAvatarPose;
   topColor?: string;
   pantsColor?: string;
+  hairColor?: string;
   keepOriginalOutfit?: boolean;
   showHeadwear?: boolean;
+  hasGlasses?: boolean;
+  hasHijab?: boolean;
+  hasNeckHeadphones?: boolean;
+  tieColor?: string;
+  fajrezzzBadgeColor?: string;
   targetHeight?: number;
   phaseOffset?: number;
   animSpeed?: number;
@@ -38,6 +46,8 @@ const MODEL_PATHS: Record<HumanAvatarVariant | "xbot", string> = {
   rpm_male: "/models/rpm_male.glb",
   rb_male_a: "/models/rb_male_a.glb",
   rb_male_b: "/models/rb_male_b.glb",
+  rpm_female: "/models/rpm_female.glb",
+  rpm_female_b: "/models/rpm_female_b.glb",
   rb_female: "/models/rb_female.glb",
   michelle: "/models/Michelle.glb",
   xbot: "/models/Xbot.glb",
@@ -47,6 +57,12 @@ const RB_VARIANTS = new Set<HumanAvatarVariant>([
   "rb_male_a",
   "rb_male_b",
   "rb_female",
+]);
+
+const RPM_VARIANTS = new Set<HumanAvatarVariant>([
+  "rpm_male",
+  "rpm_female",
+  "rpm_female_b",
 ]);
 
 const CHILD_BONE_MAP: Record<string, string> = {
@@ -104,6 +120,7 @@ const _qParChar = new THREE.Quaternion();
 const _qParCharInv = new THREE.Quaternion();
 const _vA = new THREE.Vector3();
 const _vB = new THREE.Vector3();
+const _vBoneWorld = new THREE.Vector3();
 const _axisX = new THREE.Vector3(1, 0, 0);
 const _axisY = new THREE.Vector3(0, 1, 0);
 const _axisZ = new THREE.Vector3(0, 0, 1);
@@ -115,7 +132,6 @@ function prepareTemplate(
   const existing = templateCache.get(key);
   if (existing) return existing;
 
-  // Clone once for clean reference measurement without mutating useGLTF cache
   const scene = cloneSkinned(rawScene);
   const holder = new THREE.Group();
   holder.add(scene);
@@ -146,7 +162,6 @@ function prepareTemplate(
     bindWorld[name] = bone.matrixWorld.clone();
   }
 
-  // Compute accurate standing height from Box3 + bone fallback
   const box = new THREE.Box3().setFromObject(holder);
   let height = box.max.y - box.min.y;
   let minY = box.min.y;
@@ -325,7 +340,6 @@ function retargetClipToTemplate(
   mixer.stopAllAction();
   mixer.uncacheRoot(srcTpl.scene);
 
-  // Restore source skeleton cleanly
   srcTpl.scene.traverse((obj) => {
     if ((obj as THREE.Bone).isBone && obj.userData.bindQ) {
       obj.quaternion.copy(obj.userData.bindQ);
@@ -377,18 +391,20 @@ function getRetargetedClips(
 }
 
 /**
- * Applies Rocketbox hair-card alpha cutout (from right half of atlas)
- * plus crisp per-character shirt/jacket & pants recoloring without affecting skin or face.
+ * Rocketbox shader: alpha-cutout hair cards + hair color + crisp Fajrezzz top/pants recoloring
+ * while keeping natural skin/face texture intact.
  */
 function patchRocketboxMaterial(
   mat: THREE.MeshStandardMaterial,
   topColor: string,
   pantsColor: string,
+  hairColor: string,
   keepOriginal: boolean
 ) {
   const uniforms = {
     uTop: { value: new THREE.Color(topColor) },
     uBottom: { value: new THREE.Color(pantsColor) },
+    uHair: { value: new THREE.Color(hairColor) },
     uKeepOriginal: { value: keepOriginal ? 1.0 : 0.0 },
   };
   mat.userData.rbUniforms = uniforms;
@@ -405,7 +421,7 @@ function patchRocketboxMaterial(
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying float vRbPart;\nuniform vec3 uTop;\nuniform vec3 uBottom;\nuniform float uKeepOriginal;"
+        "#include <common>\nvarying float vRbPart;\nuniform vec3 uTop;\nuniform vec3 uBottom;\nuniform vec3 uHair;\nuniform float uKeepOriginal;"
       )
       .replace(
         "#include <map_fragment>",
@@ -417,6 +433,8 @@ function patchRocketboxMaterial(
             #ifdef USE_MAP
             if (texture2D(map, vMapUv + vec2(0.5, 0.0)).r < 0.45) discard;
             #endif
+            float hLum = dot(c, vec3(0.299, 0.587, 0.114));
+            diffuseColor.rgb = mix(c, uHair * (0.55 + hLum * 1.15), 0.78);
           } else if (uKeepOriginal < 0.5 && pt > 0.5 && pt < 2.5) {
             vec3 s = pow(max(c, vec3(1e-4)), vec3(1.0 / 2.2));
             float mx = max(s.r, max(s.g, s.b));
@@ -425,25 +443,56 @@ function patchRocketboxMaterial(
             bool isSkin = (s.r >= s.g && s.g >= s.b && dd / (mx + 1e-4) > 0.22 && dd / (mx + 1e-4) < 0.72 && mx > 0.25 && hh > 0.14 && hh < 0.76);
             if (!isSkin) {
               float lum = dot(c, vec3(0.299, 0.587, 0.114));
-              float shade = 0.34 + lum * 1.55;
+              float shade = 0.36 + lum * 1.5;
               if (pt < 1.5) {
-                diffuseColor.rgb = mix(c, uTop * shade, 0.84);
+                diffuseColor.rgb = mix(c, uTop * shade, 0.9);
               } else {
-                diffuseColor.rgb = mix(c, uBottom * shade, 0.78);
+                diffuseColor.rgb = mix(c, uBottom * shade, 0.85);
               }
             }
           }
         }`
       );
   };
-  mat.customProgramCacheKey = () => "fajrezzz-rb-human-v1";
+  mat.customProgramCacheKey = () => "fajrezzz-rb-human-v2";
   mat.needsUpdate = true;
 }
 
 /**
- * Applies a rotation in CHARACTER SPACE (X = left, Y = up, Z = forward)
- * cleanly to any bone regardless of Rocketbox vs Mixamo local bone roll.
+ * Recolors Michelle's red dress into sleek Fajrezzz outfits (Black, Lavender, White, Navy)
+ * without tinting her skin or dark hair.
  */
+function patchMichelleMaterial(
+  mat: THREE.MeshStandardMaterial,
+  topColor: string,
+  keepOriginal: boolean
+) {
+  if (keepOriginal) return;
+  const uniforms = {
+    uDress: { value: new THREE.Color(topColor) },
+  };
+  mat.userData.michUniforms = uniforms;
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform vec3 uDress;")
+      .replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+        {
+          vec3 c = diffuseColor.rgb;
+          // Target red-magenta dress pixels only (leave skin & hair untouched)
+          if (c.r > 0.18 && c.r > c.g * 1.65 && c.r > c.b * 1.55) {
+            float lum = dot(c, vec3(0.299, 0.587, 0.114));
+            diffuseColor.rgb = uDress * (0.45 + lum * 1.45);
+          }
+        }`
+      );
+  };
+  mat.customProgramCacheKey = () => "fajrezzz-michelle-v1";
+  mat.needsUpdate = true;
+}
+
 function rotateBoneInCharSpace(
   bone: THREE.Bone | undefined,
   rootObj: THREE.Object3D,
@@ -466,10 +515,16 @@ function rotateBoneInCharSpace(
 function LoadedHumanAvatar({
   variant,
   pose,
-  topColor = "#1e293b",
-  pantsColor = "#111827",
+  topColor = "#141722",
+  pantsColor = "#11141e",
+  hairColor = "#151314",
   keepOriginalOutfit = false,
   showHeadwear = false,
+  hasGlasses = false,
+  hasHijab = false,
+  hasNeckHeadphones = false,
+  tieColor,
+  fajrezzzBadgeColor,
   targetHeight = 1.72,
   phaseOffset = 0,
   animSpeed = 1,
@@ -478,7 +533,10 @@ function LoadedHumanAvatar({
   const gltf = useGLTF(MODEL_PATHS[variant]);
   const xbotGltf = useGLTF(MODEL_PATHS.xbot);
 
+  const outerGroupRef = useRef<THREE.Group>(null);
   const rootGroupRef = useRef<THREE.Group>(null);
+  const headAccRef = useRef<THREE.Group>(null);
+  const chestAccRef = useRef<THREE.Group>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const actionsRef = useRef<Record<"idle" | "walk" | "run", THREE.AnimationAction> | null>(
     null
@@ -486,91 +544,114 @@ function LoadedHumanAvatar({
   const activeClipKeyRef = useRef<"idle" | "walk" | "run">("idle");
   const seatBlendRef = useRef(pose === "seated" || pose === "typing" ? 1 : 0);
 
-  const { clonedScene, bones, scaleFactor, groundOffsetY, clips } = useMemo(() => {
-    const tpl = prepareTemplate(variant, gltf.scene);
-    const retargeted = getRetargetedClips(
-      variant,
-      tpl,
-      xbotGltf.scene,
-      xbotGltf.animations
-    );
+  const { clonedScene, bones, scaleFactor, groundOffsetY, clips, hasNativeGlasses } =
+    useMemo(() => {
+      const tpl = prepareTemplate(variant, gltf.scene);
+      const retargeted = getRetargetedClips(
+        variant,
+        tpl,
+        xbotGltf.scene,
+        xbotGltf.animations
+      );
 
-    const instance = cloneSkinned(gltf.scene);
-    const boneMap: Record<string, THREE.Bone> = {};
-    const isRb = RB_VARIANTS.has(variant);
+      const instance = cloneSkinned(gltf.scene);
+      const boneMap: Record<string, THREE.Bone> = {};
+      const isRb = RB_VARIANTS.has(variant);
+      const isRpm = RPM_VARIANTS.has(variant);
+      let nativeGlassesFound = false;
 
-    instance.traverse((obj) => {
-      if ((obj as THREE.Bone).isBone) {
-        const b = obj as THREE.Bone;
-        const cname = canonicalBoneName(b.name);
-        if (!boneMap[cname]) boneMap[cname] = b;
-      }
-
-      if ((obj as THREE.SkinnedMesh).isSkinnedMesh || (obj as THREE.Mesh).isMesh) {
-        const mesh = obj as THREE.Mesh;
-        mesh.frustumCulled = false;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-
-        // Hide random headwear on Ready Player Me indoor staff unless explicitly enabled
-        if (variant === "rpm_male" && /Headwear/i.test(mesh.name)) {
-          mesh.visible = showHeadwear;
+      instance.traverse((obj) => {
+        if ((obj as THREE.Bone).isBone) {
+          const b = obj as THREE.Bone;
+          const cname = canonicalBoneName(b.name);
+          if (!boneMap[cname]) boneMap[cname] = b;
         }
 
-        // Rocketbox models store garment part ids in `_part` / `_PART`
-        const rawPartAttr =
-          mesh.geometry.attributes._part || mesh.geometry.attributes._PART;
-        if (isRb && rawPartAttr && !mesh.geometry.attributes.part) {
-          mesh.geometry.setAttribute("part", rawPartAttr);
-        }
+        if ((obj as THREE.SkinnedMesh).isSkinnedMesh || (obj as THREE.Mesh).isMesh) {
+          const mesh = obj as THREE.Mesh;
+          mesh.frustumCulled = false;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
 
-        // Clone material per instance so each staff wears their own colors cleanly
-        const applyMat = (m: THREE.Material): THREE.Material => {
-          const cloned = m.clone() as THREE.MeshStandardMaterial;
-          if (isRb) {
-            patchRocketboxMaterial(cloned, topColor, pantsColor, keepOriginalOutfit);
-          } else if (variant === "rpm_male" && !keepOriginalOutfit) {
-            if (/Outfit_Top/i.test(mesh.name)) {
-              cloned.color.set(topColor).lerp(new THREE.Color("#ffffff"), 0.12);
-            } else if (/Outfit_Bottom/i.test(mesh.name)) {
-              cloned.color.set(pantsColor).lerp(new THREE.Color("#ffffff"), 0.1);
+          if (isRpm) {
+            if (/Headwear/i.test(mesh.name)) {
+              mesh.visible = showHeadwear;
+            }
+            if (/Glasses/i.test(mesh.name)) {
+              nativeGlassesFound = true;
+              mesh.visible = hasGlasses;
+            }
+            // Hide hair mesh cleanly when wearing sculpted silk hijab
+            if (hasHijab && /Hair/i.test(mesh.name)) {
+              mesh.visible = false;
             }
           }
-          cloned.roughness = Math.max(cloned.roughness ?? 0.72, 0.52);
-          return cloned;
-        };
 
-        if (Array.isArray(mesh.material)) {
-          mesh.material = mesh.material.map(applyMat);
-        } else if (mesh.material) {
-          mesh.material = applyMat(mesh.material);
+          const rawPartAttr =
+            mesh.geometry.attributes._part || mesh.geometry.attributes._PART;
+          if (isRb && rawPartAttr && !mesh.geometry.attributes.part) {
+            mesh.geometry.setAttribute("part", rawPartAttr);
+          }
+
+          const applyMat = (m: THREE.Material): THREE.Material => {
+            const cloned = m.clone() as THREE.MeshStandardMaterial;
+            if (isRb) {
+              patchRocketboxMaterial(
+                cloned,
+                topColor,
+                pantsColor,
+                hairColor,
+                keepOriginalOutfit
+              );
+            } else if (isRpm) {
+              if (!keepOriginalOutfit && /Outfit_Top/i.test(mesh.name)) {
+                cloned.color.set(topColor).lerp(new THREE.Color("#ffffff"), 0.08);
+              } else if (!keepOriginalOutfit && /Outfit_Bottom/i.test(mesh.name)) {
+                cloned.color.set(pantsColor).lerp(new THREE.Color("#ffffff"), 0.06);
+              } else if (/Hair/i.test(mesh.name)) {
+                cloned.color.set(hairColor).lerp(new THREE.Color("#ffffff"), 0.08);
+              }
+            } else if (variant === "michelle") {
+              patchMichelleMaterial(cloned, topColor, keepOriginalOutfit);
+            }
+            cloned.roughness = Math.max(cloned.roughness ?? 0.72, 0.52);
+            return cloned;
+          };
+
+          if (Array.isArray(mesh.material)) {
+            mesh.material = mesh.material.map(applyMat);
+          } else if (mesh.material) {
+            mesh.material = applyMat(mesh.material);
+          }
         }
-      }
-    });
+      });
 
-    const scale = targetHeight / Math.max(0.8, tpl.height);
-    const offsetY = -tpl.minY * scale;
+      const scale = targetHeight / Math.max(0.8, tpl.height);
+      const offsetY = -tpl.minY * scale;
 
-    return {
-      clonedScene: instance,
-      bones: boneMap,
-      scaleFactor: scale,
-      groundOffsetY: offsetY,
-      clips: retargeted,
-    };
-  }, [
-    gltf.scene,
-    xbotGltf.scene,
-    xbotGltf.animations,
-    variant,
-    topColor,
-    pantsColor,
-    keepOriginalOutfit,
-    showHeadwear,
-    targetHeight,
-  ]);
+      return {
+        clonedScene: instance,
+        bones: boneMap,
+        scaleFactor: scale,
+        groundOffsetY: offsetY,
+        clips: retargeted,
+        hasNativeGlasses: nativeGlassesFound,
+      };
+    }, [
+      gltf.scene,
+      xbotGltf.scene,
+      xbotGltf.animations,
+      variant,
+      topColor,
+      pantsColor,
+      hairColor,
+      keepOriginalOutfit,
+      showHeadwear,
+      hasGlasses,
+      hasHijab,
+      targetHeight,
+    ]);
 
-  // Setup AnimationMixer & Actions once per instance
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(clonedScene);
     const idleAction = mixer.clipAction(clips.idle);
@@ -592,7 +673,6 @@ function LoadedHumanAvatar({
     };
   }, [clonedScene, clips, phaseOffset]);
 
-  // Dispose cloned materials cleanly on unmount
   useEffect(() => {
     return () => {
       clonedScene.traverse((obj) => {
@@ -607,16 +687,19 @@ function LoadedHumanAvatar({
     };
   }, [clonedScene]);
 
+  const needHeadAcc = hasHijab || (hasGlasses && !hasNativeGlasses);
+  const needChestAcc = Boolean(hasNeckHeadphones || tieColor || fajrezzzBadgeColor);
+
   useFrame((state, delta) => {
     const mixer = mixerRef.current;
     const actions = actionsRef.current;
     const root = rootGroupRef.current;
-    if (!mixer || !actions || !root) return;
+    const outer = outerGroupRef.current;
+    if (!mixer || !actions || !root || !outer) return;
 
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime + phaseOffset;
 
-    // 1. Choose base mocap clip
     const desiredClip: "idle" | "walk" | "run" =
       pose === "running"
         ? "run"
@@ -642,7 +725,6 @@ function LoadedHumanAvatar({
 
     mixer.update(dt * playbackRate);
 
-    // 2. Smoothly blend procedural pose layers on top of mocap (seated / typing / swimming)
     const wantSeat = pose === "seated" || pose === "typing" ? 1 : 0;
     seatBlendRef.current += (wantSeat - seatBlendRef.current) * Math.min(1, dt * 8);
     const seatW = seatBlendRef.current;
@@ -650,14 +732,12 @@ function LoadedHumanAvatar({
     root.updateMatrixWorld(true);
 
     if (seatW > 0.01) {
-      // Bend legs cleanly into a natural seated office posture
       rotateBoneInCharSpace(bones.LeftUpLeg, root, _axisX, -1.42 * seatW);
       rotateBoneInCharSpace(bones.RightUpLeg, root, _axisX, -1.42 * seatW);
       rotateBoneInCharSpace(bones.LeftLeg, root, _axisX, 1.46 * seatW);
       rotateBoneInCharSpace(bones.RightLeg, root, _axisX, 1.46 * seatW);
 
       if (pose === "typing") {
-        // Bring upper arms & forearms forward onto the keyboard with subtle typing rhythm
         const typeL = Math.sin(t * 7.5) * 0.045;
         const typeR = Math.cos(t * 7.9 + 0.6) * 0.045;
         rotateBoneInCharSpace(bones.Spine1, root, _axisX, 0.09 * seatW);
@@ -668,7 +748,6 @@ function LoadedHumanAvatar({
         rotateBoneInCharSpace(bones.Head, root, _axisY, Math.sin(t * 0.75) * 0.14 * seatW);
         rotateBoneInCharSpace(bones.Head, root, _axisX, 0.07 * seatW);
       } else {
-        // Relaxed lounge / executive meeting seat posture
         rotateBoneInCharSpace(bones.LeftArm, root, _axisX, -0.34 * seatW);
         rotateBoneInCharSpace(bones.RightArm, root, _axisX, -0.34 * seatW);
         rotateBoneInCharSpace(bones.LeftForeArm, root, _axisX, -0.42 * seatW);
@@ -684,29 +763,134 @@ function LoadedHumanAvatar({
       rotateBoneInCharSpace(bones.RightUpLeg, root, _axisX, -stroke * 0.35);
       rotateBoneInCharSpace(bones.Head, root, _axisX, -0.35);
     } else if (pose === "idle") {
-      // Natural subtle living look-around while standing idle
       rotateBoneInCharSpace(bones.Head, root, _axisY, Math.sin(t * 0.6) * 0.16);
       rotateBoneInCharSpace(bones.Spine2, root, _axisZ, Math.sin(t * 1.1) * 0.02);
     }
 
-    // Subtle seated hip-height fine adjustment inside avatar container
     const seatDrop = seatW * -0.26;
     _vB.set(0, groundOffsetY + seatDrop, seatW * 0.08);
     root.position.lerp(_vB, Math.min(1, dt * 12));
+
+    // Sync character-space 3D accessories cleanly to live animated Head / Spine2 bones
+    if (needHeadAcc && headAccRef.current && bones.Head) {
+      bones.Head.getWorldPosition(_vBoneWorld);
+      outer.worldToLocal(_vBoneWorld);
+      headAccRef.current.position.copy(_vBoneWorld);
+    }
+    if (needChestAcc && chestAccRef.current && (bones.Spine2 || bones.Spine1)) {
+      const chestBone = bones.Spine2 || bones.Spine1;
+      chestBone.getWorldPosition(_vBoneWorld);
+      outer.worldToLocal(_vBoneWorld);
+      chestAccRef.current.position.copy(_vBoneWorld);
+    }
   });
 
   return (
-    <group
-      ref={rootGroupRef}
-      position={[0, groundOffsetY, 0]}
-      scale={[scaleFactor, scaleFactor, scaleFactor]}
-    >
-      <primitive object={clonedScene} />
+    <group ref={outerGroupRef}>
+      <group
+        ref={rootGroupRef}
+        position={[0, groundOffsetY, 0]}
+        scale={[scaleFactor, scaleFactor, scaleFactor]}
+      >
+        <primitive object={clonedScene} />
+      </group>
+
+      {/* Bone-Tracked Head Accessories (Black Silk Hijab / Modern Glasses from Fajrezzz Team Photo) */}
+      {needHeadAcc && (
+        <group ref={headAccRef} position={[0, targetHeight * 0.88, 0]}>
+          {hasHijab && (
+            <group>
+              {/* Sleek Black Silk Hijab Head Wrap */}
+              <mesh position={[0, 0.095, -0.015]} scale={[1.05, 1.12, 1.08]} castShadow>
+                <sphereGeometry args={[0.128, 18, 16]} />
+                <meshStandardMaterial color="#11131a" roughness={0.62} />
+              </mesh>
+              {/* Face-Framing Hijab Rim */}
+              <mesh position={[0, 0.085, 0.048]} scale={[0.96, 1.06, 0.85]}>
+                <torusGeometry args={[0.098, 0.022, 10, 22]} />
+                <meshStandardMaterial color="#161924" roughness={0.64} />
+              </mesh>
+              {/* Neck & Chest Drape Shawl */}
+              <mesh position={[0, -0.06, 0.005]} scale={[1.15, 0.92, 0.95]} castShadow>
+                <cylinderGeometry args={[0.105, 0.165, 0.2, 16]} />
+                <meshStandardMaterial color="#12151f" roughness={0.65} />
+              </mesh>
+            </group>
+          )}
+          {hasGlasses && !hasNativeGlasses && (
+            <group position={[0, 0.075, 0.105]}>
+              <mesh position={[-0.036, 0, 0]}>
+                <torusGeometry args={[0.021, 0.0038, 8, 18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.2} />
+              </mesh>
+              <mesh position={[0.036, 0, 0]}>
+                <torusGeometry args={[0.021, 0.0038, 8, 18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.2} />
+              </mesh>
+              <mesh position={[0, 0.002, 0]}>
+                <boxGeometry args={[0.024, 0.004, 0.004]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.2} />
+              </mesh>
+            </group>
+          )}
+        </group>
+      )}
+
+      {/* Bone-Tracked Chest Accessories (Neck Headphones, Executive Tie, Glowing Purple F Badge) */}
+      {needChestAcc && (
+        <group ref={chestAccRef} position={[0, targetHeight * 0.72, 0]}>
+          {hasNeckHeadphones && (
+            <group position={[0, 0.175, 0.015]}>
+              <mesh rotation={[Math.PI / 2 - 0.18, 0, 0]}>
+                <torusGeometry args={[0.088, 0.015, 10, 20, Math.PI * 1.4]} />
+                <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.5} />
+              </mesh>
+              {[-0.082, 0.082].map((hx, hi) => (
+                <group key={hi} position={[hx, -0.015, 0.068]}>
+                  <mesh rotation={[0, 0, Math.PI / 2]}>
+                    <cylinderGeometry args={[0.032, 0.032, 0.024, 12]} />
+                    <meshStandardMaterial color="#1e1b4b" roughness={0.35} metalness={0.55} />
+                  </mesh>
+                  <mesh rotation={[0, 0, Math.PI / 2]} position={[hx > 0 ? 0.013 : -0.013, 0, 0]}>
+                    <torusGeometry args={[0.024, 0.004, 8, 16]} />
+                    <meshStandardMaterial
+                      color="#c4b5fd"
+                      emissive="#8b5cf6"
+                      emissiveIntensity={1.6}
+                    />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          )}
+          {tieColor && (
+            <group position={[0, 0.01, 0.118]}>
+              <mesh position={[0, 0.095, 0]}>
+                <boxGeometry args={[0.036, 0.034, 0.016]} />
+                <meshStandardMaterial color={tieColor} roughness={0.45} />
+              </mesh>
+              <mesh position={[0, -0.035, 0]}>
+                <boxGeometry args={[0.032, 0.22, 0.012]} />
+                <meshStandardMaterial color={tieColor} roughness={0.45} />
+              </mesh>
+            </group>
+          )}
+          {fajrezzzBadgeColor && (
+            <mesh position={[0.075, 0.06, 0.118]}>
+              <boxGeometry args={[0.036, 0.036, 0.008]} />
+              <meshStandardMaterial
+                color="#e9d5ff"
+                emissive={fajrezzzBadgeColor}
+                emissiveIntensity={1.9}
+              />
+            </mesh>
+          )}
+        </group>
+      )}
     </group>
   );
 }
 
-/** Lightweight neutral placeholder shown briefly while the HD .glb streams in */
 function HumanLoadingFallback({ color = "#334155" }: { color?: string }) {
   return (
     <group>
@@ -751,12 +935,13 @@ export function RealisticHumanAvatar(props: RealisticHumanAvatarProps) {
   );
 }
 
-// Preload all 5 realistic human models + Mixamo animation rig once in background
 if (typeof window !== "undefined") {
   useGLTF.preload(MODEL_PATHS.xbot);
   useGLTF.preload(MODEL_PATHS.rpm_male);
   useGLTF.preload(MODEL_PATHS.rb_male_a);
   useGLTF.preload(MODEL_PATHS.rb_male_b);
+  useGLTF.preload(MODEL_PATHS.rpm_female);
+  useGLTF.preload(MODEL_PATHS.rpm_female_b);
   useGLTF.preload(MODEL_PATHS.rb_female);
   useGLTF.preload(MODEL_PATHS.michelle);
 }

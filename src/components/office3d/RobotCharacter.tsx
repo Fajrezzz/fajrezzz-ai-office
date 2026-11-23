@@ -13,6 +13,7 @@ import {
   OFFICE_WAYPOINTS,
   findWaypointPath,
 } from "@/lib/data/initial-office-data";
+import { useOffice } from "@/store/OfficeContext";
 import type { OfficeAgent, Vector3Tuple } from "@/types/office";
 
 interface RobotCharacterProps {
@@ -47,18 +48,111 @@ const SEATED_WAYPOINT_IDS = new Set([
   "wp-l3-boardroom",
 ]);
 
-/** Maps each Fajrezzz AI staff member to a distinct realistic 3D human `.glb` model */
-const STAFF_AVATAR_MAP: Record<string, { variant: HumanAvatarVariant; keepOriginal?: boolean }> = {
-  "staff-01": { variant: "rb_male_a" },
-  "staff-02": { variant: "michelle", keepOriginal: true },
-  "staff-03": { variant: "rb_male_b" },
-  "staff-04": { variant: "rb_female" },
-  "staff-05": { variant: "rpm_male" },
-  "staff-06": { variant: "rb_female" },
-  "staff-07": { variant: "rb_male_a" },
-  "staff-08": { variant: "michelle", keepOriginal: true },
-  "staff-09": { variant: "rb_male_b" },
-  "staff-10": { variant: "rb_female" },
+interface StaffVisualSpec {
+  variant: HumanAvatarVariant;
+  topColor: string;
+  pantsColor: string;
+  hairColor: string;
+  keepOriginal?: boolean;
+  hasGlasses?: boolean;
+  hasHijab?: boolean;
+  hasNeckHeadphones?: boolean;
+  tieColor?: string;
+  fajrezzzBadgeColor?: string;
+}
+
+/**
+ * Unique visual identity for every core Fajrezzz AI staff member,
+ * modeled directly after Bos's "Our Team · 22 Amazing People" portrait.
+ */
+const STAFF_AVATAR_MAP: Record<string, StaffVisualSpec> = {
+  // Man #1: Black Fajrezzz Hoodie + Glasses
+  "staff-01": {
+    variant: "rb_male_a",
+    topColor: "#141722",
+    pantsColor: "#10121a",
+    hairColor: "#131316",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#8b5cf6",
+  },
+  // Woman #7 + #2: Signature Lavender Purple Blouse + Glasses
+  "staff-02": {
+    variant: "rpm_female",
+    topColor: "#8b5cf6",
+    pantsColor: "#161822",
+    hairColor: "#211612",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#c4b5fd",
+  },
+  // Man #2: Crisp White/Light-Grey Fajrezzz Hoodie
+  "staff-03": {
+    variant: "rb_male_b",
+    topColor: "#eef2f6",
+    pantsColor: "#1a1f2c",
+    hairColor: "#171516",
+    fajrezzzBadgeColor: "#6366f1",
+  },
+  // Woman #8: Black Fajrezzz Hoodie + Glasses
+  "staff-04": {
+    variant: "rpm_female_b",
+    topColor: "#161824",
+    pantsColor: "#2c3242",
+    hairColor: "#281912",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#a855f7",
+  },
+  // Man #4: Black-Purple Zip Jacket + Neck Headphones (Audio Studio)
+  "staff-05": {
+    variant: "rpm_male",
+    topColor: "#1e1b4b",
+    pantsColor: "#11141e",
+    hairColor: "#131318",
+    hasNeckHeadphones: true,
+    fajrezzzBadgeColor: "#a855f7",
+  },
+  // Woman #2/#5: Crisp White Collared Blouse + Glasses
+  "staff-06": {
+    variant: "rb_female",
+    topColor: "#f8fafc",
+    pantsColor: "#1b1e29",
+    hairColor: "#2b1b13",
+    hasGlasses: true,
+    fajrezzzBadgeColor: "#6366f1",
+  },
+  // Man #12: Royal Blue Fajrezzz Varsity Jacket
+  "staff-07": {
+    variant: "rb_male_a",
+    topColor: "#1d4ed8",
+    pantsColor: "#141824",
+    hairColor: "#161515",
+    fajrezzzBadgeColor: "#38bdf8",
+  },
+  // Woman #4: All-Black Modest Fajrezzz Outfit + Black Silk Hijab
+  "staff-08": {
+    variant: "rpm_female_b",
+    topColor: "#14161f",
+    pantsColor: "#0e1017",
+    hairColor: "#111318",
+    hasHijab: true,
+    fajrezzzBadgeColor: "#8b5cf6",
+  },
+  // Man #6: Crisp White Dress Shirt + Navy Executive Tie + Glasses (Director L3)
+  "staff-09": {
+    variant: "rb_male_b",
+    topColor: "#f8fafc",
+    pantsColor: "#151822",
+    hairColor: "#151416",
+    tieColor: "#1e3a8a",
+    hasGlasses: true,
+  },
+  // Woman #1/#6: Sleek Jet-Black Executive Outfit + Wavy Chestnut Hair
+  "staff-10": {
+    variant: "michelle",
+    topColor: "#1a1d2a",
+    pantsColor: "#11131b",
+    hairColor: "#3a2216",
+    fajrezzzBadgeColor: "#a855f7",
+  },
 };
 
 export function RobotCharacter({
@@ -70,6 +164,7 @@ export function RobotCharacter({
   onFocusPoint,
   onArrive,
 }: RobotCharacterProps) {
+  const { thinkingAgentId, agentThoughts } = useOffice();
   const rootRef = useRef<THREE.Group>(null);
 
   const initialPos = useMemo(() => {
@@ -90,7 +185,6 @@ export function RobotCharacter({
     [agent.id]
   );
 
-  // Distance-tiered label LOD (near = full name, mid = compact initial badge, far = hidden unless selected)
   const [labelTier, setLabelTier] = useState<"near" | "mid" | "far">("mid");
   const labelTierRef = useRef<"near" | "mid" | "far">("mid");
   const distCheckAccumRef = useRef(0);
@@ -157,7 +251,6 @@ export function RobotCharacter({
 
     const dt = Math.min(delta, 0.05);
 
-    // Throttled camera distance check for clean, non-overlapping billboard labels
     distCheckAccumRef.current += dt;
     if (distCheckAccumRef.current > 0.18) {
       distCheckAccumRef.current = 0;
@@ -238,27 +331,33 @@ export function RobotCharacter({
     }
   });
 
-  const { hairStyle, suitColor, pantsColor } = agent.appearance;
+  const { hairStyle, suitColor, pantsColor, hairColor } = agent.appearance;
   const isFemale =
     hairStyle === "bob" || hairStyle === "ponytail" || hairStyle === "hijab";
 
-  const avatarConfig = useMemo(() => {
+  const avatarSpec = useMemo<StaffVisualSpec>(() => {
     const mapped = STAFF_AVATAR_MAP[agent.id];
     if (mapped) return mapped;
     return {
-      variant: (isFemale ? "rb_female" : "rb_male_a") as HumanAvatarVariant,
-      keepOriginal: false,
+      variant: isFemale ? "rb_female" : "rb_male_a",
+      topColor: suitColor,
+      pantsColor,
+      hairColor,
     };
-  }, [agent.id, isFemale]);
+  }, [agent.id, isFemale, suitColor, pantsColor, hairColor]);
 
-  const statusDotColor =
-    agent.status === "working"
-      ? "#10b981"
-      : agent.status === "walking"
-      ? "#38bdf8"
-      : agent.status === "error"
-      ? "#ef4444"
-      : "#f59e0b";
+  const isThinkingNow = thinkingAgentId === agent.id;
+  const latestThought = agentThoughts[agent.id];
+
+  const statusDotColor = isThinkingNow
+    ? "#00f0ff"
+    : agent.status === "working"
+    ? "#10b981"
+    : agent.status === "walking"
+    ? "#38bdf8"
+    : agent.status === "error"
+    ? "#ef4444"
+    : "#f59e0b";
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -282,27 +381,75 @@ export function RobotCharacter({
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {/* Subtle Selection & Role Presence Ring on Floor */}
+      {/* Cyberpunk Neon Selection & Thinking Ring on Floor */}
       <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[isSelected ? 0.42 : 0.3, isSelected ? 0.52 : 0.36, 28]} />
+        <ringGeometry
+          args={[
+            isSelected || isThinkingNow ? 0.42 : 0.3,
+            isSelected || isThinkingNow ? 0.54 : 0.36,
+            28,
+          ]}
+        />
         <meshBasicMaterial
-          color={isSelected ? "#38bdf8" : agent.accentColor}
+          color={isThinkingNow ? "#00f0ff" : isSelected ? "#38bdf8" : agent.accentColor}
           transparent
-          opacity={isSelected ? 0.85 : 0.32}
+          opacity={isThinkingNow ? 0.9 : isSelected ? 0.85 : 0.34}
         />
       </mesh>
 
-      {/* Photorealistic Rigged 3D Human Model (.glb + Mixamo MoCap) */}
+      {/* Photorealistic Rigged 3D Human Avatar matching Fajrezzz Team Portrait */}
       <RealisticHumanAvatar
-        variant={avatarConfig.variant}
+        variant={avatarSpec.variant}
         pose={avatarPose}
-        topColor={suitColor}
-        pantsColor={pantsColor}
-        keepOriginalOutfit={avatarConfig.keepOriginal}
+        topColor={avatarSpec.topColor}
+        pantsColor={avatarSpec.pantsColor}
+        hairColor={avatarSpec.hairColor}
+        keepOriginalOutfit={avatarSpec.keepOriginal}
+        hasGlasses={avatarSpec.hasGlasses}
+        hasHijab={avatarSpec.hasHijab}
+        hasNeckHeadphones={avatarSpec.hasNeckHeadphones}
+        tieColor={avatarSpec.tieColor}
+        fajrezzzBadgeColor={avatarSpec.fajrezzzBadgeColor}
         targetHeight={isFemale ? 1.65 : 1.74}
         phaseOffset={phaseOffset}
         isSimulationRunning={isSimulationRunning}
       />
+
+      {/* Live Autonomous AI Thought Bubble above Character Head */}
+      {showLabels && (isThinkingNow || (latestThought && (isSelected || labelTier === "near"))) && (
+        <Html
+          position={[0, roleOffsetY + 0.34, 0]}
+          center
+          distanceFactor={12}
+          zIndexRange={[35, 22]}
+        >
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(agent.id);
+            }}
+            className={`pointer-events-auto max-w-[210px] cursor-pointer rounded-xl border px-2.5 py-1 text-[9px] leading-snug shadow-xl backdrop-blur-md ${
+              isThinkingNow
+                ? "animate-pulse border-cyan-400/80 bg-cyan-950/90 text-cyan-100"
+                : "border-fuchsia-400/60 bg-slate-950/90 text-slate-100"
+            }`}
+          >
+            {isThinkingNow ? (
+              <span className="font-bold">🧠 Sedang berpikir mandiri (AI)...</span>
+            ) : (
+              <div>
+                <div className="mb-0.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-cyan-300">
+                  <span>🧠 {latestThought.provider}</span>
+                  <span className="text-slate-400">· {latestThought.timestamp}</span>
+                </div>
+                <div className="line-clamp-2 font-medium text-white">
+                  {latestThought.chatBubble}
+                </div>
+              </div>
+            )}
+          </div>
+        </Html>
+      )}
 
       {showLabels && (isSelected || labelTier !== "far") && (
         <Html

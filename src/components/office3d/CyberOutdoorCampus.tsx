@@ -645,13 +645,13 @@ function CyberpunkRGBFountain({
           opacity={0.86}
         />
       </mesh>
-      {/* Subtle Warm Architectural Underwater Rim */}
+      {/* Cyberpunk Cyan Underwater Fountain Rim */}
       <mesh position={[0, 0.44, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.38, 0.032, 8, 32]} />
         <meshStandardMaterial
-          color="#fffbeb"
-          emissive="#fde68a"
-          emissiveIntensity={isNight ? 1.3 : 0.12}
+          color="#cffafe"
+          emissive="#00f0ff"
+          emissiveIntensity={isNight ? 1.8 : 0.28}
         />
       </mesh>
       {/* Classic Two-Tier Cream Stone Pedestal */}
@@ -1255,9 +1255,7 @@ function StreetLampWithCone({
   isSunset: boolean;
   isCyan?: boolean;
 }) {
-  const showBeam = isNight || isSunset;
-  const lampColor = isCyan ? "#67e8f9" : "#ffe2a6";
-  const coneOpacity = isNight ? 0.16 : 0.08;
+  const lampColor = isCyan ? "#00f0ff" : "#a855f7";
 
   return (
     <group position={position}>
@@ -1270,35 +1268,30 @@ function StreetLampWithCone({
         <cylinderGeometry args={[0.065, 0.095, 5.2, 10]} />
         <meshStandardMaterial color="#273140" metalness={0.78} roughness={0.28} />
       </mesh>
+      {/* Sleek Cyberpunk Neon Accent Ring on Pole */}
+      <mesh position={[0, 4.45, 0]}>
+        <cylinderGeometry args={[0.088, 0.088, 0.22, 10]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive={lampColor}
+          emissiveIntensity={isNight ? 2.4 : isSunset ? 1.2 : 0.35}
+        />
+      </mesh>
       {/* Cantilevered Head overhanging the Avenue */}
       <mesh position={[0, 5.28, 0.72]} rotation={[0.12, 0, 0]}>
         <boxGeometry args={[0.16, 0.1, 1.55]} />
         <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Glowing LED Street Luminaire */}
+      {/* Clean Cyberpunk RGB LED Street Luminaire (no bulky yellow cone blocking view) */}
       <mesh position={[0, 5.22, 1.32]}>
         <boxGeometry args={[0.42, 0.08, 0.28]} />
         <meshStandardMaterial
           color="#ffffff"
           emissive={lampColor}
-          emissiveIntensity={isNight ? 3.2 : isSunset ? 1.8 : 0.25}
+          emissiveIntensity={isNight ? 2.8 : isSunset ? 1.5 : 0.3}
           toneMapped={!(isNight || isSunset)}
         />
       </mesh>
-      {/* Soft Volumetric Light Cone */}
-      {showBeam && (
-        <mesh position={[0, 2.6, 1.38]}>
-          <coneGeometry args={[2.55, 5.15, 16, 1, true]} />
-          <meshBasicMaterial
-            color={lampColor}
-            transparent
-            opacity={coneOpacity}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      )}
     </group>
   );
 }
@@ -1472,9 +1465,9 @@ export function CyberOutdoorCampus({
           <mesh position={[0, 1.58, 0]}>
             <boxGeometry args={[0.24, 0.1, 0.24]} />
             <meshStandardMaterial
-              color="#fffbeb"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.8 : 0.12}
+              color="#e0f2fe"
+              emissive={gi % 2 === 0 ? "#00f0ff" : "#a855f7"}
+              emissiveIntensity={isNight ? 2.2 : 0.3}
             />
           </mesh>
         </group>
@@ -1527,22 +1520,22 @@ export function CyberOutdoorCampus({
         )}
       </mesh>
 
-      {/* Subtle Warm Architectural Streetlight Reflection on Wet Night Asphalt */}
+      {/* Cyberpunk RGB Neon Reflections on Wet Night Asphalt */}
       {isNight && (
         <group position={[0, 0.008, 24.5]}>
           {[
-            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#fde68a" },
-            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#fffbeb" },
-            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#fde68a" },
-            { x: -24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
-            { x: 24, z: -2.0, w: 4.5, d: 1.8, col: "#fbbf24" },
+            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#00f0ff" },
+            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#8b5cf6" },
+            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#ec4899" },
+            { x: -24, z: -2.0, w: 4.5, d: 1.8, col: "#38bdf8" },
+            { x: 24, z: -2.0, w: 4.5, d: 1.8, col: "#a855f7" },
           ].map((p, idx) => (
             <mesh key={idx} position={[p.x, 0, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[p.w, p.d]} />
               <meshBasicMaterial
                 color={p.col}
                 transparent
-                opacity={0.1}
+                opacity={0.14}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
               />
@@ -1581,7 +1574,7 @@ export function CyberOutdoorCampus({
           position={[x, 0.12, 19.65]}
           isNight={isNight}
           isSunset={isSunset}
-          isCyan={false}
+          isCyan={i % 2 === 0}
         />
       ))}
 
