@@ -328,7 +328,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
   const [gameDay, setGameDay] = useState<number>(1);
   const [timeSpeed, setTimeSpeed] = useState<TimeSpeed>("normal");
   const [autoDayNight, setAutoDayNight] = useState<boolean>(false);
-  const [weatherMode, setWeatherMode] = useState<WeatherMode>("dynamic");
+  const [weatherMode, setWeatherMode] = useState<WeatherMode>("clear");
   const [dynamicWeather, setDynamicWeather] = useState<ResolvedWeather>("clear");
 
   const [simCameraMode, setSimCameraMode] = useState<SimCameraMode>("orbit");

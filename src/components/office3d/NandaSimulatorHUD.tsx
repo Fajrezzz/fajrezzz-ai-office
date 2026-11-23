@@ -3,27 +3,14 @@
 import React from "react";
 import {
   Activity,
-  Car,
-  Cloud,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
-  Coffee,
-  Compass,
-  Clock,
-  HelpCircle,
   MapPin,
   Save,
-  Settings,
-  Sun,
   UploadCloud,
-  Users,
   Volume2,
   X,
 } from "lucide-react";
 import { useOffice } from "@/store/OfficeContext";
 import {
-  DRIVABLE_VEHICLES,
   TELEPORT_LOCATIONS,
   useSimulator,
   type TimeSpeed,
@@ -37,34 +24,22 @@ export function NandaSimulatorHUD() {
     setPerformanceMode,
     setActiveFloor,
     teleportBoss,
-    bossPositionRef,
     agents,
   } = useOffice();
 
   const {
-    formattedTime,
-    gameDay,
     timeSpeed,
     setTimeSpeed,
     autoDayNight,
     setAutoDayNight,
     weatherMode,
-    resolvedWeather,
     setWeatherMode,
-    cycleWeather,
-    simCameraMode,
-    cycleSimCameraMode,
-    viewPerspective,
-    toggleViewPerspective,
     showHud,
     toggleHud,
     sensitivity,
     setSensitivity,
     volume,
     setVolume,
-    compassDeg,
-    zoomPct,
-    currentLocationName,
     activeSimModal,
     setActiveSimModal,
     staffVitals,
@@ -78,23 +53,11 @@ export function NandaSimulatorHUD() {
     driveCameraMode,
     toggleDriveCameraMode,
     triggerHorn,
-    vehiclePositionsRef,
     pushSimLog,
     saveStatus,
     saveProgress,
     loadProgress,
   } = useSimulator();
-
-  const WeatherIcon =
-    resolvedWeather === "rain"
-      ? CloudRain
-      : resolvedWeather === "storm"
-        ? CloudLightning
-        : resolvedWeather === "fog"
-          ? CloudFog
-          : resolvedWeather === "cloudy"
-            ? Cloud
-            : Sun;
 
   const weatherLabel: Record<string, string> = {
     dynamic: "Dinamis",
@@ -119,127 +82,7 @@ export function NandaSimulatorHUD() {
 
   return (
     <>
-      {/* SINGLE CLEAN CALM ACTION BAR (No Flashing SIMULASI Numbers & No MT5!) */}
-      <div className="pointer-events-none absolute inset-x-2 top-14 z-20 sm:inset-x-3">
-        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto pb-1">
-          <span className="shrink-0 rounded-full border border-fuchsia-400/35 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-fuchsia-200 backdrop-blur">
-            📍 {currentLocationName}
-          </span>
-
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-slate-700/80 bg-slate-950/82 px-2.5 py-1 font-mono text-[10px] text-cyan-200 backdrop-blur">
-            <Clock className="h-3 w-3 text-cyan-400" />
-            {formattedTime} · H{gameDay}
-          </span>
-
-          <button
-            type="button"
-            onClick={cycleWeather}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-700/80 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-sky-200 hover:bg-slate-800"
-            title="Ganti Cuaca (N)"
-          >
-            <WeatherIcon className="h-3 w-3 text-sky-400" />
-            <span>{weatherLabel[resolvedWeather]}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("directory")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-950/70"
-          >
-            <Users className="h-3 w-3" /> Staf ({staffVitals.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("lounge")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-amber-200 hover:bg-amber-950/70"
-          >
-            <Coffee className="h-3 w-3" /> Undang Ngobrol
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("map")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-violet-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-violet-200 hover:bg-violet-950/70"
-          >
-            <MapPin className="h-3 w-3" /> Peta (M)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (activeVehicleId) {
-                const cur = vehiclePositionsRef.current[activeVehicleId];
-                if (cur) teleportBoss([cur.pos[0] - 2.1, 0.18, cur.pos[2]], 1, "Halaman Parkir", cur.yaw);
-                setActiveVehicleId(null);
-                pushSimLog("Bos Fajrez", "Turun dari kendaraan.", "vehicle");
-              } else {
-                const [bx, , bz] = bossPositionRef.current;
-                let nearest = DRIVABLE_VEHICLES[0];
-                let minD = Infinity;
-                for (const v of DRIVABLE_VEHICLES) {
-                  const st = vehiclePositionsRef.current[v.id];
-                  if (!st) continue;
-                  const d = Math.hypot(st.pos[0] - bx, st.pos[2] - bz);
-                  if (d < minD) {
-                    minD = d;
-                    nearest = v;
-                  }
-                }
-                setActiveVehicleId(nearest.id);
-                pushSimLog("Bos Fajrez", `Mengemudikan ${nearest.name}!`, "vehicle");
-              }
-            }}
-            className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
-              activeVehicleId
-                ? "border-rose-400 bg-rose-500/25 text-rose-200"
-                : "border-sky-400/40 bg-slate-950/82 text-sky-200 hover:bg-sky-950/70"
-            }`}
-          >
-            <Car className="h-3 w-3" /> {activeVehicleId ? "Turun (F)" : "Kemudi (9)"}
-          </button>
-
-          <button
-            type="button"
-            onClick={cycleSimCameraMode}
-            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
-            title="Mode Kamera (O)"
-          >
-            🎥 {simCameraMode === "orbit" ? "Orbit" : simCameraMode === "drone" ? "Drone" : "Atas"}
-          </button>
-
-          <button
-            type="button"
-            onClick={toggleViewPerspective}
-            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/82 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
-            title="Sudut Pandang 1/3 Orang (V)"
-          >
-            {viewPerspective === "first" ? "1st" : "3rd"}
-          </button>
-
-          <span className="hidden lg:flex shrink-0 items-center gap-1 rounded-full border border-slate-700 bg-slate-950/82 px-2 py-1 text-[10px] text-slate-300">
-            <Compass className="h-3 w-3 text-fuchsia-400" />
-            {Math.round(compassDeg)}° · {zoomPct}%
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("settings")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
-          >
-            <Settings className="h-3 w-3" /> Setelan
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("help")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/82 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
-            title="Bantuan Tombol"
-          >
-            <HelpCircle className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
+      {/* Top location/clock/weather ticker bar removed for a calm, uncluttered 3D viewport */}
 
       {/* DRIVING SPEEDOMETER & CONTROLS BANNER WHEN DRIVING ANY OF THE 9 REALISTIC VEHICLES */}
       {activeVehicleId && (
