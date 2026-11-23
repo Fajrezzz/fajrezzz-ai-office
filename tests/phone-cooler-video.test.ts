@@ -85,3 +85,27 @@ test("subtitle ter-burn memakai waktu narasi dan menyebut sumber", { skip: !repo
   assert.match(report.honesty.sources, /Magnus|ASUS|TEC1-12706/);
   assert.match(report.honesty.visuals, /prosedural/i);
 });
+
+/* ------------------------------- cut TikTok ------------------------------- */
+
+const tiktokPath = path.join(process.cwd(), "docs/reports/phone-cooler/tiktok-report.json");
+const tiktok: PhoneCoolerReport | null = fs.existsSync(tiktokPath)
+  ? (JSON.parse(fs.readFileSync(tiktokPath, "utf8")) as PhoneCoolerReport)
+  : null;
+
+test("cut TikTok ter-render dengan musik latar hasil sintesis", { skip: !tiktok && "belum ada tiktok-report.json" }, () => {
+  assert.ok(tiktok);
+  assert.equal(tiktok.probe.width, 1080);
+  assert.equal(tiktok.probe.height, 1920);
+  assert.equal(tiktok.probe.fps, 30);
+  assert.equal(tiktok.probe.videoCodec, "h264");
+  assert.equal(tiktok.probe.audioCodec, "aac");
+  assert.ok(tiktok.probe.durationSec > 45 && tiktok.probe.durationSec < 90, `durasi ${tiktok.probe.durationSec}`);
+  assert.equal(tiktok.decodeCheck.ok, true, tiktok.decodeCheck.detail);
+  assert.equal(tiktok.timeline.length, 7);
+  assert.match(tiktok.honesty.music, /disintesis/i);
+  assert.match(tiktok.honesty.music, /lisensi/i);
+  const file = path.join(process.cwd(), tiktok.video);
+  assert.ok(fs.existsSync(file), "file video TikTok tidak ada");
+  assert.ok(fs.statSync(file).size > 4_000_000, "file terlalu kecil untuk video 1 menit");
+});

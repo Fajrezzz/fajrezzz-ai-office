@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
-import { SCENES, FPS, WIDTH, HEIGHT, SCENE_TAIL_SEC } from "./scenes.ts";
+import { FPS, WIDTH, HEIGHT, SCENE_TAIL_SEC } from "./scenes.ts";
 import type { SceneSpec } from "./scenes.ts";
 import { Frame, VW, VH, drawScene } from "./visuals.ts";
 
@@ -26,8 +26,15 @@ const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH ?? "ffprobe";
 
 const root = process.cwd();
+const MODE = process.argv.includes("--tiktok") ? "tiktok" : "long";
+const SLUG = MODE === "tiktok" ? "kenapa-cooler-hp-tiktok" : "kenapa-cooler-hp-keluarkan-air";
+const REPORT_SLUG = MODE === "tiktok" ? "tiktok-report" : "render-report";
+const SUB_MARGIN_V = MODE === "tiktok" ? 370 : 300;
+const PROGRESS_Y = MODE === "tiktok" ? 1738 : 1836;
+const MUSIC_PATH = MODE === "tiktok" ? path.join(root, "assets/music/tiktok-bed.mp3") : null;
+
 const outDir = path.join(root, "docs/reports/phone-cooler");
-const workDir = path.join(root, ".video-work/phone-cooler");
+const workDir = path.join(root, ".video-work", MODE === "tiktok" ? "phone-cooler-tiktok" : "phone-cooler");
 const framesDir = path.join(outDir, "frames");
 const txtDir = path.join(workDir, "txt");
 
@@ -81,10 +88,10 @@ interface SceneTiming {
   frames: number;
 }
 
-function buildTimeline(): { timings: SceneTiming[]; totalSec: number } {
+function buildTimeline(scenes: SceneSpec[]): { timings: SceneTiming[]; totalSec: number } {
   const timings: SceneTiming[] = [];
   let cursor = 0;
-  SCENES.forEach((scene, index) => {
+  scenes.forEach((scene, index) => {
     const audioPath = path.join(root, scene.audio);
     if (!fs.existsSync(audioPath)) {
       throw new Error(`Narasi belum ada: ${scene.audio} (jalankan generate_speech dulu)`);
@@ -394,8 +401,7 @@ function buildAss(timings: SceneTiming[]): { ass: string; cues: number } {
     });
   }
 
-  const style =
-    "-1,0,0,0,100,100,0,0,1,6,3,2,95,95,300,1";
+  const style = `-1,0,0,0,100,100,0,0,1,6,3,2,95,95,${SUB_MARGIN_V},1`;
   const ass = [
     "[Script Info]",
     "ScriptType: v4.00+",
@@ -442,7 +448,13 @@ function makeWhoosh(file: string): void {
   );
 }
 
-function buildAudioFilter(timings: SceneTiming[], offset: number, whooshIndex: number): { graph: string; label: string } {
+function buildAudioFilter(
+  timings: SceneTiming[],
+  offset: number,
+  whooshIndex: number,
+  musicIndex: number | null,
+  totalSec: number
+): { graph: string; label: string } {
   const parts: string[] = [];
   const labels: string[] = [];
 
@@ -464,6 +476,15 @@ function buildAudioFilter(timings: SceneTiming[], offset: number, whooshIndex: n
     labels.push(`[q${i}]`);
   });
 
+  if (musicIndex !== null) {
+    const fadeOutStart = Math.max(0, totalSec - 2.6);
+    parts.push(
+      `[${musicIndex}:a]aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.35,` +
+        `afade=t=in:st=0:d=1.4,afade=t=out:st=${fadeOutStart.toFixed(2)}:d=2.4[mus]`
+    );
+    labels.push("[mus]");
+  }
+
   parts.push(
     `${labels.join("")}amix=inputs=${labels.length}:normalize=0:dropout_transition=0,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[aout]`
   );
@@ -473,7 +494,10 @@ function buildAudioFilter(timings: SceneTiming[], offset: number, whooshIndex: n
 /* ---------------------------------- main ---------------------------------- */
 
 async function main(): Promise<void> {
-  const { timings, totalSec } = buildTimeline();
+  const { SCENES: sceneList } = (await import(MODE === "tiktok" ? "./scenes-tiktok.ts" : "./scenes.ts")) as {
+    SCENES: SceneSpec[];
+  };
+  const { timings, totalSec } = buildTimeline(sceneList);
   const totalFrames = timings.reduce((sum, t) => sum + t.frames, 0);
   console.log(
     `Timeline: ${timings.length} scene, ${totalSec.toFixed(2)} s (${totalFrames} frame). ` +
@@ -507,7 +531,7 @@ async function main(): Promise<void> {
 
   // subtitle + teks
   const { ass, cues } = buildAss(timings);
-  const assPath = path.join(outDir, "kenapa-cooler-hp-keluarkan-air.ass");
+  const assPath = path.join(outDir, `${SLUG}.ass`);
   fs.writeFileSync(assPath, ass, "utf8");
   const { filters } = buildTextLayer(timings);
 
@@ -516,16 +540,20 @@ async function main(): Promise<void> {
 
   const audioInputs = timings.flatMap((t) => ["-i", path.join(root, t.scene.audio)]);
   const whooshIndex = 2 + timings.length; // 0 = base, 1 = bar, lalu narasi
-  const { graph, label } = buildAudioFilter(timings, 2, whooshIndex);
+  const musicIndex = MUSIC_PATH ? whooshIndex + 1 : null;
+  if (MUSIC_PATH && !fs.existsSync(MUSIC_PATH)) {
+    throw new Error(`Musik latar tidak ada: ${path.relative(root, MUSIC_PATH)} (jalankan scripts/phone-cooler/music.ts lalu encode ke mp3)`);
+  }
+  const { graph, label } = buildAudioFilter(timings, 2, whooshIndex, musicIndex, totalSec);
 
   const videoChain = [
-    `[0:v][1:v]overlay=x='${WIDTH}*(t/${totalSec.toFixed(3)})-${WIDTH}':y=1836:shortest=1[bar]`,
+    `[0:v][1:v]overlay=x='${WIDTH}*(t/${totalSec.toFixed(3)})-${WIDTH}':y=${PROGRESS_Y}:shortest=1[bar]`,
     `[bar]${filters.map((f) => f).join(",")},ass=${assPath}:fontsdir=${FONT_DIR},format=yuv420p[vout]`,
   ].join(";");
 
   const graphText = `${videoChain};${graph}`;
   fs.writeFileSync(path.join(workDir, "graph.txt"), graphText, "utf8");
-  const finalFile = path.join(outDir, "kenapa-cooler-hp-keluarkan-air.mp4");
+  const finalFile = path.join(outDir, `${SLUG}.mp4`);
   const encodeStarted = Date.now();
   run(
     FFMPEG,
@@ -542,6 +570,7 @@ async function main(): Promise<void> {
       ...audioInputs,
       "-i",
       whoosh,
+      ...(MUSIC_PATH ? ["-stream_loop", "-1", "-i", MUSIC_PATH] : []),
       "-filter_complex",
       graphText,
       "-map",
@@ -650,13 +679,16 @@ async function main(): Promise<void> {
         "Narasi = suara TTS yang dihasilkan di sesi ini (Arena voice), satu klip per scene; durasi scene diukur dari file audio, bukan diperkirakan.",
       visuals:
         "Visual digambar prosedural di Node (gradien, embun, kristal, partikel) lalu di-upscale ffmpeg; tidak memakai stok footage atau B-roll AI.",
-      music: "Tanpa musik latar. Hanya narasi + whoosh tipis yang disintesis ffmpeg di setiap potongan.",
+      music:
+        MODE === "tiktok"
+          ? "Musik latar disintesis sendiri di Node (scripts/phone-cooler/music.ts, 84 BPM, progresi Am-F-C-G) lalu di-encode ke mp3 — bebas klaim lisensi pihak ketiga. Volume musik ±0,35 relatif suara, di-fade in/out."
+          : "Tanpa musik latar. Hanya narasi + whoosh tipis yang disintesis ffmpeg di setiap potongan.",
       sources:
         "Titik embun: rumus Magnus/Tetens (25°C/60% ≈ 16,7°C). Tetesan air: FAQ resmi ASUS AeroActive Cooler 6. Daya & sisi panas: datasheet TEC1-12706.",
     },
   };
 
-  fs.writeFileSync(path.join(outDir, "render-report.json"), JSON.stringify(report, null, 2), "utf8");
+  fs.writeFileSync(path.join(outDir, `${REPORT_SLUG}.json`), JSON.stringify(report, null, 2), "utf8");
   const md = [
     "# Video contoh — kenapa cooler HP bisa mengeluarkan air atau es",
     "",
@@ -686,7 +718,7 @@ async function main(): Promise<void> {
     `- **Audio.** ${report.honesty.music}`,
     `- **Sumber.** ${report.honesty.sources}`,
   ].join("\n");
-  fs.writeFileSync(path.join(outDir, "render-report.md"), md, "utf8");
+  fs.writeFileSync(path.join(outDir, `${REPORT_SLUG}.md`), md, "utf8");
 
   const valid =
     report.probe.width === WIDTH &&

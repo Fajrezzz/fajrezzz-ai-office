@@ -61,6 +61,25 @@ Keluaran:
 
 Tes otomatis: `node --experimental-strip-types --test tests/phone-cooler-video.test.ts` (metadata, audio bersuara, timeline narasi, subtitle & sumber).
 
+## Cut TikTok (dengan musik latar)
+
+File: **`kenapa-cooler-hp-tiktok.mp4`** — 1080×1920, 30 fps, 62,9 s, 8,9 MB, 7 scene.
+
+Bedanya dengan versi panjang:
+
+- Naskah ditulis ulang jadi 7 kalimat utuh (bukan potongan), jadi tidak ada kalimat menggantung.
+- **Musik latar disintesis sendiri** (`scripts/phone-cooler/music.ts`): 84 BPM, progresi Am–F–C–G, pad + bass + kick + hi-hat, lalu dikompresi dan di-encode ke mp3. Tidak memakai lagu pihak ketiga → aman dari klaim hak cipta TikTok.
+- Musik ditaruh di bawah narasi (volume ±0,35 relatif suara, fade in/out) dan diukur: di jeda antar scene tersisa ±−31 dB, sementara narasi ±−19 dB.
+- Subtitle dinaikkan sedikit supaya tidak menabrak UI TikTok di bawah.
+
+Render ulang:
+
+```bash
+node --experimental-strip-types scripts/phone-cooler/music.ts   # menghasilkan WAV
+ffmpeg -i assets/music/tiktok-bed.wav -c:a libmp3lame -b:a 192k assets/music/tiktok-bed.mp3
+FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:tiktok
+```
+
 ## Struktur kode
 
 | File | Isi |
@@ -68,5 +87,7 @@ Tes otomatis: `node --experimental-strip-types --test tests/phone-cooler-video.t
 | `scripts/phone-cooler/scenes.ts` | naskah per scene, judul/label, warna, jalur audio |
 | `scripts/phone-cooler/visuals.ts` | renderer visual prosedural (gradien, embun, kristal, partikel, termometer) |
 | `scripts/phone-cooler/render.ts` | timeline dari audio, encode per scene, teks beranimasi, subtitle, mix audio, verifikasi ffprobe |
+| `scripts/phone-cooler/scenes-tiktok.ts` | naskah cut TikTok (7 scene, layout khusus UI TikTok) |
+| `scripts/phone-cooler/music.ts` | sintesis musik latar (WAV 48 kHz) tanpa sampel pihak ketiga |
 | `scripts/phone-cooler/stills.ts` | render still per scene untuk cek komposisi |
 | `assets/fonts/` | Inter (SIL OFL, lisensi disertakan) untuk tipografi video |

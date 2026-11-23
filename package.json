@@ -15,7 +15,9 @@
     "studio:dry-run": "node --experimental-strip-types scripts/studio-dry-run.ts",
     "studio:render": "node --experimental-strip-types scripts/studio-render.ts",
     "video:phone-cooler": "node --experimental-strip-types scripts/phone-cooler/render.ts",
-    "video:phone-cooler:stills": "node --experimental-strip-types scripts/phone-cooler/stills.ts"
+    "video:phone-cooler:stills": "node --experimental-strip-types scripts/phone-cooler/stills.ts",
+    "video:tiktok": "node --experimental-strip-types scripts/phone-cooler/render.ts --tiktok",
+    "music:tiktok": "node --experimental-strip-types scripts/phone-cooler/music.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
