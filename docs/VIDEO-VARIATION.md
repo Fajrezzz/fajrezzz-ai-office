@@ -30,7 +30,7 @@ Ini penting supaya kalau ada yang perlu di-render ulang / QC, hasilnya identik.
 
 | Sumbu | Nilai |
 | --- | --- |
-| `paper` | `cream` `#F1EBE0` · `newsprint` `#EDEDE6` · `bone` `#F6F1E7` · `charcoal` `#141416` (gelap) |
+| `paper` | `cream` `#F1EBE0` · `newsprint` `#EDEDE6` · `bone` `#F6F1E7` · `charcoal` `#141416` (gelap, ±1 dari 9 episode) |
 | `accent` | `vermilion` (merah/amber/biru) · `electric` (biru/merah/hijau) · `acid` (limau/hitam/hijau) · `sunset` (amber/merah/ungu) |
 | `layoutMode` | `band_swap` · `full_bleed_art` · `stacked_cards` · `text_only` |
 | `typography` | `slab` (blok tinta) · `outline` (stroke tebal) · `highlight` (satu baris berwarna aksen) |
@@ -68,6 +68,14 @@ lalu headline juga diwarnai tinta → headline hitam di atas blok hitam (hilang 
 di episode kertas gelap). Sekarang blok jangkar selalu warna aksen, jadi headline selalu
 kontras, baik di kertas terang maupun `charcoal`.
 
+## 4b. Komposisi yang tidak menabrak teks
+
+- `full_bleed_art`: kartu artwork berhenti tepat di atas band headline, jadi
+  tipografi + caption selalu di kertas bersih (dulu kartu menutupi teks).
+- `stacked_cards`: kartu sedikit lebih lebar (0.72w) supaya tidak terasa kecil.
+- Caption diberi **scrim kertas tipis** di belakangnya, jadi tetap terbaca walau
+  kebetulan jatuh di atas artwork.
+
 ## 5. Caption penjelas (video harus jelas untuk penonton awam)
 
 Headline tetap `visualCue` 3–6 kata. Di bawahnya sekarang ada **caption** dari kalimat
@@ -80,6 +88,9 @@ Caption dilewati otomatis kalau narasi sama dengan headline (tidak mengulang tek
 ## 6. QC cepat tanpa render MP4
 
 ```bash
+# lembar perbandingan 4 episode (bukti look beda) → .zine-preview/perbandingan-episode.png
+npm run preview:variety
+
 # 7 frame contoh untuk satu episode
 npm run preview:zine -- "KANTOR AI INI KERJA SENDIRI TANPA MANUSIA"
 

@@ -10,7 +10,8 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/video-engine-v3.test.ts && node --experimental-strip-types tests/advanced-skills-v4.test.ts && node --experimental-strip-types --test tests/major-revision-v5.test.ts && node --experimental-strip-types --test tests/central-ai-router-v6.test.ts && node --experimental-strip-types tests/render-telemetry-v7.test.ts && node --experimental-strip-types --test tests/three-floor-layout.test.ts && node --experimental-strip-types --test tests/office-fixes-v8.test.ts && node --experimental-strip-types --test tests/zine-style-v9.test.ts && node --experimental-strip-types --test tests/office-layout-v9.test.ts && node --experimental-strip-types --test tests/ai-resilience-v9.test.ts && node --experimental-strip-types --test tests/visual-variation-v9.test.ts && node --experimental-strip-types --test tests/uploaded-audio-plan-v9.test.ts",
-    "preview:zine": "tsx scripts/preview-zine.ts"
+    "preview:zine": "tsx scripts/preview-zine.ts",
+    "preview:variety": "tsx scripts/preview-variety.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

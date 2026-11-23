@@ -124,7 +124,17 @@ export interface VisualVariation {
 const LAYOUTS: LayoutModeId[] = ["band_swap", "full_bleed_art", "stacked_cards", "text_only"];
 const TYPOGRAPHY: TypographyModeId[] = ["slab", "outline", "highlight"];
 const TRANSITIONS: TransitionModeId[] = ["speedlines", "flash", "slice", "page_wipe"];
-const PAPERS: PaperToneId[] = ["cream", "newsprint", "bone", "cream", "newsprint", "bone", "charcoal"];
+const PAPERS: PaperToneId[] = [
+  "cream",
+  "newsprint",
+  "bone",
+  "cream",
+  "newsprint",
+  "bone",
+  "cream",
+  "newsprint",
+  "charcoal", // kertas gelap = look langka (±1 dari 9 episode), bukan default
+];
 const ACCENTS: AccentSetId[] = ["vermilion", "electric", "acid", "sunset", "vermilion"];
 
 /** Hash 32-bit stabil (FNV-1a) — sama di browser & Node. */

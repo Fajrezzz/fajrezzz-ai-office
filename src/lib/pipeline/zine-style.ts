@@ -762,12 +762,19 @@ function drawZineScene(
   const artH = Math.max(1, artBand.bottom - artBand.top);
   const artCy = (artBand.top + artBand.bottom) / 2;
   const fullBleed = mode === "full_bleed_art";
-  const cardH = fullBleed ? artH * 0.98 : mode === "stacked_cards" ? artH * 0.94 : artH * 0.94;
+  // full_bleed: kartu sengaja tidak menutupi band headline di bawah,
+  // jadi tipografi + caption tetap terbaca di atas kertas bersih.
+  const cardH = fullBleed
+    ? Math.max(artH * 0.3, headBand.top - gap * 0.5 - artBand.top)
+    : mode === "stacked_cards"
+      ? artH * 0.94
+      : artH * 0.94;
   const cardW = fullBleed
     ? w * 0.96
     : mode === "stacked_cards"
-      ? Math.min(w * 0.58, cardH * 1.15)
+      ? Math.min(w * 0.72, cardH * 1.25)
       : Math.min(w * 0.74, cardH * 1.06);
+  const cardCy = fullBleed ? artBand.top + cardH / 2 : artCy;
   const hasArt = mode !== "text_only";
 
   if (hasArt) {
@@ -850,7 +857,7 @@ function drawZineScene(
       ctx,
       image,
       w / 2 - cardW / 2,
-      artCy - cardH / 2,
+      cardCy - cardH / 2,
       cardW,
       cardH,
       variation.cardRotation + zineCardRotation(sceneIndex) * 0.5,
@@ -960,8 +967,19 @@ function drawZineScene(
       const capTop = fitsBelow ? belowY : fitsAbove ? aboveY : -1;
 
       if (capTop >= 0) {
+        // Scrim kertas tipis di belakang caption supaya tetap terbaca walau
+        // kebetulan jatuh di atas kartu artwork (bukan cuma berharap kontras).
+        const scrimPad = capFont * 0.42;
         ctx.save();
-        ctx.globalAlpha = 0.92;
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = paperColor;
+        ctx.fillRect(
+          w * 0.075,
+          capTop - scrimPad * 0.4,
+          w * 0.85,
+          capH + scrimPad * 0.8
+        );
+        ctx.globalAlpha = 1;
         ctx.fillStyle = accent.primary;
         ctx.fillRect(w * 0.11, capTop + capFont * 0.2, w * 0.05, Math.max(2, capFont * 0.1));
         ctx.fillStyle = inkColor;
@@ -991,7 +1009,7 @@ function drawZineScene(
     drawPrismSticker(
       ctx,
       w / 2 + cardW / 2 - w * 0.03,
-      artCy - cardH / 2 + w * 0.03,
+      cardCy - cardH / 2 + w * 0.03,
       Math.max(12, w * 0.045)
     );
   } else {
