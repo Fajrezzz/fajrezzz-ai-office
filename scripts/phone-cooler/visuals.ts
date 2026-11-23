@@ -11,8 +11,13 @@ export type RGB = [number, number, number];
 
 export const VW = 360;
 export const VH = 640;
-/** Kanvas akhir 1080x1920 → faktor 3. */
-export const SCALE = 3;
+/**
+ * Supersampling gambar prosedural: kanvas desain tetap 360x640, tapi piksel
+ * digambar SS kali lebih rapat supaya hasil 1440x2560 tetap tajam.
+ */
+export const SS = Math.max(1, Math.round(Number(process.env.VISUAL_SS ?? 4)));
+export const RW = VW * SS;
+export const RH = VH * SS;
 
 export function rgb(hex: string): RGB {
   const c = hex.replace("#", "");
@@ -45,13 +50,15 @@ function rng(seed: number): () => number {
   };
 }
 
+/** Palet yang di-cache; tiap entri = RW*RH*3 float, jadi dibatasi biar RAM aman. */
 const BG_CACHE = new Map<string, Float32Array>();
+const BG_CACHE_MAX = 4;
 
 export class Frame {
   readonly data: Float32Array;
 
   constructor() {
-    this.data = new Float32Array(VW * VH * 3);
+    this.data = new Float32Array(RW * RH * 3);
   }
 
   /** Gradasi vertikal + vignette lembut, dipakai semua scene (di-cache per palet). */
@@ -61,12 +68,12 @@ export class Frame {
     if (!cached) {
       const frame = new Frame();
       const d = frame.data;
-      for (let y = 0; y < VH; y += 1) {
-        const vy = y / (VH - 1);
+      for (let y = 0; y < RH; y += 1) {
+        const vy = y / (RH - 1);
         const k = 0.15 * vy + 0.85 * vy * vy;
         const base = mix(top, bottom, k);
-        for (let x = 0; x < VW; x += 1) {
-          const idx = (y * VW + x) * 3;
+        for (let x = 0; x < RW; x += 1) {
+          const idx = (y * RW + x) * 3;
           d[idx] = base[0];
           d[idx + 1] = base[1];
           d[idx + 2] = base[2];
@@ -75,6 +82,7 @@ export class Frame {
       if (glowAt) frame.glow(glowAt.x, glowAt.y, glowAt.r, glowAt.color, glowAt.strength);
       frame.vignette(0.55);
       cached = frame.data;
+      if (BG_CACHE.size >= BG_CACHE_MAX) BG_CACHE.clear();
       BG_CACHE.set(key, cached);
     }
     this.data.set(cached);
@@ -82,13 +90,13 @@ export class Frame {
 
   vignette(strength: number): void {
     const d = this.data;
-    for (let y = 0; y < VH; y += 1) {
-      const dy = (y - VH / 2) / (VH / 2);
-      for (let x = 0; x < VW; x += 1) {
-        const dx = (x - VW / 2) / (VW / 2);
+    for (let y = 0; y < RH; y += 1) {
+      const dy = (y - RH / 2) / (RH / 2);
+      for (let x = 0; x < RW; x += 1) {
+        const dx = (x - RW / 2) / (RW / 2);
         const v = Math.min(1, (dx * dx + dy * dy) * 0.45);
         const f = 1 - v * strength;
-        const idx = (y * VW + x) * 3;
+        const idx = (y * RW + x) * 3;
         d[idx] *= f;
         d[idx + 1] *= f;
         d[idx + 2] *= f;
@@ -96,11 +104,12 @@ export class Frame {
     }
   }
 
-  blend(x: number, y: number, color: RGB, alpha: number): void {
-    const xi = x | 0;
-    const yi = y | 0;
-    if (xi < 0 || yi < 0 || xi >= VW || yi >= VH) return;
-    const idx = (yi * VW + xi) * 3;
+  /** Tambah satu piksel (koordinat piksel hasil supersampling). */
+  private addPixel(px: number, py: number, color: RGB, alpha: number): void {
+    const xi = px | 0;
+    const yi = py | 0;
+    if (xi < 0 || yi < 0 || xi >= RW || yi >= RH) return;
+    const idx = (yi * RW + xi) * 3;
     const a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
     const d = this.data;
     d[idx] += (color[0] - d[idx]) * a;
@@ -108,71 +117,79 @@ export class Frame {
     d[idx + 2] += (color[2] - d[idx + 2]) * a;
   }
 
+  /** Koordinat desain (360x640) → piksel. */
+  blend(x: number, y: number, color: RGB, alpha: number): void {
+    this.addPixel(Math.round(x * SS), Math.round(y * SS), color, alpha);
+  }
+
   glow(cx: number, cy: number, radius: number, color: RGB, strength: number): void {
-    const d = this.data;
-    const x0 = Math.max(0, Math.floor(cx - radius));
-    const x1 = Math.min(VW - 1, Math.ceil(cx + radius));
-    const y0 = Math.max(0, Math.floor(cy - radius));
-    const y1 = Math.min(VH - 1, Math.ceil(cy + radius));
-    const r2 = radius * radius;
+    const px = cx * SS;
+    const py = cy * SS;
+    const pr = radius * SS;
+    const x0 = Math.max(0, Math.floor(px - pr));
+    const x1 = Math.min(RW - 1, Math.ceil(px + pr));
+    const y0 = Math.max(0, Math.floor(py - pr));
+    const y1 = Math.min(RH - 1, Math.ceil(py + pr));
+    const r2 = pr * pr;
     for (let y = y0; y <= y1; y += 1) {
-      const dy = y - cy;
+      const dy = y - py;
       for (let x = x0; x <= x1; x += 1) {
-        const dx = x - cx;
+        const dx = x - px;
         const dist2 = dx * dx + dy * dy;
         if (dist2 > r2) continue;
-        const f = 1 - Math.sqrt(dist2) / radius;
-        const a = f * f * strength;
-        const idx = (y * VW + x) * 3;
-        d[idx] += (color[0] - d[idx]) * a;
-        d[idx + 1] += (color[1] - d[idx + 1]) * a;
-        d[idx + 2] += (color[2] - d[idx + 2]) * a;
+        const f = 1 - Math.sqrt(dist2) / pr;
+        this.addPixel(x, y, color, f * f * strength);
       }
     }
   }
 
   rect(x: number, y: number, w: number, h: number, color: RGB, alpha: number): void {
-    const x0 = Math.max(0, Math.round(x));
-    const y0 = Math.max(0, Math.round(y));
-    const x1 = Math.min(VW, Math.round(x + w));
-    const y1 = Math.min(VH, Math.round(y + h));
+    const x0 = Math.max(0, Math.round(x * SS));
+    const y0 = Math.max(0, Math.round(y * SS));
+    const x1 = Math.min(RW, Math.round((x + w) * SS));
+    const y1 = Math.min(RH, Math.round((y + h) * SS));
     for (let yy = y0; yy < y1; yy += 1) {
-      for (let xx = x0; xx < x1; xx += 1) this.blend(xx, yy, color, alpha);
+      for (let xx = x0; xx < x1; xx += 1) this.addPixel(xx, yy, color, alpha);
     }
   }
 
   roundRect(x: number, y: number, w: number, h: number, r: number, color: RGB, alpha: number): void {
-    const x0 = Math.max(0, Math.floor(x));
-    const y0 = Math.max(0, Math.floor(y));
-    const x1 = Math.min(VW, Math.ceil(x + w));
-    const y1 = Math.min(VH, Math.ceil(y + h));
+    const x0 = Math.max(0, Math.floor(x * SS));
+    const y0 = Math.max(0, Math.floor(y * SS));
+    const x1 = Math.min(RW, Math.ceil((x + w) * SS));
+    const y1 = Math.min(RH, Math.ceil((y + h) * SS));
+    const rr = r * SS;
     for (let yy = y0; yy < y1; yy += 1) {
       for (let xx = x0; xx < x1; xx += 1) {
-        const px = xx - x + 0.5;
-        const py = yy - y + 0.5;
-        const cx = Math.min(Math.max(px, r), w - r);
-        const cy = Math.min(Math.max(py, r), h - r);
+        const px = xx - x * SS + 0.5;
+        const py = yy - y * SS + 0.5;
+        const cx = Math.min(Math.max(px, rr), w * SS - rr);
+        const cy = Math.min(Math.max(py, rr), h * SS - rr);
         const dx = px - cx;
         const dy = py - cy;
-        if (dx * dx + dy * dy > r * r) continue;
-        this.blend(xx, yy, color, alpha);
+        if (dx * dx + dy * dy > rr * rr) continue;
+        this.addPixel(xx, yy, color, alpha);
       }
     }
   }
 
   /** Garis tebal: stempel lingkaran kecil di sepanjang segmen. */
   line(x0: number, y0: number, x1: number, y1: number, color: RGB, alpha: number, thickness = 1.6): void {
-    const len = Math.hypot(x1 - x0, y1 - y0);
-    const steps = Math.max(1, Math.ceil(len * 2));
-    const r = thickness / 2;
+    const ax = x0 * SS;
+    const ay = y0 * SS;
+    const bx = x1 * SS;
+    const by = y1 * SS;
+    const len = Math.hypot(bx - ax, by - ay);
+    const steps = Math.max(1, Math.ceil(len * 1.5));
+    const r = Math.max(0.6, (thickness / 2) * SS);
     for (let i = 0; i <= steps; i += 1) {
       const t = i / steps;
-      const cx = x0 + (x1 - x0) * t;
-      const cy = y0 + (y1 - y0) * t;
-      for (let oy = -r; oy <= r; oy += 0.5) {
-        for (let ox = -r; ox <= r; ox += 0.5) {
+      const cx = ax + (bx - ax) * t;
+      const cy = ay + (by - ay) * t;
+      for (let oy = -r; oy <= r; oy += 0.6) {
+        for (let ox = -r; ox <= r; ox += 0.6) {
           if (ox * ox + oy * oy > r * r) continue;
-          this.blend(cx + ox, cy + oy, color, alpha);
+          this.addPixel(cx + ox, cy + oy, color, alpha);
         }
       }
     }
@@ -180,38 +197,107 @@ export class Frame {
 
   /** Segmen garis dengan ujung membulat, alpha di ujung mengecil (cahaya). */
   taperLine(x0: number, y0: number, x1: number, y1: number, color: RGB, alpha: number, thickness: number): void {
-    const steps = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2));
+    const ax = x0 * SS;
+    const ay = y0 * SS;
+    const bx = x1 * SS;
+    const by = y1 * SS;
+    const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) * 1.5));
     for (let i = 0; i <= steps; i += 1) {
       const t = i / steps;
-      const cx = x0 + (x1 - x0) * t;
-      const cy = y0 + (y1 - y0) * t;
+      const cx = ax + (bx - ax) * t;
+      const cy = ay + (by - ay) * t;
       const a = alpha * (1 - t * 0.7);
-      const r = (thickness / 2) * (1 - t * 0.6);
-      for (let oy = -r; oy <= r; oy += 0.5) {
-        for (let ox = -r; ox <= r; ox += 0.5) {
+      const r = Math.max(0.5, ((thickness / 2) * (1 - t * 0.6)) * SS);
+      for (let oy = -r; oy <= r; oy += 0.6) {
+        for (let ox = -r; ox <= r; ox += 0.6) {
           if (ox * ox + oy * oy > r * r) continue;
-          this.blend(cx + ox, cy + oy, color, a);
+          this.addPixel(cx + ox, cy + oy, color, a);
         }
       }
     }
   }
 
-  /** Tetesan embun: bulat, sedikit memanjang, dengan kilau di kiri atas. */
-  droplet(cx: number, cy: number, r: number, color: RGB, alpha = 0.9): void {
-    const rx = r;
-    const ry = r * 1.12;
-    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y += 1) {
-      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x += 1) {
-        const nx = (x + 0.5 - cx) / rx;
-        const ny = (y + 0.5 - cy) / ry;
-        const d = nx * nx + ny * ny;
-        if (d > 1) continue;
-        // tepi lebih tipis, tengah lebih pekat
-        const edge = 1 - Math.pow(d, 3);
-        this.blend(x, y, mix(color, [235, 250, 255], 0.15), alpha * edge);
+  /**
+   * Cakram penuh dengan tepi melunak, sampel per piksel keluaran.
+   * `alphaCenter`/`alphaEdge` mengatur profil alpha dari pusat ke tepi.
+   */
+  disc(cx: number, cy: number, radius: number, color: RGB, alphaCenter: number, alphaEdge: number, edgePow = 6): void {
+    const px = cx * SS;
+    const py = cy * SS;
+    const pr = radius * SS;
+    const x0 = Math.max(0, Math.floor(px - pr));
+    const x1 = Math.min(RW - 1, Math.ceil(px + pr));
+    const y0 = Math.max(0, Math.floor(py - pr));
+    const y1 = Math.min(RH - 1, Math.ceil(py + pr));
+    for (let y = y0; y <= y1; y += 1) {
+      const dy = y + 0.5 - py;
+      for (let x = x0; x <= x1; x += 1) {
+        const dx = x + 0.5 - px;
+        const d = Math.hypot(dx, dy);
+        if (d > pr) continue;
+        const edge = 1 - Math.pow(d / pr, edgePow);
+        this.addPixel(x, y, color, alphaEdge + (alphaCenter - alphaEdge) * edge);
       }
     }
-    this.glow(cx - rx * 0.3, cy - ry * 0.35, Math.max(1.2, r * 0.55), [240, 252, 255], 0.75 * alpha);
+  }
+
+  /** Kotak yang diputar (es batu), sampel per piksel keluaran supaya tidak bergerigi. */
+  rotSquare(cx: number, cy: number, size: number, angle: number, colorCenter: RGB, colorEdge: RGB, alpha: number): void {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const half = size / 2;
+    const reach = half * 1.5;
+    const x0 = Math.max(0, Math.floor((cx - reach) * SS));
+    const x1 = Math.min(RW - 1, Math.ceil((cx + reach) * SS));
+    const y0 = Math.max(0, Math.floor((cy - reach) * SS));
+    const y1 = Math.min(RH - 1, Math.ceil((cy + reach) * SS));
+    for (let y = y0; y <= y1; y += 1) {
+      const yy = y / SS + 0.5 / SS - cy;
+      for (let x = x0; x <= x1; x += 1) {
+        const xx = x / SS + 0.5 / SS - cx;
+        const dx = xx * cos + yy * sin;
+        const dy = -xx * sin + yy * cos;
+        if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
+        const edge = Math.max(Math.abs(dx), Math.abs(dy)) / half;
+        this.addPixel(x, y, mix(colorCenter, colorEdge, edge * 0.85), alpha * (1 - edge * 0.3));
+      }
+    }
+  }
+
+  /**
+   * Kolom setipis satu piksel keluaran (koordinat desain, ujung bebas),
+   * dipakai untuk tekstur halus seperti kerak beku — supaya tidak jadi balok
+   * 4x4 piksel saat supersampling tinggi.
+   */
+  spike(x: number, yFrom: number, yTo: number, color: RGB, alphaTop: number, alphaBottom: number): void {
+    const px = Math.round(x * SS);
+    const a0 = Math.round(Math.min(yFrom, yTo) * SS);
+    const a1 = Math.round(Math.max(yFrom, yTo) * SS);
+    const span = Math.max(1, a1 - a0);
+    for (let py = a0; py < a1; py += 1) {
+      const k = (py - a0) / span;
+      this.addPixel(px, py, color, alphaTop + (alphaBottom - alphaTop) * k);
+      this.addPixel(px + 1, py, color, (alphaTop + (alphaBottom - alphaTop) * k) * 0.55);
+    }
+  }
+
+  /** Tetesan embun: bulat, sedikit memanjang, dengan kilau di kiri atas. */
+  droplet(cx: number, cy: number, r: number, color: RGB, alpha = 0.9): void {
+    const px = cx * SS;
+    const py = cy * SS;
+    const rx = r * SS;
+    const ry = rx * 1.12;
+    for (let y = Math.floor(py - ry); y <= Math.ceil(py + ry); y += 1) {
+      for (let x = Math.floor(px - rx); x <= Math.ceil(px + rx); x += 1) {
+        const nx = (x + 0.5 - px) / rx;
+        const ny = (y + 0.5 - py) / ry;
+        const d = nx * nx + ny * ny;
+        if (d > 1) continue;
+        const edge = 1 - Math.pow(d, 3);
+        this.addPixel(x, y, mix(color, [235, 250, 255], 0.15), alpha * edge);
+      }
+    }
+    this.glow(cx - r * 0.3, cy - r * 0.4, Math.max(1, r * 0.55), [240, 252, 255], 0.75 * alpha);
   }
 
   /** Kristal es: garis bercabang (dipakai scene "ice"). */
@@ -235,8 +321,8 @@ export class Frame {
   toRgb(out: Uint8Array, seed = 1): void {
     const d = this.data;
     let idx = 0;
-    for (let y = 0; y < VH; y += 1) {
-      for (let x = 0; x < VW; x += 1) {
+    for (let y = 0; y < RH; y += 1) {
+      for (let x = 0; x < RW; x += 1) {
         const noise = ((x * 374761393 + y * 668265263 + seed * 2654435761) ^ ((x * 1274126177 + y * 1103515245) >>> 13)) >>> 0;
         const grain = ((noise % 1000) / 1000) * 8 - 4;
         for (let c = 0; c < 3; c += 1) {
@@ -490,14 +576,7 @@ function dewpoint(f: Frame, t: number, d: number): void {
 
   // bohlam
   const bulbR = 17;
-  for (let y = -bulbR; y <= bulbR; y += 1) {
-    for (let x = -bulbR; x <= bulbR; x += 1) {
-      const dist = Math.hypot(x, y);
-      if (dist > bulbR) continue;
-      const edge = 1 - Math.pow(dist / bulbR, 6);
-      f.blend(tubeX0 + x, tubeY + tubeH / 2 + y, mix(CYAN, ICE, 0.3), 0.45 + edge * 0.45);
-    }
-  }
+  f.disc(tubeX0, tubeY + tubeH / 2, bulbR, mix(CYAN, ICE, 0.3), 0.9, 0.45, 6);
   f.glow(tubeX0, tubeY + tubeH / 2, bulbR * 1.9, CYAN, 0.3);
 
   // garis bantu skala
@@ -569,20 +648,8 @@ function glass(f: Frame, t: number): void {
     { x: 170, y: 346, s: 27, a: 0.34 },
   ];
   for (const c of cubes) {
-    const cos = Math.cos(c.a);
-    const sin = Math.sin(c.a);
-    const half = c.s / 2;
-    const reach = Math.ceil(half * 1.5);
-    for (let yy = -reach; yy <= reach; yy += 1) {
-      for (let xx = -reach; xx <= reach; xx += 1) {
-        // inverse-rotation: petakan tiap piksel balik ke ruang kubus
-        const dx = xx * cos + yy * sin;
-        const dy = -xx * sin + yy * cos;
-        if (Math.abs(dx) > half || Math.abs(dy) > half) continue;
-        const edge = Math.max(Math.abs(dx), Math.abs(dy)) / half;
-        f.blend(c.x + xx, c.y + yy, mix(rgb("#f7ffff"), rgb("#bfe9f5"), edge * 0.85), 0.62 * (1 - edge * 0.3));
-      }
-    }
+    // es batu: kotak diputar, digambar per piksel keluaran (bukan per unit desain)
+    f.rotSquare(c.x, c.y, c.s, c.a, rgb("#f7ffff"), rgb("#bfe9f5"), 0.62);
     f.glow(c.x - c.s * 0.16, c.y - c.s * 0.2, 7, [255, 255, 255], 0.3);
   }
 
@@ -632,24 +699,31 @@ function ice(f: Frame, t: number, d: number): void {
 
   const grow = easeOut(t / Math.max(0.1, d * 0.85));
 
-  // kerak beku: tepi atas tidak rata, menutup permukaan pelat
-  for (let x = plateX; x < plateX + plateW; x += 1) {
-    const h = 3 + 2.4 * (0.5 + 0.5 * Math.sin(x * 0.63)) + 1.6 * (0.5 + 0.5 * Math.sin(x * 2.1 + 1.3));
-    const edge = clamp01((grow * 1.3 - (x - plateX) / plateW * 0.3));
+  // kerak beku: tepi atas tidak rata, menutup permukaan pelat.
+  // Sampel per piksel keluaran (bukan per unit desain) supaya tepinya tetap
+  // berbutir di 1440x2560.
+  const crustColor = mix(ICE, [255, 255, 255], 0.3);
+  for (let px = Math.round(plateX * SS); px < Math.round((plateX + plateW) * SS); px += 1) {
+    const x = px / SS;
+    const h =
+      3.2 +
+      2.6 * (0.5 + 0.5 * Math.sin(x * 0.63)) +
+      1.5 * (0.5 + 0.5 * Math.sin(x * 2.1 + 1.3)) +
+      0.85 * (0.5 + 0.5 * Math.sin(x * 7.7 + 0.4)) +
+      0.5 * (0.5 + 0.5 * Math.sin(x * 17.3));
+    const edge = clamp01(grow * 1.3 - ((x - plateX) / plateW) * 0.3);
     if (edge <= 0) continue;
-    for (let y = 0; y < h; y += 1) {
-      f.blend(x, plateY - y, mix(ICE, [255, 255, 255], 0.3), (0.42 * (1 - y / h) + 0.08) * edge);
-    }
+    f.spike(x, plateY + 0.4, plateY - h, crustColor, 0.08 * edge, 0.46 * edge);
   }
   f.glow(180, plateY - 3, 160, ICE, 0.12 * grow);
 
   // jarum-jarum es halus, tumbuh dari permukaan
   const needles = cached<{ x: number; a: number; len: number; t0: number }[]>("ice-needles", () => {
     const rand = rng(45);
-    return Array.from({ length: 110 }, () => ({
-      x: plateX + 4 + rand() * (plateW - 8),
-      a: -Math.PI / 2 + (rand() - 0.5) * 1.7,
-      len: 2 + rand() * 7,
+    return Array.from({ length: 150 }, () => ({
+      x: plateX + 3 + rand() * (plateW - 6),
+      a: -Math.PI / 2 + (rand() - 0.5) * 1.9,
+      len: 1.4 + rand() * 8,
       t0: rand() * 0.5,
     }));
   });
@@ -659,7 +733,7 @@ function ice(f: Frame, t: number, d: number): void {
     if (len < 1.5) continue;
     const x1 = n.x + Math.cos(n.a) * len;
     const y1 = plateY + 1 + Math.sin(n.a) * len;
-    f.line(n.x, plateY - 2, x1, y1, mix(ICE, [255, 255, 255], 0.4), 0.26 * local, 0.7);
+    f.line(n.x, plateY - 2, x1, y1, mix(ICE, [255, 255, 255], 0.4), 0.24 * local, 0.45);
   }
 
   // kilau kristal

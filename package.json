@@ -17,7 +17,9 @@
     "video:phone-cooler": "node --experimental-strip-types scripts/phone-cooler/render.ts",
     "video:phone-cooler:stills": "node --experimental-strip-types scripts/phone-cooler/stills.ts",
     "video:tiktok": "node --experimental-strip-types scripts/phone-cooler/render.ts --tiktok",
-    "music:tiktok": "node --experimental-strip-types scripts/phone-cooler/music.ts"
+    "music:tiktok": "node --experimental-strip-types scripts/phone-cooler/music.ts",
+    "video:phone-cooler:1080": "OUTPUT_WIDTH=1080 VISUAL_SS=3 node --experimental-strip-types scripts/phone-cooler/render.ts",
+    "video:tiktok:1080": "OUTPUT_WIDTH=1080 VISUAL_SS=3 node --experimental-strip-types scripts/phone-cooler/render.ts --tiktok"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

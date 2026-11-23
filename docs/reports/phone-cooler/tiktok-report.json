@@ -1,10 +1,10 @@
 {
   "video": "docs/reports/phone-cooler/kenapa-cooler-hp-tiktok.mp4",
-  "generatedAt": "2026-11-23T21:10:20.605Z",
+  "generatedAt": "2026-11-23T21:53:53.266Z",
   "subtitleFile": "docs/reports/phone-cooler/kenapa-cooler-hp-tiktok.ass",
   "probe": {
-    "width": 1080,
-    "height": 1920,
+    "width": 1440,
+    "height": 2560,
     "fps": 30,
     "videoCodec": "h264",
     "pixFmt": "yuv420p",
@@ -12,20 +12,20 @@
     "audioChannels": 2,
     "audioSampleRate": 48000,
     "durationSec": 62.9,
-    "bitrateKbps": 1185,
-    "sizeMB": 8.9,
+    "bitrateKbps": 2532,
+    "sizeMB": 19,
     "formatName": "mov,mp4,m4a,3gp,3g2,mj2"
   },
   "audioLevel": {
     "meanDb": -19,
-    "maxDb": -1.6
+    "maxDb": -1.5
   },
   "decodeCheck": {
     "ok": true,
     "detail": "decode bersih tanpa error"
   },
   "renderMs": {
-    "total": 53924,
+    "total": 100272,
     "perScene": [
       {
         "id": "hook",

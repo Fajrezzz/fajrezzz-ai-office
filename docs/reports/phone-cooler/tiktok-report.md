@@ -1,15 +1,15 @@
 # Video contoh — kenapa cooler HP bisa mengeluarkan air atau es
 
 File: `docs/reports/phone-cooler/kenapa-cooler-hp-tiktok.mp4`
-Dibuat: 2026-11-23T21:10:20.605Z
+Dibuat: 2026-11-23T21:53:53.266Z
 
 | Item | Nilai |
 |---|---|
-| Resolusi / fps | 1080×1920 · 30 fps |
+| Resolusi / fps | 1440×2560 · 30 fps |
 | Codec | h264 (yuv420p) + aac |
 | Durasi | 62.9 s |
-| Bitrate / ukuran | 1185 kbps · 8.9 MB |
-| Level audio | rata-rata -19 dB, puncak -1.6 dB |
+| Bitrate / ukuran | 2532 kbps · 19 MB |
+| Level audio | rata-rata -19 dB, puncak -1.5 dB |
 | Decode | bersih |
 | Cue subtitle | 23 |
 

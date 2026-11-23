@@ -1,14 +1,14 @@
 [Script Info]
 ScriptType: v4.00+
-PlayResX: 1080
-PlayResY: 1920
+PlayResX: 1440
+PlayResY: 2560
 WrapStyle: 0
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Inter,52,&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,300,1
-Style: Accent,Inter,52,&H00FFE035,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,6,3,2,95,95,300,1
+Style: Default,Inter,69,&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,400,1
+Style: Accent,Inter,69,&H00FFE035,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,400,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

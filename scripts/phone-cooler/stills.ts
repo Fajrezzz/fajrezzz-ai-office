@@ -2,26 +2,33 @@
  * Cek visual cepat: render satu frame per scene (tanpa audio) ke PNG
  * supaya komposisi & keterbacaan bisa dinilai sebelum encode penuh.
  *
- * Pemakaian: FFMPEG_PATH=... node --experimental-strip-types scripts/phone-cooler/stills.ts [--at 0.5]
+ * Pemakaian: FFMPEG_PATH=... node --experimental-strip-types scripts/phone-cooler/stills.ts [--at 0.5] [--tiktok]
+ *
+ * Resolusi keluaran ikut OUTPUT_WIDTH (default 1440 = 2K vertikal).
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { SCENES, FPS } from "./scenes.ts";
-import { Frame, VW, VH, drawScene } from "./visuals.ts";
+import { SCENES as LONG_SCENES, FPS } from "./scenes.ts";
+import { Frame, RW, RH, drawScene } from "./visuals.ts";
+
+const MODE = process.argv.includes("--tiktok") ? "tiktok" : "long";
+const SCENES = MODE === "tiktok" ? (await import("./scenes-tiktok.ts")).SCENES : LONG_SCENES;
+const OUT_W = Number(process.env.OUTPUT_WIDTH ?? 1440);
+const OUT_H = Math.round((OUT_W * 16) / 9);
 
 const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
 const root = process.cwd();
-const outDir = path.join(root, ".video-work/stills");
+const outDir = path.join(root, `.video-work/stills-${MODE}`);
 fs.mkdirSync(outDir, { recursive: true });
 
 const atArg = process.argv.indexOf("--at");
 const at = atArg >= 0 ? Number(process.argv[atArg + 1]) : 0.55;
 
 const frame = new Frame();
-const buffer = new Uint8Array(VW * VH * 3);
+const buffer = new Uint8Array(RW * RH * 3);
 
 SCENES.forEach((scene, index) => {
   const duration = 8;
@@ -40,11 +47,11 @@ SCENES.forEach((scene, index) => {
       "-pix_fmt",
       "rgb24",
       "-s",
-      `${VW}x${VH}`,
+      `${RW}x${RH}`,
       "-i",
       "-",
       "-vf",
-      "scale=1080:1920:flags=lanczos,format=rgb24",
+      `scale=${OUT_W}:${OUT_H}:flags=lanczos,format=rgb24`,
       "-frames:v",
       "1",
       "-y",

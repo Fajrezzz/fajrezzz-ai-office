@@ -18,9 +18,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
-import { FPS, WIDTH, HEIGHT, SCENE_TAIL_SEC } from "./scenes.ts";
+import { FPS, WIDTH, SCENE_TAIL_SEC } from "./scenes.ts";
 import type { SceneSpec } from "./scenes.ts";
-import { Frame, VW, VH, drawScene } from "./visuals.ts";
+import { Frame, RW, RH, drawScene } from "./visuals.ts";
 
 const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH ?? "ffprobe";
@@ -31,6 +31,11 @@ const SLUG = MODE === "tiktok" ? "kenapa-cooler-hp-tiktok" : "kenapa-cooler-hp-k
 const REPORT_SLUG = MODE === "tiktok" ? "tiktok-report" : "render-report";
 const SUB_MARGIN_V = MODE === "tiktok" ? 370 : 300;
 const PROGRESS_Y = MODE === "tiktok" ? 1738 : 1836;
+
+/** Resolusi keluaran (desain tetap di ruang 1080x1920). 1440x2560 = 2K vertikal. */
+const OUT_W = Number(process.env.OUTPUT_WIDTH ?? 1440);
+const OUT_H = Math.round((OUT_W * 16) / 9);
+const U = OUT_W / WIDTH;
 const MUSIC_PATH = MODE === "tiktok" ? path.join(root, "assets/music/tiktok-bed.mp3") : null;
 
 const outDir = path.join(root, "docs/reports/phone-cooler");
@@ -120,13 +125,13 @@ async function renderScene(timing: SceneTiming): Promise<{ file: string; ms: num
     "-pix_fmt",
     "rgb24",
     "-s",
-    `${VW}x${VH}`,
+    `${RW}x${RH}`,
     "-r",
     String(FPS),
     "-i",
     "-",
     "-vf",
-    `scale=${WIDTH}:${HEIGHT}:flags=lanczos,format=yuv420p`,
+    `scale=${OUT_W}:${OUT_H}:flags=lanczos,format=yuv420p`,
     "-c:v",
     "libx264",
     "-preset",
@@ -152,7 +157,7 @@ async function renderScene(timing: SceneTiming): Promise<{ file: string; ms: num
   });
 
   const frame = new Frame();
-  const buffer = new Uint8Array(VW * VH * 3);
+  const buffer = new Uint8Array(RW * RH * 3);
   const stdin = child.stdin;
   if (!stdin) throw new Error("stdin ffmpeg tidak tersedia");
 
@@ -238,10 +243,10 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
     drawText({
       textFile: brandFile,
       font: FONT_BODY_SEMIBOLD,
-      size: 28,
+      size: Math.round(28 * U),
       color: "0x9aa6b6@0.85",
-      x: "72",
-      y: "84",
+      x: String(Math.round(72 * U)),
+      y: String(Math.round(84 * U)),
       enable: "1",
     })
   );
@@ -257,18 +262,18 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
       drawText({
         textFile: kickerFile,
         font: FONT_BODY_SEMIBOLD,
-        size: 26,
+        size: Math.round(26 * U),
         color: scene.accent.replace("#", "0x"),
-        x: "w-text_w-72",
-        y: "88",
+        x: `w-text_w-${Math.round(72 * U)}`,
+        y: String(Math.round(88 * U)),
         enable: `between(t,${startSec.toFixed(3)},${endSec.toFixed(3)})`,
       })
     );
 
     // Headline: tiap baris satu drawtext supaya bisa beda warna/ukuran.
-    let y = scene.headlineY;
+    let y = scene.headlineY * U;
     scene.headline.forEach((line, lineIndex) => {
-      const size = Math.round(scene.headlineSize * (line.scale ?? 1));
+      const size = Math.round(scene.headlineSize * (line.scale ?? 1) * U);
       const revealAt = startSec + 0.06 * lineIndex;
       const file = writeTextFile(`${key}-h${lineIndex}`, line.text);
       const color =
@@ -280,8 +285,8 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
           size,
           color,
           alpha: `min(1,max(0,(t-${revealAt.toFixed(3)})/0.32))`,
-          x: "72",
-          y: `${Math.round(y)}+26-26*min(1,max(0,(t-${revealAt.toFixed(3)})/0.45))`,
+          x: String(Math.round(72 * U)),
+          y: `${Math.round(y)}+${Math.round(26 * U)}-${Math.round(26 * U)}*min(1,max(0,(t-${revealAt.toFixed(3)})/0.45))`,
           enable: `between(t,${startSec.toFixed(3)},${endSec.toFixed(3)})`,
           shadow: true,
           lineSpacing: Math.round(size * 0.12),
@@ -296,16 +301,20 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
       const file = writeTextFile(`${key}-l${labelIndex}`, wrapLabel(label.text, label.size));
       const align = label.align ?? "left";
       const x =
-        align === "center" ? `(w-text_w)/2` : align === "right" ? `w-text_w-${WIDTH - label.x}` : String(label.x);
+        align === "center"
+          ? `(w-text_w)/2`
+          : align === "right"
+            ? `w-text_w-${Math.round((WIDTH - label.x) * U)}`
+            : String(Math.round(label.x * U));
       filters.push(
         drawText({
           textFile: file,
           font: FONT_BODY,
-          size: label.size,
+          size: Math.round(label.size * U),
           color: (label.color ?? "#aab3c2").replace("#", "0x"),
           alpha: `min(1,max(0,(t-${at.toFixed(3)})/0.4))`,
           x,
-          y: `${label.y}+18-18*min(1,max(0,(t-${at.toFixed(3)})/0.4))`,
+          y: `${Math.round(label.y * U)}+${Math.round(18 * U)}-${Math.round(18 * U)}*min(1,max(0,(t-${at.toFixed(3)})/0.4))`,
           enable: `between(t,${at.toFixed(3)},${endSec.toFixed(3)})`,
           shadow: true,
           box: true,
@@ -316,7 +325,7 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
 
     // Bar aksen kecil di kiri headline sebagai penanda scene.
     filters.push(
-      `drawbox=x=40:y=${Math.round(scene.headlineY + 6)}:w=6:h=${Math.round(scene.headlineSize * 0.9)}:color=${scene.accent.replace("#", "0x")}@0.9:t=fill:enable='between(t,${startSec.toFixed(
+      `drawbox=x=${Math.round(40 * U)}:y=${Math.round((scene.headlineY + 6) * U)}:w=${Math.round(6 * U)}:h=${Math.round(scene.headlineSize * 0.9 * U)}:color=${scene.accent.replace("#", "0x")}@0.9:t=fill:enable='between(t,${startSec.toFixed(
         3
       )},${endSec.toFixed(3)})'`
     );
@@ -327,7 +336,7 @@ function buildTextLayer(timings: SceneTiming[]): GeneratedText {
       rows.forEach((rowY, i) => {
         const at = startSec + [0.3, 1.2, 2.1][i];
         filters.push(
-          `drawbox=x=96:y=${rowY - 26}:w=4:h=44:color=${scene.accent.replace("#", "0x")}@0.9:t=fill:enable='between(t,${at.toFixed(
+          `drawbox=x=${Math.round(96 * U)}:y=${Math.round((rowY - 26) * U)}:w=${Math.round(4 * U)}:h=${Math.round(44 * U)}:color=${scene.accent.replace("#", "0x")}@0.9:t=fill:enable='between(t,${at.toFixed(
             3
           )},${endSec.toFixed(3)})'`
         );
@@ -401,19 +410,21 @@ function buildAss(timings: SceneTiming[]): { ass: string; cues: number } {
     });
   }
 
-  const style = `-1,0,0,0,100,100,0,0,1,6,3,2,95,95,${SUB_MARGIN_V},1`;
+  const style = `-1,0,0,0,100,100,0,0,1,${Math.round(6 * U)},${Math.round(3 * U)},2,${Math.round(
+    95 * U
+  )},${Math.round(95 * U)},${Math.round(SUB_MARGIN_V * U)},1`;
   const ass = [
     "[Script Info]",
     "ScriptType: v4.00+",
-    `PlayResX: ${WIDTH}`,
-    `PlayResY: ${HEIGHT}`,
+    `PlayResX: ${OUT_W}`,
+    `PlayResY: ${OUT_H}`,
     "WrapStyle: 0",
     "ScaledBorderAndShadow: yes",
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Default,Inter,52,&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,${style}`,
-    `Style: Accent,Inter,52,&H00${bgr("#35e0ff")},&H00F2F6FF,&HAA05070C,&H7A000000,${style}`,
+    `Style: Default,Inter,${Math.round(52 * U)},&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,${style}`,
+    `Style: Accent,Inter,${Math.round(52 * U)},&H00${bgr("#35e0ff")},&H00F2F6FF,&HAA05070C,&H7A000000,${style}`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -547,7 +558,9 @@ async function main(): Promise<void> {
   const { graph, label } = buildAudioFilter(timings, 2, whooshIndex, musicIndex, totalSec);
 
   const videoChain = [
-    `[0:v][1:v]overlay=x='${WIDTH}*(t/${totalSec.toFixed(3)})-${WIDTH}':y=${PROGRESS_Y}:shortest=1[bar]`,
+    `[0:v][1:v]overlay=x='${OUT_W}*(t/${totalSec.toFixed(3)})-${OUT_W}':y=${Math.round(
+      PROGRESS_Y * U
+    )}:shortest=1[bar]`,
     `[bar]${filters.map((f) => f).join(",")},ass=${assPath}:fontsdir=${FONT_DIR},format=yuv420p[vout]`,
   ].join(";");
 
@@ -566,7 +579,7 @@ async function main(): Promise<void> {
       "-f",
       "lavfi",
       "-i",
-      `color=c=0x35e0ff:s=${WIDTH}x6:r=${FPS}`,
+      `color=c=0x35e0ff:s=${OUT_W}x${Math.round(6 * U)}:r=${FPS}`,
       ...audioInputs,
       "-i",
       whoosh,
@@ -588,9 +601,9 @@ async function main(): Promise<void> {
       "-crf",
       "20",
       "-maxrate",
-      "8M",
+      `${(8 * U * U).toFixed(1)}M`,
       "-bufsize",
-      "16M",
+      `${(16 * U * U).toFixed(1)}M`,
       "-pix_fmt",
       "yuv420p",
       "-r",
@@ -721,8 +734,8 @@ async function main(): Promise<void> {
   fs.writeFileSync(path.join(outDir, `${REPORT_SLUG}.md`), md, "utf8");
 
   const valid =
-    report.probe.width === WIDTH &&
-    report.probe.height === HEIGHT &&
+    report.probe.width === OUT_W &&
+    report.probe.height === OUT_H &&
     report.probe.fps === FPS &&
     report.probe.videoCodec === "h264" &&
     report.probe.pixFmt === "yuv420p" &&

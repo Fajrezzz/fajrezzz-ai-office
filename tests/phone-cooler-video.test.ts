@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import { RW, RH, SS, VW, VH } from "../scripts/phone-cooler/visuals.ts";
+
 const reportPath = path.join(process.cwd(), "docs/reports/phone-cooler/render-report.json");
 const assPath = path.join(process.cwd(), "docs/reports/phone-cooler/kenapa-cooler-hp-keluarkan-air.ass");
 
@@ -38,15 +40,16 @@ test(
   { skip: !report && "belum ada render-report.json (jalankan npm run video:phone-cooler)" },
   () => {
     assert.ok(report);
-    assert.equal(report.probe.width, 1080);
-    assert.equal(report.probe.height, 1920);
+    assert.ok(report.probe.width >= 1080, `lebar ${report.probe.width} — minimal 1080 (FHD)`);
+    assert.ok(report.probe.height >= 1920, `tinggi ${report.probe.height} — minimal 1920 (FHD)`);
+    assert.equal(report.probe.height, Math.round((report.probe.width * 16) / 9), "rasio harus 9:16");
     assert.equal(report.probe.fps, 30);
     assert.equal(report.probe.videoCodec, "h264");
     assert.equal(report.probe.pixFmt, "yuv420p");
     assert.equal(report.probe.audioCodec, "aac");
     assert.match(report.probe.formatName, /mp4/);
     assert.ok(report.probe.durationSec > 60 && report.probe.durationSec < 240, `durasi ${report.probe.durationSec}`);
-    assert.ok(report.probe.bitrateKbps > 400 && report.probe.bitrateKbps < 8000);
+    assert.ok(report.probe.bitrateKbps > 400 && report.probe.bitrateKbps < 16000);
     assert.equal(report.decodeCheck.ok, true, report.decodeCheck.detail);
     assert.ok(fs.existsSync(path.join(process.cwd(), report.video)), "file video tidak ada");
   }
@@ -95,8 +98,9 @@ const tiktok: PhoneCoolerReport | null = fs.existsSync(tiktokPath)
 
 test("cut TikTok ter-render dengan musik latar hasil sintesis", { skip: !tiktok && "belum ada tiktok-report.json" }, () => {
   assert.ok(tiktok);
-  assert.equal(tiktok.probe.width, 1080);
-  assert.equal(tiktok.probe.height, 1920);
+  assert.ok(tiktok.probe.width >= 1080, `lebar ${tiktok.probe.width}`);
+  assert.ok(tiktok.probe.height >= 1920, `tinggi ${tiktok.probe.height}`);
+  assert.equal(tiktok.probe.height, Math.round((tiktok.probe.width * 16) / 9), "rasio harus 9:16");
   assert.equal(tiktok.probe.fps, 30);
   assert.equal(tiktok.probe.videoCodec, "h264");
   assert.equal(tiktok.probe.audioCodec, "aac");
@@ -108,4 +112,14 @@ test("cut TikTok ter-render dengan musik latar hasil sintesis", { skip: !tiktok 
   const file = path.join(process.cwd(), tiktok.video);
   assert.ok(fs.existsSync(file), "file video TikTok tidak ada");
   assert.ok(fs.statSync(file).size > 4_000_000, "file terlalu kecil untuk video 1 menit");
+});
+
+/* ------------------------------- resolusi 2K ------------------------------ */
+
+test("kanvas gambar prosedural cukup rapat untuk keluaran 2K", () => {
+  assert.equal(RW, VW * SS);
+  assert.equal(RH, VH * SS);
+  assert.ok(RW >= 1440, `kanvas ${RW}px — harus >= 1440 supaya 2K tidak di-upscale`);
+  assert.ok(RH >= 2560, `kanvas ${RH}px — harus >= 2560`);
+  assert.ok(SS >= 4, "supersampling minimal 4x untuk kanvas 360x640");
 });

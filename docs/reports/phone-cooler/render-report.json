@@ -1,10 +1,10 @@
 {
   "video": "docs/reports/phone-cooler/kenapa-cooler-hp-keluarkan-air.mp4",
-  "generatedAt": "2026-11-23T20:50:17.402Z",
+  "generatedAt": "2026-11-23T22:06:25.848Z",
   "subtitleFile": "docs/reports/phone-cooler/kenapa-cooler-hp-keluarkan-air.ass",
   "probe": {
-    "width": 1080,
-    "height": 1920,
+    "width": 1440,
+    "height": 2560,
     "fps": 30,
     "videoCodec": "h264",
     "pixFmt": "yuv420p",
@@ -12,8 +12,8 @@
     "audioChannels": 2,
     "audioSampleRate": 48000,
     "durationSec": 130.07,
-    "bitrateKbps": 1100,
-    "sizeMB": 17.1,
+    "bitrateKbps": 2388,
+    "sizeMB": 37,
     "formatName": "mov,mp4,m4a,3gp,3g2,mj2"
   },
   "audioLevel": {
@@ -25,7 +25,7 @@
     "detail": "decode bersih tanpa error"
   },
   "renderMs": {
-    "total": 104790,
+    "total": 197423,
     "perScene": [
       {
         "id": "hook",
