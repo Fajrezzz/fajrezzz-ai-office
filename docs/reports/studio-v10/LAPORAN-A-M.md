@@ -217,9 +217,12 @@ Diubah:
 
 ## L. Commit terbaru
 
-- Commit fitur (kode + tes + dashboard + bukti): lihat `git log -1` pada branch
-  `arena/e690331b-fajrezzz-ai-office`; laporan ini di-commit setelahnya.
-- Basis: `8313262` (merge PR #29). Branch belum di-merge ke `main`.
+- Commit fitur (kode + tes + dashboard + seluruh bukti run): **`9ba2a9b`**
+  ("feat(studio): v10 topic intelligence, creative blueprint, script audit, dan audit skill
+  berbasis bukti").
+- Commit laporan (penyempurnaan angka SHA ini): commit berikutnya di branch yang sama.
+- Basis: `8313262` (merge PR #29). Branch `arena/e690331b-fajrezzz-ai-office` **belum di-merge**
+  ke `main`; merge menunggu izin Bos.
 
 ## M. Yang masih belum berfungsi / butuh tambahan
 
