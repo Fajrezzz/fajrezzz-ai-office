@@ -517,6 +517,43 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
 
       const markFailed = (errorMsg: string, hintMsg: string | null = null) => {
         const durationMs = Date.now() - startMs;
+
+        /**
+         * "Belum ada API key" BUKAN kegagalan produksi — jangan tampilkan banner merah.
+         * Status dikembalikan ke antrean (queued) + hint link Vercel, dan agen kembali idle.
+         */
+        const needsApiKey =
+          /no_provider_configured|belum ada api key/i.test(errorMsg) ||
+          /belum ada api key/i.test(hintMsg ?? "");
+        if (needsApiKey) {
+          syncAgent3D(division, "idle");
+          setRunningDivision(null);
+          addActivity(
+            meta.agentName,
+            "system",
+            `${meta.label} menunggu API key AI — pasang di Vercel Environment Variables.`,
+            "warning",
+            meta.shortLabel
+          );
+          return patchEpisode(episodeId, (ep) =>
+            updateDiv(ep, {
+              status: "queued",
+              finishedAt: null,
+              durationMs,
+              error: null,
+              hint:
+                "Butuh API key: Vercel → Settings → Environment Variables (GEMINI_API_KEY / GROQ_API_KEY / OPENROUTER_API_KEY) → Redeploy.",
+              logs: [
+                ...ep.divisions[division].logs,
+                makeLog(
+                  "warning",
+                  "Menunggu API key — bukan error produksi. Setelah key terpasang, tekan Retry."
+                ),
+              ],
+            })
+          );
+        }
+
         syncAgent3D(division, "error");
         setRunningDivision(null);
         recordDivisionHistory({
@@ -643,6 +680,15 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
             lastData = data;
             if (res.ok && data.ok) {
               return { ok: true, status: res.status, data };
+            }
+
+            // Belum ada API key sama sekali: bukan masalah jaringan, jangan retry.
+            if (String(data.code ?? "") === "NO_PROVIDER_CONFIGURED") {
+              appendLiveLog(
+                "warning",
+                "Belum ada API key AI terpasang (Gemini/Groq/OpenRouter). Buka panel AI Router → 3 tombol link langsung, tempel key di Vercel Environment Variables, lalu Redeploy."
+              );
+              return { ok: false, status: res.status, data };
             }
 
             const errStr = String(data.error ?? "");
@@ -1028,7 +1074,8 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         return null;
       } catch (err) {
         return markFailed(
-          err instanceof Error ? err.message : "Terjadi kesalahan tidak terduga."
+          err instanceof Error ? err.message : "Terjadi kesalahan tidak terduga.",
+          "Kalau ini soal API key: Vercel → Settings → Environment Variables (GEMINI/GROQ/OPENROUTER), lalu Redeploy."
         );
       }
     },
@@ -1070,22 +1117,12 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           }
         });
       };
-
-      const paceIfPollinations = async (provider?: string | null) => {
-        if (provider === "pollinations") {
-          await new Promise((r) => setTimeout(r, 6000));
-        }
-      };
-
-      await paceIfPollinations(epWithIdea.divisions.research.provider);
       const afterSeo = await runDivision(episodeId, "seo", epWithIdea, true);
       if (!afterSeo || afterSeo.divisions.seo.status !== "done") {
         releaseRemainingIdle(afterSeo);
         return afterSeo;
       }
       syncAgent3D("seo", "idle");
-
-      await paceIfPollinations(afterSeo.divisions.seo.provider);
       const afterScript = await runDivision(episodeId, "script", afterSeo, true);
       if (!afterScript || afterScript.divisions.script.status !== "done") {
         releaseRemainingIdle(afterScript);
@@ -1119,8 +1156,6 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         return afterEditing;
       }
       syncAgent3D("editing", "idle");
-
-      await paceIfPollinations(afterScript.divisions.script.provider);
       const afterQc = await runDivision(episodeId, "qc", afterEditing, true);
       releaseRemainingIdle(afterQc);
       return afterQc;
@@ -1312,12 +1347,6 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         });
       };
 
-      const paceIfPollinations = async (provider?: string | null) => {
-        if (provider === "pollinations") {
-          await new Promise((r) => setTimeout(r, 6000));
-        }
-      };
-
       if (ep.divisions.research.status !== "done") {
         ep = await runDivision(episodeId, "research", ep, true);
         if (!ep || ep.divisions.research.status !== "done") {
@@ -1342,7 +1371,6 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (ep.divisions.seo.status !== "done") {
-        await paceIfPollinations(ep.divisions.research.provider);
         ep = await runDivision(episodeId, "seo", ep, true);
         if (!ep || ep.divisions.seo.status !== "done") {
           releaseNonFailed(ep);
@@ -1352,7 +1380,6 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       syncAgent3D("seo", "idle");
 
       if (ep.divisions.script.status !== "done") {
-        await paceIfPollinations(ep.divisions.seo.provider);
         ep = await runDivision(episodeId, "script", ep, true);
         if (!ep || ep.divisions.script.status !== "done") {
           releaseNonFailed(ep);
@@ -1389,7 +1416,6 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
       syncAgent3D("editing", "idle");
 
       if (ep.divisions.qc.status !== "done") {
-        await paceIfPollinations(ep.divisions.script.provider);
         ep = await runDivision(episodeId, "qc", ep, true);
       }
       releaseNonFailed(ep);

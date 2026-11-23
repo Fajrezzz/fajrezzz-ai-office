@@ -29,7 +29,7 @@ export function InteriorActivityRooms({
           {[
             { y: 3.88, color: "#cffafe", emissive: "#00f0ff" },
             { y: 7.78, color: "#f3e8ff", emissive: "#a855f7" },
-            { y: 11.76, color: "#fce7f3", emissive: "#ec4899" },
+            { y: 11.98, color: "#fce7f3", emissive: "#ec4899" },
           ].map((band, bi) => (
             <group key={`arch-band-${bi}`} position={[0, band.y, 0]}>
               {/* Front Facade RGB Neon Strip (38.2m) */}

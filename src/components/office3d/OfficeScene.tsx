@@ -620,10 +620,12 @@ export function OfficeScene() {
       />
 
       {/* Stage 2 Interior Activity Rooms */}
+      {/* RGB edge strips facade (cyan/violet/magenta) WAJIB selalu tampil:
+          sebelumnya showRoof={false} -> lampu RGB depan kantor hilang. */}
       <InteriorActivityRooms
         showL1={true}
         showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof"}
-        showRoof={false}
+        showRoof={true}
         isNight={isNight}
       />
 

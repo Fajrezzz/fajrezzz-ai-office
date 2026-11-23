@@ -1,7 +1,7 @@
 # Tutorial — Memasang API Key Central AI Router (Gratis Rp 0)
 
 Dokumen ini menjelaskan **cara memasukkan API key** untuk *Central AI Router* FAJREZZZ AI OFFICE
-(Gemini + Groq + OpenRouter + Mistral + fallback keyless Pollinations), baik di **Vercel**
+(Gemini + Groq + OpenRouter saja — Pollinations keyless sudah DIHAPUS), baik di **Vercel**
 (Production & Preview) maupun untuk **development lokal**.
 
 > **Penting:** Aplikasi ini **tidak punya kolom input API key di UI**. Itu disengaja.
@@ -18,7 +18,7 @@ Dokumen ini menjelaskan **cara memasukkan API key** untuk *Central AI Router* FA
 | Bikin key OpenRouter (gratis, model `:free`) | <https://openrouter.ai/keys> |
 | **Tempel key di Vercel** (project `fajrezzz-ai-office`) | <https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables> |
 | Cek status key di server | `/api/ai/status` (domain Vercel kamu, mis. `https://fajrezzz-ai-office.vercel.app/api/ai/status`) |
-| Bikin key Gemini / Groq / Mistral | <https://aistudio.google.com/apikey> · <https://console.groq.com/keys> · <https://console.mistral.ai/api-keys> |
+| Bikin key Gemini / Groq / OpenRouter | <https://aistudio.google.com/apikey> · <https://console.groq.com/keys> · <https://openrouter.ai/keys> |
 
 Urutan cepat: **buka link 1 → copy key → buka link 2 → Add New → Name `OPENROUTER_API_KEY`,
 Value = key → centang Production + Preview + Development → Save → Deployments → ⋯ → Redeploy.**
@@ -36,8 +36,9 @@ Shortcut yang sama juga ada di dalam aplikasi: panel **AI Router** (3 tombol di 
 | 4 | **Redeploy** (env baru hanya terbaca setelah deployment baru) |
 | 5 | Verifikasi: buka `/api/ai/status` atau panel **AI Router** → tombol **Tes Live Provider** |
 
-Tanpa key sama sekali pun aplikasi tetap jalan lewat **Pollinations keyless fallback** (Rp 0),
-hanya lebih lambat/terbatas. Key hanya meningkatkan kecepatan, kualitas, dan kuota.
+**Tanpa API key, fitur AI berhenti dengan pesan jelas** (tidak ada lagi fallback keyless).
+Router mengembalikan kode `NO_PROVIDER_CONFIGURED` + link Vercel, jadi tidak ada lagi log
+"server antre 502" yang menyesatkan dan tidak ada retry sia-sia.
 
 ---
 
@@ -48,11 +49,10 @@ hanya lebih lambat/terbatas. Key hanya meningkatkan kecepatan, kualitas, dan kuo
 | `GEMINI_API_KEY` | Google Gemini | Reasoning, research, planning, strategy, keputusan agent (gemini-2.5-flash / flash-lite) | ~10–15 RPM, 250–1.500 request/hari | <https://aistudio.google.com/apikey> |
 | `GROQ_API_KEY` | Groq Cloud | Tugas cepat: klasifikasi, ringkasan, text processing (llama-3.3-70b / 3.1-8b) | ~30 RPM, 1.000–14.400 request/hari | <https://console.groq.com/keys> |
 | `OPENROUTER_API_KEY` | OpenRouter | Alternatif & fallback (hanya model `:free` by default) | ~20 RPM, 50 request/hari | <https://openrouter.ai/keys> |
-| `MISTRAL_API_KEY` | Mistral AI | Opsional cadangan ke-4 (mistral-small-latest) | tergantung akun | <https://console.mistral.ai/api-keys> |
 | `HINDSIGHT_API_KEY` | Hindsight | Memori jangka panjang agent (opsional) | – | sesuai dashboard Hindsight |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase | Simpan state cloud (opsional) | – | Supabase → Project Settings → API |
 
-Key **tidak butuh kartu kredit** untuk Gemini, Groq, OpenRouter `:free`, dan Pollinations.
+Key **tidak butuh kartu kredit** untuk Gemini, Groq, dan OpenRouter `:free`.
 
 ---
 
@@ -135,8 +135,8 @@ Tiga cara, dari paling cepat:
 | --- | --- | --- |
 | Badge tetap `ENV BELUM ADA` | Variabel belum ada / salah nama / deployment lama | Pastikan nama persis, centang environment yang dipakai, lalu **Redeploy** |
 | `FAILED` dengan `401` / `invalid api key` | Key salah copy, sudah di-revoke, atau ada spasi | Copy ulang key, hapus spasi di awal/akhir |
-| `429` di sebagian request | Kuota free tier habis sementara | Normal — router otomatis fallback ke provider lain / Pollinations |
-| Hanya Pollinations yang aktif | Tidak ada key terpasang | Tambahkan minimal satu key (Gemini paling mudah) |
+| `429` di sebagian request | Kuota free tier habis sementara | Normal — router otomatis retry lalu pindah ke provider lain |
+| `NO_PROVIDER_CONFIGURED` | Tidak ada key terpasang | Tambahkan minimal satu key (Gemini paling mudah) lalu Redeploy |
 | Preview beda perilaku dengan Production | Env Preview tidak dicentang | Edit variabel → centang **Preview** → redeploy preview |
 | Key “bocor” di log | Tidak akan terjadi: `sanitizeErrorMessage()` meredaksi `Bearer`, `AIza…`, `gsk_…`, `sk-or-v1-…` | Tetap jangan pernah menaruh key di `NEXT_PUBLIC_*` |
 
@@ -149,7 +149,7 @@ lalu buat key baru. Jangan pakai prefix `NEXT_PUBLIC_` untuk key apa pun.
 
 1. Klasifikasi tugas (`reasoning` → Gemini, `fast` → Groq, dll.)
 2. Kalau provider utama error / 429 / circuit OPEN → provider berikutnya
-3. Terakhir: **Pollinations keyless** (tanpa API key, Rp 0)
+3. Tidak ada fallback keyless lagi — key wajib ada
 
 Detail implementasi: `src/lib/ai/llm-provider.ts` (server-only).
 Kebijakan & angka FPS/ketajaman render: `docs/VISUAL-QUALITY-FPS.md`.

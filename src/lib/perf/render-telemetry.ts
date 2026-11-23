@@ -97,6 +97,40 @@ export function resolvePixelRatio(
   );
 }
 
+/**
+ * DPR yang "makin HD saat zoom in".
+ *
+ * Prinsip pengguna: makin di-zoom in, gambar harus makin tajam (bukan makin blur),
+ * dan zoom out TIDAK menurunkan resolusi. Jadi resolusi render dinaikkan saat kamera
+ * dekat (objek memenuhi layar -> tepi objek butuh piksel lebih banyak), dengan plafon
+ * perangkat & tier supaya GPU tidak jebol:
+ *  - zoom >= 145%  -> +45% pixel ratio (maks. deviceDPR, plafon tier)
+ *  - zoom >= 115%  -> +22%
+ *  - zoom <  115%  -> pixel ratio dasar tier (tidak pernah turun di bawah 1.0)
+ * Nilai selalu dibulatkan ke 0.05 supaya tidak ada perubahan resolusi tiap frame.
+ */
+export function resolveZoomSharpenedPixelRatio(
+  mode: PerformanceMode,
+  devicePixelRatio: number,
+  zoomPct: number
+): number {
+  const base = resolvePixelRatio(mode, devicePixelRatio);
+  const dpr =
+    Number.isFinite(devicePixelRatio) && devicePixelRatio > 0
+      ? devicePixelRatio
+      : 1;
+  const tierCeiling: Record<PerformanceMode, number> = {
+    high: 3,
+    balanced: 2.6,
+    eco: 2,
+  };
+  const ceiling = Math.min(dpr, Math.max(base, tierCeiling[mode]));
+  const boost = zoomPct >= 145 ? 1.45 : zoomPct >= 115 ? 1.22 : 1;
+  const boosted = base * boost;
+  const clamped = Math.max(ABSOLUTE_MIN_PIXEL_RATIO, Math.min(ceiling, boosted));
+  return Math.round(clamped * 20) / 20;
+}
+
 const REFRESH_CANDIDATES = [120, 90, 60, 48];
 
 /**

@@ -98,7 +98,7 @@ Ringkasnya (tutorial lengkap: **[`docs/API-KEY-ROUTER.md`](docs/API-KEY-ROUTER.m
 4. Verifikasi: buka `/api/ai/status` atau panel **AI Router** → tombol **Tes Live Provider**.
 
 Lokal: `cp .env.example .env.local`, isi key, lalu `npm run dev`.
-Tanpa key pun aplikasi tetap hidup lewat fallback **Pollinations keyless (Rp 0)**.
+Tanpa API key, fitur AI **berhenti dengan pesan jelas** (`NO_PROVIDER_CONFIGURED`) — tidak ada fallback keyless; pasang key di Vercel Environment Variables.
 
 ### Kualitas Visual & FPS (Target 120 FPS)
 
