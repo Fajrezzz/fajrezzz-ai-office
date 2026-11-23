@@ -2,13 +2,16 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Bot,
   Box,
+  Brain,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
   Copy,
+  Cpu,
   Download,
   ExternalLink,
   Film,
@@ -27,13 +30,21 @@ import {
   Volume2,
   VolumeX,
   XCircle,
+  Zap,
 } from "lucide-react";
+import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
+import {
+  loadLongTermMemory,
+  type AgentLongTermMemoryState,
+} from "@/lib/ai/agent-memory";
 import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
 import {
   buildEditorialEpisode,
   renderEditorialFrame,
+  scheduleSceneTransitionsSfx,
   startAmbientSynthBed,
 } from "@/lib/pipeline/motion-renderer";
+import { getCachedSceneBRoll } from "@/lib/pipeline/scene-broll-client";
 import { speakSceneTracks } from "@/lib/pipeline/browser-divisions";
 import {
   buildScriptSummaryArchive,
@@ -109,6 +120,13 @@ export function KidsStudioPanel() {
     videoBlobUrls,
     editingProgressPct,
     runningDivision,
+    autoPilotEnabled,
+    setAutoPilotEnabled,
+    autoPilotStatus,
+    autoPilotMessage,
+    autoPilotCountdownSec,
+    lastAutoPilotTopic,
+    triggerAutonomousEpisode,
     startNewEpisode,
     selectIdeaAndContinue,
     runDivision,
@@ -125,6 +143,17 @@ export function KidsStudioPanel() {
   const [aiStatus, setAiStatus] = useState<AiServerStatus | null>(null);
   const [expandedDiv, setExpandedDiv] = useState<PipelineDivisionKey | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [skillsDrawerOpen, setSkillsDrawerOpen] = useState(false);
+  const [manualOverrideOpen, setManualOverrideOpen] = useState(false);
+  const [longTermMem, setLongTermMem] = useState<AgentLongTermMemoryState | null>(null);
+
+  useEffect(() => {
+    setLongTermMem(loadLongTermMemory());
+    const id = window.setInterval(() => {
+      setLongTermMem(loadLongTermMemory());
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
 
   // Playback & TTS preview refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -181,16 +210,17 @@ export function KidsStudioPanel() {
     stopPlayback();
     setPlayTime(0);
     const canvas = canvasRef.current;
-    if (!canvas || !renderableEpisode) return;
+    if (!canvas || !renderableEpisode || !activeEpisode) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8);
-  }, [renderableEpisode, stopPlayback]);
+    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
+    renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, 0.8, broll);
+  }, [renderableEpisode, activeEpisode, stopPlayback]);
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
   const togglePlayPreview = () => {
-    if (!renderableEpisode || !canvasRef.current) return;
+    if (!renderableEpisode || !activeEpisode || !canvasRef.current) return;
     if (isPlaying) {
       stopPlayback();
       return;
@@ -200,8 +230,19 @@ export function KidsStudioPanel() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const broll = getCachedSceneBRoll(renderableEpisode, activeEpisode.format);
+
     if (!isMuted) {
-      melodyStopRef.current = startAmbientSynthBed(true).stop;
+      const synth = startAmbientSynthBed(true);
+      melodyStopRef.current = synth.stop;
+      if (synth.audioCtx && synth.voiceBus) {
+        scheduleSceneTransitionsSfx(
+          synth.audioCtx,
+          synth.voiceBus,
+          synth.audioCtx.currentTime + 0.08,
+          renderableEpisode.scenes.map((s) => s.durationSec)
+        );
+      }
       const tracks = activeEpisode?.divisions.voice.output?.sceneTracks;
       if (tracks && tracks.length > 0) {
         speechStopRef.current = speakSceneTracks(tracks, (sn) =>
@@ -221,7 +262,7 @@ export function KidsStudioPanel() {
         return;
       }
       setPlayTime(elapsed);
-      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed);
+      renderEditorialFrame(ctx, canvas.width, canvas.height, renderableEpisode, elapsed, broll);
       rafRef.current = window.requestAnimationFrame(loop);
     };
     rafRef.current = window.requestAnimationFrame(loop);
@@ -305,102 +346,297 @@ export function KidsStudioPanel() {
         </div>
       )}
 
-      {/* ================= 1. KOMANDO BOS (MULAI EPISODE NYATA) ================= */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
+      {/* ================= 1. ZERO-CLICK AUTO-PILOT VIDEO STUDIO (AI KERJA SENDIRI) ================= */}
+      <section className="rounded-3xl border border-cyan-500/35 bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-indigo-950/70 p-4 shadow-[0_0_32px_rgba(34,211,238,0.08)] sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/50 bg-cyan-500/15 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-cyan-200">
+                <Bot className="h-3.5 w-3.5" />
+                {autoPilotEnabled ? "AUTO-PILOT PENUH AKTIF" : "AUTO-PILOT DIJEDA"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/45 bg-violet-500/15 px-2.5 py-0.5 text-[10px] font-bold text-violet-200">
+                <Cpu className="h-3 w-3" />
+                {INSTALLED_GITHUB_SKILLS.length} GitHub AI Skills Terpasang
+              </span>
+            </div>
             <h2 className="text-base font-black text-white sm:text-lg">
-              📱 Komando Bos — Mulai Produksi Episode Nyata
+              🤖 Studio Video Otonom — AI Kerja Sendiri Tanpa Ketik &amp; Tanpa Klik
             </h2>
-            <p className="text-xs text-slate-400">
-              Ketik tema episode → Divisi Riset memanggil AI nyata untuk 5 ide unik,
-              lalu tiap divisi menjalankan tugasnya dengan log &amp; hasil JSON tersimpan.
+            <p className="text-xs leading-relaxed text-slate-300">
+              AI CEO &amp; 7 Divisi otomatis memilih topik viral, menulis naskah, merekam{" "}
+              <strong className="text-cyan-200">suara neural Indonesia</strong>, menggambar{" "}
+              <strong className="text-violet-200">motion teks kinetik</strong>, dan merender{" "}
+              <strong className="text-emerald-200">video siap download/upload</strong> sepenuhnya mandiri.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setActiveSection("office")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25"
-          >
-            <Box className="h-4 w-4" />
-            <span>Pantau di Kantor 3D</span>
-          </button>
-        </div>
 
-        <form onSubmit={handleSubmitTheme} className="mt-4 space-y-3">
-          <div className="flex flex-wrap gap-1.5">
-            {(
-              [
-                { id: "youtube_shorts", label: "📱 YouTube Shorts (9:16)" },
-                { id: "youtube_landscape", label: "📺 YouTube Video (16:9)" },
-                { id: "tiktok", label: "🎵 TikTok / Reels (9:16)" },
-              ] as { id: PublishPlatform; label: string }[]
-            ).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPlatform(p.id)}
-                className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                  platform === p.id
-                    ? "border-amber-300 bg-amber-400 text-slate-950"
-                    : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              type="text"
-              value={themeInput}
-              onChange={(e) => setThemeInput(e.target.value)}
-              placeholder="Contoh: 3 cara mengatur keuangan gaji pertama biar tidak habis di tengah bulan..."
-              className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
-            />
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              type="submit"
-              disabled={!themeInput.trim() || Boolean(runningDivision)}
-              className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={() => setAutoPilotEnabled(!autoPilotEnabled)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black transition ${
+                autoPilotEnabled
+                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30"
+                  : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500"
+              }`}
             >
-              {runningDivision ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  autoPilotEnabled ? "animate-pulse bg-emerald-400" : "bg-slate-500"
+                }`}
+              />
+              <span>{autoPilotEnabled ? "Auto-Pilot ON" : "Auto-Pilot OFF"}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                Boolean(runningDivision) || autoPilotStatus === "choosing_topic"
+              }
+              onClick={() => void triggerAutonomousEpisode()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-400 to-violet-400 px-3.5 py-2 text-xs font-black text-slate-950 transition hover:brightness-110 disabled:opacity-50"
+            >
+              {runningDivision || autoPilotStatus === "choosing_topic" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Zap className="h-3.5 w-3.5" />
               )}
-              <span>{runningDivision ? "Sedang Produksi..." : "Produksi Otomatis → Video"}</span>
+              <span>
+                {runningDivision || autoPilotStatus === "choosing_topic"
+                  ? "AI Sedang Bekerja..."
+                  : "Bikin Video Baru Sekarang"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSection("office")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25"
+            >
+              <Box className="h-4 w-4" />
+              <span>Pantau 3D</span>
             </button>
           </div>
+        </div>
 
-          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-cyan-200/95">
-            <input
-              type="checkbox"
-              checked={autoWatch3D}
-              onChange={(e) => setAutoWatch3D(e.target.checked)}
-              className="h-4 w-4 rounded border-cyan-400/50 bg-slate-950 text-cyan-400"
-            />
-            <span>
-              <strong>Otomatis buka Kantor 3D</strong> — cukup 1 klik, tonton 7 karakter bekerja otomatis sampai video jadi!
-            </span>
-          </label>
-
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_THEMES.map((q) => (
-              <button
-                key={q.label}
-                type="button"
-                onClick={() => {
-                  setThemeInput(q.theme);
-                  setPlatform(q.platform);
-                }}
-                className="rounded-lg border border-slate-800 bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-cyan-400/50 hover:text-cyan-200"
-              >
-                {q.label}
-              </button>
-            ))}
+        {/* Live Autonomous Status Strip */}
+        <div className="mt-3 rounded-2xl border border-slate-800/90 bg-slate-950/75 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-cyan-100">
+              {runningDivision || autoPilotStatus === "choosing_topic" ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-cyan-400" />
+              ) : (
+                <Brain className="h-4 w-4 shrink-0 text-violet-400" />
+              )}
+              <span className="font-semibold">{autoPilotMessage}</span>
+            </div>
+            {autoPilotStatus === "cooldown" && autoPilotCountdownSec > 0 && (
+              <span className="rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-200">
+                Next: {autoPilotCountdownSec}s
+              </span>
+            )}
           </div>
-        </form>
+
+          {lastAutoPilotTopic && (
+            <div className="mt-2.5 rounded-xl border border-violet-500/25 bg-violet-950/20 px-3 py-2 text-[11px]">
+              <div className="flex flex-wrap items-center justify-between gap-1 text-violet-200">
+                <span className="font-bold">
+                  🎯 Keputusan AI CEO ({lastAutoPilotTopic.provider}) · {lastAutoPilotTopic.niche}
+                </span>
+                <span className="font-mono text-[10px] text-slate-400">
+                  {lastAutoPilotTopic.decidedAt}
+                </span>
+              </div>
+              <p className="mt-1 font-semibold text-white">
+                &ldquo;{lastAutoPilotTopic.theme}&rdquo;
+              </p>
+              <p className="mt-0.5 text-slate-300">{lastAutoPilotTopic.reasoning}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Collapsible 19 Installed GitHub AI Skills & Long-Term Memory Panel */}
+        <div className="mt-3 rounded-2xl border border-violet-500/30 bg-slate-950/70">
+          <button
+            type="button"
+            onClick={() => setSkillsDrawerOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Brain className="h-4 w-4 text-violet-300" />
+              <span className="text-xs font-black text-white">
+                🧠 {INSTALLED_GITHUB_SKILLS.length} Modul GitHub AI Skills &amp; Memori Jangka Panjang Terpasang
+              </span>
+              <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-200">
+                {INSTALLED_GITHUB_SKILLS.length}/{INSTALLED_GITHUB_SKILLS.length} AKTIF
+              </span>
+              {longTermMem && longTermMem.entries.length > 0 && (
+                <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2 py-0.5 font-mono text-[10px] text-cyan-200">
+                  {longTermMem.entries.length} Memori Tersimpan
+                </span>
+              )}
+            </div>
+            {skillsDrawerOpen ? (
+              <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+            )}
+          </button>
+
+          {skillsDrawerOpen && (
+            <div className="space-y-3 border-t border-slate-800/80 p-3.5">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {INSTALLED_GITHUB_SKILLS.map((skill) => {
+                  const hits = longTermMem?.skillHitCounts?.[skill.repo] ?? 0;
+                  return (
+                    <a
+                      key={skill.id}
+                      href={skill.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/75 p-2.5 transition hover:border-cyan-400/50"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="truncate font-mono text-[10px] font-bold text-cyan-300 group-hover:text-cyan-200">
+                            {skill.repo}
+                          </span>
+                          <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-emerald-300">
+                            AKTIF{hits > 0 ? ` · ${hits}×` : ""}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[11px] font-bold text-white">
+                          {skill.name}
+                        </div>
+                        <p className="mt-0.5 text-[10px] leading-snug text-slate-400">
+                          {skill.summaryId}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between border-t border-slate-800/70 pt-1.5 text-[9px] text-slate-400">
+                        <span className="truncate">
+                          Dipakai: {skill.assignedAgents.join(", ")}
+                        </span>
+                        <span className="ml-1 shrink-0 font-mono text-violet-300">
+                          {skill.license}
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+
+              {longTermMem && longTermMem.entries.length > 0 && (
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-2.5">
+                  <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-300">
+                    Memori Jangka Panjang Terbaru (ai-memory + claude-mem)
+                  </div>
+                  <div className="max-h-28 space-y-1 overflow-y-auto font-mono text-[10px] text-slate-300">
+                    {longTermMem.entries.slice(0, 6).map((m) => (
+                      <div key={m.id} className="truncate">
+                        <span className="text-cyan-400">[{m.actor}]</span>{" "}
+                        {m.summary}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Optional Manual Override Accordion (Bos doesn't have to touch it!) */}
+        <div className="mt-3 rounded-2xl border border-slate-800/90 bg-slate-950/50">
+          <button
+            type="button"
+            onClick={() => setManualOverrideOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-3.5 py-2 text-left text-[11px] font-bold text-slate-300 hover:text-white"
+          >
+            <span>✍️ Opsional: Override Topik Manual oleh Bos (Biarkan tertutup untuk Auto-Pilot Penuh)</span>
+            {manualOverrideOpen ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+
+          {manualOverrideOpen && (
+            <form onSubmit={handleSubmitTheme} className="space-y-3 border-t border-slate-800 p-3.5">
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    { id: "youtube_shorts", label: "📱 YouTube Shorts (9:16)" },
+                    { id: "youtube_landscape", label: "📺 YouTube Video (16:9)" },
+                    { id: "tiktok", label: "🎵 TikTok / Reels (9:16)" },
+                  ] as { id: PublishPlatform; label: string }[]
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPlatform(p.id)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                      platform === p.id
+                        ? "border-amber-300 bg-amber-400 text-slate-950"
+                        : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={themeInput}
+                  onChange={(e) => setThemeInput(e.target.value)}
+                  placeholder="Opsional: ketik topik khusus jika Bos ingin meminta tema tertentu..."
+                  className="flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!themeInput.trim() || Boolean(runningDivision)}
+                  className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {runningDivision ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  <span>{runningDivision ? "Sedang Produksi..." : "Override → Produksi"}</span>
+                </button>
+              </div>
+
+              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-cyan-200/95">
+                <input
+                  type="checkbox"
+                  checked={autoWatch3D}
+                  onChange={(e) => setAutoWatch3D(e.target.checked)}
+                  className="h-4 w-4 rounded border-cyan-400/50 bg-slate-950 text-cyan-400"
+                />
+                <span>
+                  <strong>Otomatis buka Kantor 3D</strong> saat override manual dikirim
+                </span>
+              </label>
+
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_THEMES.map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => {
+                      setThemeInput(q.theme);
+                      setPlatform(q.platform);
+                    }}
+                    className="rounded-lg border border-slate-800 bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-cyan-400/50 hover:text-cyan-200"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            </form>
+          )}
+        </div>
       </section>
 
       {/* ================= EPISODE SELECTOR BAR ================= */}
@@ -440,17 +676,33 @@ export function KidsStudioPanel() {
         </div>
       )}
 
-      {/* ================= EMPTY STATE ================= */}
+      {/* ================= EMPTY / AUTO-STARTING STATE ================= */}
       {!activeEpisode && (
-        <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
-          <Film className="mx-auto h-10 w-10 text-slate-600" />
-          <h3 className="mt-3 text-sm font-bold text-slate-200">
-            Belum Ada Episode Produksi
-          </h3>
-          <p className="mx-auto mt-1 max-w-md text-xs text-slate-400">
-            Tidak ada data atau angka simulasi palsu. Ketik tema episode pertama di
-            atas untuk mulai menjalankan Pipeline 7 Divisi secara nyata.
-          </p>
+        <div className="rounded-3xl border border-dashed border-cyan-500/35 bg-slate-900/50 p-8 text-center">
+          {autoPilotEnabled ? (
+            <>
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-cyan-400" />
+              <h3 className="mt-3 text-sm font-black text-white">
+                AI Auto-Pilot Sedang Menyiapkan Episode Pertama Secara Mandiri...
+              </h3>
+              <p className="mx-auto mt-1 max-w-md text-xs text-slate-300">
+                Bos tidak perlu mengetik atau memencet apa pun — {INSTALLED_GITHUB_SKILLS.length} GitHub AI Skills
+                sedang bekerja memilih topik viral, menulis naskah, merekam suara
+                neural, membuat AI B-Roll + motion teks sinematik, dan merender video otomatis.
+              </p>
+            </>
+          ) : (
+            <>
+              <Film className="mx-auto h-10 w-10 text-slate-600" />
+              <h3 className="mt-3 text-sm font-bold text-slate-200">
+                Auto-Pilot Dijeda — Belum Ada Episode Produksi
+              </h3>
+              <p className="mx-auto mt-1 max-w-md text-xs text-slate-400">
+                Aktifkan tombol Auto-Pilot ON di atas agar AI langsung bekerja sendiri,
+                atau buka menu Override Topik Manual.
+              </p>
+            </>
+          )}
         </div>
       )}
 

@@ -919,13 +919,13 @@ export function OfficeArchitecture({
               <meshStandardMaterial color="#9c6434" roughness={0.56} />
             </mesh>
           ))}
-          {/* Subtle Warm Downlight Accent under Canopy */}
+          {/* Cyberpunk Cyan Neon Downlight Accent under Canopy */}
           <mesh position={[0, -0.09, 0]}>
             <boxGeometry args={[6.4, 0.025, 0.08]} />
             <meshStandardMaterial
-              color="#fff6e0"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.6 : 0.2}
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 2.1 : 0.35}
             />
           </mesh>
         </group>
@@ -947,11 +947,11 @@ export function OfficeArchitecture({
           <mesh position={[0, 0.58, 0.62]}>
             <boxGeometry args={[5.4, 0.06, 0.03]} />
             <meshStandardMaterial
-              color="#d4af37"
-              metalness={0.85}
+              color="#c4b5fd"
+              metalness={0.7}
               roughness={0.2}
-              emissive="#f59e0b"
-              emissiveIntensity={isNight ? 1.3 : 0.35}
+              emissive="#8b5cf6"
+              emissiveIntensity={isNight ? 1.9 : 0.55}
             />
           </mesh>
           {/* Receptionist Monitors */}
@@ -1000,12 +1000,12 @@ export function OfficeArchitecture({
         <Text
           position={[0, 1.92, -9.58]}
           fontSize={0.2}
-          color="#fde68a"
+          color="#38bdf8"
           letterSpacing={0.2}
           anchorX="center"
           anchorY="middle"
         >
-          EXECUTIVE HEADQUARTERS · 10 STAFF + BOS FAJREZ
+          EXECUTIVE HEADQUARTERS · 22 STAFF + BOS FAJREZ
         </Text>
 
         {/* West & East Luxury Lobby Lounge Sets (Sofas + Armrests + Pillows + Marble Tables) */}
@@ -1201,13 +1201,13 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Warm Architectural Gold Edge Light along L2 Balcony */}
+          {/* Cyberpunk Electric-Cyan Neon Edge Light along L2 Balcony */}
           <mesh position={[0, FLOOR_2_Y - 0.25, 6.2]}>
             <boxGeometry args={[38.6, 0.06, 0.08]} />
             <meshStandardMaterial
-              color="#fef3c7"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.25 : isSunset ? 0.6 : 0.12}
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 1.9 : isSunset ? 1.0 : 0.32}
             />
           </mesh>
 
@@ -1663,13 +1663,13 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Clean Warm-White Architectural Edge Light along L3 Facade */}
+          {/* Cyberpunk Neon Purple Edge Light along L3 Facade */}
           <mesh position={[0, FLOOR_3_Y - 0.25, 4.18]}>
             <boxGeometry args={[38.4, 0.06, 0.08]} />
             <meshStandardMaterial
-              color="#fffbeb"
-              emissive="#fef3c7"
-              emissiveIntensity={isNight ? 1.15 : isSunset ? 0.55 : 0.12}
+              color="#f3e8ff"
+              emissive="#a855f7"
+              emissiveIntensity={isNight ? 1.85 : isSunset ? 0.95 : 0.28}
             />
           </mesh>
 
@@ -1959,15 +1959,15 @@ export function OfficeArchitecture({
           <mesh position={[7.4, FLOOR_3_Y + 1.85, -9.67]}>
             <boxGeometry args={[6.4, 0.06, 0.04]} />
             <meshStandardMaterial
-              color="#facc15"
-              emissive="#f59e0b"
-              emissiveIntensity={isNight ? 1.8 : 0.6}
+              color="#c4b5fd"
+              emissive="#8b5cf6"
+              emissiveIntensity={isNight ? 2.1 : 0.75}
             />
           </mesh>
 
           <pointLight
             position={[0, FLOOR_3_Y + 3.0, -3.2]}
-            color="#fff0d8"
+            color="#dbeafe"
             intensity={isNight ? 18 : isSunset ? 11 : 7}
             distance={24}
           />
@@ -1975,25 +1975,25 @@ export function OfficeArchitecture({
       )}
 
       {/* ============================================================
-          ROOFTOP — HELIPAD, BADMINTON COURT, NEON TRIM & LARGE GLOWING SIGNAGE (Y=11.6)
+          ROOFTOP — HELIPAD, BADMINTON COURT, CYBERPUNK RGB NEON TRIM & SIGNAGE (Y=11.6)
           ============================================================ */}
       {showRoof && (
         <group>
-          {/* Vertical Corner Warm Architectural Edge Bars spanning Full Building Height */}
+          {/* Vertical Corner Cyberpunk Neon Edge Bars (Left Electric Cyan, Right Hot Magenta) */}
           <mesh position={[-19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.075, 11.4, 0.075]} />
+            <boxGeometry args={[0.085, 11.4, 0.085]} />
             <meshStandardMaterial
-              color="#fef3c7"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 2.2 : isSunset ? 1.1 : 0.35}
             />
           </mesh>
           <mesh position={[19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.075, 11.4, 0.075]} />
+            <boxGeometry args={[0.085, 11.4, 0.085]} />
             <meshStandardMaterial
-              color="#fef3c7"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
+              color="#fce7f3"
+              emissive="#ec4899"
+              emissiveIntensity={isNight ? 2.2 : isSunset ? 1.1 : 0.35}
             />
           </mesh>
 
@@ -2024,53 +2024,53 @@ export function OfficeArchitecture({
             </mesh>
           ))}
 
-          {/* Rooftop Full-Width Warm Champagne-Gold Architectural Trim */}
+          {/* Rooftop Full-Width Cyberpunk RGB Neon Rim */}
           <mesh position={[0, 11.52, 5.66]}>
-            <boxGeometry args={[39.6, 0.055, 0.06]} />
+            <boxGeometry args={[39.6, 0.065, 0.065]} />
             <meshStandardMaterial
-              color="#fef3c7"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 2.1 : isSunset ? 1.1 : 0.35}
             />
           </mesh>
 
-          {/* CLASSY NANVERSE-STYLE ILLUMINATED "FAJREZZZ AI OFFICE" CROWN SIGNAGE */}
+          {/* CYBERPUNK RGB ILLUMINATED "FAJREZZZ AI OFFICE" CROWN SIGNAGE */}
           <group position={[0, 12.6, 5.56]}>
             <mesh castShadow>
               <boxGeometry args={[13.2, 1.12, 0.24]} />
-              <meshStandardMaterial color="#161a20" metalness={0.62} roughness={0.3} />
+              <meshStandardMaterial color="#111624" metalness={0.68} roughness={0.28} />
             </mesh>
             <mesh position={[0, 0.58, 0.1]}>
-              <boxGeometry args={[13.25, 0.055, 0.06]} />
+              <boxGeometry args={[13.25, 0.065, 0.06]} />
               <meshStandardMaterial
-                color="#fef3c7"
-                emissive="#fde68a"
-                emissiveIntensity={isNight ? 1.55 : isSunset ? 0.85 : 0.2}
+                color="#cffafe"
+                emissive="#00f0ff"
+                emissiveIntensity={isNight ? 2.4 : isSunset ? 1.35 : 0.45}
               />
             </mesh>
             <mesh position={[0, -0.58, 0.1]}>
-              <boxGeometry args={[13.25, 0.055, 0.06]} />
+              <boxGeometry args={[13.25, 0.065, 0.06]} />
               <meshStandardMaterial
-                color="#fef3c7"
-                emissive="#fde68a"
-                emissiveIntensity={isNight ? 1.4 : isSunset ? 0.75 : 0.18}
+                color="#f3e8ff"
+                emissive="#a855f7"
+                emissiveIntensity={isNight ? 2.4 : isSunset ? 1.35 : 0.45}
               />
             </mesh>
             <Text
               position={[0, 0, 0.15]}
               fontSize={0.76}
-              color="#ffffff"
+              color="#e0f2fe"
               letterSpacing={0.14}
               anchorX="center"
               anchorY="middle"
               outlineWidth={0.015}
-              outlineColor="#141820"
+              outlineColor="#0f172a"
             >
               FAJREZZZ AI OFFICE
               <meshStandardMaterial
-                color="#ffffff"
-                emissive={isNight ? "#fffbeb" : isSunset ? "#fde68a" : "#ffffff"}
-                emissiveIntensity={isNight ? 1.85 : isSunset ? 0.95 : 0.2}
+                color="#e0f2fe"
+                emissive={isNight ? "#38bdf8" : isSunset ? "#818cf8" : "#38bdf8"}
+                emissiveIntensity={isNight ? 2.1 : isSunset ? 1.15 : 0.35}
                 toneMapped={!(isNight || isSunset)}
               />
             </Text>
@@ -2115,9 +2115,9 @@ export function OfficeArchitecture({
             <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <ringGeometry args={[3.72, 4.02, 36]} />
               <meshStandardMaterial
-                color="#ffffff"
-                emissive="#fef3c7"
-                emissiveIntensity={isNight ? 1.15 : 0.15}
+                color="#cffafe"
+                emissive="#00f0ff"
+                emissiveIntensity={isNight ? 1.85 : 0.35}
               />
             </mesh>
             <mesh position={[-0.95, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>

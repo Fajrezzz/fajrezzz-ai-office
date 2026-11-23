@@ -23,32 +23,32 @@ export function InteriorActivityRooms({
 }) {
   return (
     <group>
-      {/* ARCHITECTURAL WARM-WHITE / CHAMPAGNE-GOLD BUILDING EDGE LIGHTS (Nanverse Real-World Luxury Night Glow) */}
+      {/* CYBERPUNK RGB / NEON BUILDING EDGE STRIPS (Cyan L1, Violet L2, Magenta Roof) */}
       {showRoof && (
         <group>
           {[
-            { y: 3.88, color: "#fef3c7", emissive: "#fde68a" },
-            { y: 7.78, color: "#f8fafc", emissive: "#fffbeb" },
-            { y: 11.76, color: "#fef3c7", emissive: "#fde68a" },
+            { y: 3.88, color: "#cffafe", emissive: "#00f0ff" },
+            { y: 7.78, color: "#f3e8ff", emissive: "#a855f7" },
+            { y: 11.76, color: "#fce7f3", emissive: "#ec4899" },
           ].map((band, bi) => (
             <group key={`arch-band-${bi}`} position={[0, band.y, 0]}>
-              {/* Front Facade Warm Cove Light (38.2m) */}
+              {/* Front Facade RGB Neon Strip (38.2m) */}
               <mesh position={[0, 0, 4.14]}>
-                <boxGeometry args={[38.2, 0.04, 0.04]} />
+                <boxGeometry args={[38.2, 0.055, 0.055]} />
                 <meshStandardMaterial
                   color={band.color}
                   emissive={band.emissive}
-                  emissiveIntensity={isNight ? 1.15 : 0.08}
+                  emissiveIntensity={isNight ? 2.0 : 0.32}
                 />
               </mesh>
-              {/* Left & Right Side Edge Cove Lights (X = ±19.1) */}
+              {/* Left & Right Side Edge RGB Neon Strips (X = ±19.1) */}
               {[-19.1, 19.1].map((sx, si) => (
                 <mesh key={si} position={[sx, 0, -3.0]}>
-                  <boxGeometry args={[0.04, 0.04, 14.2]} />
+                  <boxGeometry args={[0.055, 0.055, 14.2]} />
                   <meshStandardMaterial
                     color={band.color}
                     emissive={band.emissive}
-                    emissiveIntensity={isNight ? 1.0 : 0.06}
+                    emissiveIntensity={isNight ? 1.85 : 0.28}
                   />
                 </mesh>
               ))}
@@ -102,18 +102,18 @@ export function InteriorActivityRooms({
               <boxGeometry args={[1.15, 0.56, 0.05]} />
               <meshStandardMaterial
                 color="#0f172a"
-                emissive="#fef3c7"
-                emissiveIntensity={isNight ? 0.65 : 0.22}
+                emissive="#38bdf8"
+                emissiveIntensity={isNight ? 1.1 : 0.35}
               />
             </mesh>
           </group>
-          {/* Warm Architectural Ceiling Light Bar */}
+          {/* Cyberpunk Cyan Ceiling Neon Bar */}
           <mesh position={[0.4, 3.25, 0]}>
-            <boxGeometry args={[4.8, 0.05, 0.08]} />
+            <boxGeometry args={[4.8, 0.055, 0.08]} />
             <meshStandardMaterial
-              color="#fff6e0"
-              emissive="#fde68a"
-              emissiveIntensity={isNight ? 1.4 : 0.35}
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 2.0 : 0.45}
             />
           </mesh>
         </group>

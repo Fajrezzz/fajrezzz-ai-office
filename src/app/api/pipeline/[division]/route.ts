@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
+import { buildInstalledSkillsPrompt } from "@/lib/ai/github-skills-registry";
 import {
   MORAL_LESSON_CATALOG,
   SETTING_CATALOG,
@@ -247,7 +248,11 @@ export async function POST(
         );
       }
 
+      const researchSkills = buildInstalledSkillsPrompt("research");
       const systemPrompt = `Anda adalah Kepala Divisi Riset Konten YouTube & TikTok profesional berbahasa Indonesia (konten umum/edukasi/bisnis/teknologi/storytelling — BUKAN kartun anak-anak). Anda taat kebijakan monetisasi YouTube (anti konten massal/template seragam).
+
+${researchSkills.promptBlock}
+
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
   "ideas": [
@@ -300,7 +305,7 @@ VARIATION ENGINE — Gunakan variasi baru berbeda untuk tiap ide dari 5 ide:
 - Rekomendasi Karakter Pendukung Baru: ${JSON.stringify(freshChars)}
 - Rekomendasi Pesan Moral Baru: ${JSON.stringify(MORAL_LESSON_CATALOG.slice(0, 5))}
 
-Hasilkan tepat 5 ide episode baru yang segar, orisinal, aman untuk anak, masing-masing berbeda struktur cerita, latar, karakter pendukung, dan pesan moral.`;
+Hasilkan tepat 5 ide episode baru yang segar, orisinal, bernilai tinggi untuk audiens modern Indonesia, masing-masing berbeda struktur cerita, latar visual, sudut pandang pendukung, dan pesan utama.`;
 
       const llm = await callFreeTierLLM<{ ideas?: Partial<ResearchIdeaItem>[] }>({
         systemPrompt,
@@ -369,7 +374,11 @@ Hasilkan tepat 5 ide episode baru yang segar, orisinal, aman untuk anak, masing-
         );
       }
 
+      const seoSkills = buildInstalledSkillsPrompt("seo");
       const systemPrompt = `Anda adalah Spesialis SEO YouTube & TikTok profesional berbahasa Indonesia (konten umum/edukasi/teknologi/bisnis — bukan kartun anak).
+
+${seoSkills.promptBlock}
+
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
   "title": "Judul YouTube klik-tinggi maksimal 72 karakter (tanpa clickbait menyesatkan)",
@@ -462,7 +471,11 @@ Buat metadata SEO Bahasa Indonesia yang natural, tajam, dan tidak spam keyword.`
             .join("\n")
         : "";
 
+      const scriptSkills = buildInstalledSkillsPrompt("script");
       const systemPrompt = `Anda adalah Penulis Naskah YouTube & TikTok profesional berbahasa Indonesia (konten modern edukasi/teknologi/bisnis/storytelling — BUKAN kartun anak-anak).
+
+${scriptSkills.promptBlock}
+
 Balas HANYA dalam JSON valid tanpa teks tambahan dengan skema:
 {
   "summary": "Ringkasan isi video 2-3 kalimat untuk arsip anti-duplikat",
@@ -491,7 +504,7 @@ ${bossHints ? `Elemen Orisinal dari Bos (WAJIB dimasukkan ke cerita):\n${bossHin
 Ringkasan episode sebelumnya (WAJIB berbeda plot & kalimat):
 ${JSON.stringify((input.previousSummaries ?? []).slice(0, 6))}
 
-Tulis naskah lengkap per adegan Bahasa Indonesia yang segar, komunikatif untuk anak, dan tidak generik.`;
+Tulis naskah lengkap per adegan Bahasa Indonesia yang segar, manusiawi, ritmis untuk Voiceover Neural & Motion Teks Kinetik, dan tidak generik.`;
 
       const llm = await callFreeTierLLM<Partial<ScriptOutput>>({
         systemPrompt,
