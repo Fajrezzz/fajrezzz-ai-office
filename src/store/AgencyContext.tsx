@@ -39,9 +39,17 @@ import {
   type VoiceInput,
 } from "@/types/pipeline";
 import { useOffice } from "@/store/OfficeContext";
+import {
+  buildCompressedMemoryContext,
+  loadLongTermMemory,
+  recordMemoryEvent,
+} from "@/lib/ai/agent-memory";
+import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
 
 const EPISODES_STORAGE_KEY = "fajrezzz_real_episodes_v2";
 const HISTORY_STORAGE_KEY = "fajrezzz_division_history_v2";
+const AUTOPILOT_STORAGE_KEY = "fajrezzz_autopilot_video_v1";
+const AUTOPILOT_COOLDOWN_SEC = 180;
 
 function nowClock(): string {
   return new Date().toLocaleTimeString("id-ID", {
@@ -79,6 +87,24 @@ export interface AgentRealStateSnapshot {
   finishedAt: string | null;
 }
 
+export type AutoPilotStatus =
+  | "idle"
+  | "choosing_topic"
+  | "producing"
+  | "cooldown"
+  | "paused";
+
+export interface AutoPilotTopicDecision {
+  theme: string;
+  platform: PublishPlatform;
+  niche: string;
+  reasoning: string;
+  viralHookPreview: string;
+  provider: string;
+  activeSkillsUsed: string[];
+  decidedAt: string;
+}
+
 interface AgencyContextValue {
   episodes: RealEpisode[];
   activeEpisodeId: string | null;
@@ -89,6 +115,14 @@ interface AgencyContextValue {
   videoBlobUrls: Record<string, string>;
   editingProgressPct: number;
   runningDivision: PipelineDivisionKey | null;
+  /** Zero-Click Full Auto-Pilot Video Studio (AI discovers topic -> scripts -> voices -> motion -> edits -> renders video) */
+  autoPilotEnabled: boolean;
+  setAutoPilotEnabled: (enabled: boolean) => void;
+  autoPilotStatus: AutoPilotStatus;
+  autoPilotMessage: string;
+  autoPilotCountdownSec: number;
+  lastAutoPilotTopic: AutoPilotTopicDecision | null;
+  triggerAutonomousEpisode: () => Promise<RealEpisode | null>;
   /** Create a new episode from Bos theme & automatically run ALL 7 divisions straight to real video */
   startNewEpisode: (theme: string, platform: PublishPlatform) => Promise<RealEpisode | null>;
   /** Select 1 of 5 Research ideas and run SEO -> Script -> Voice -> Motion -> Editing (Video) -> QC */
@@ -171,12 +205,52 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
     useState<PipelineDivisionKey | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  // Zero-Click Autonomous Video Studio state (ON by default so Bos never needs to type/click!)
+  const [autoPilotEnabled, setAutoPilotEnabledState] = useState<boolean>(true);
+  const [autoPilotStatus, setAutoPilotStatus] =
+    useState<AutoPilotStatus>("idle");
+  const [autoPilotMessage, setAutoPilotMessage] = useState<string>(
+    "AI Auto-Pilot siap memilih topik & memproduksi video sendiri..."
+  );
+  const [autoPilotCountdownSec, setAutoPilotCountdownSec] = useState<number>(0);
+  const [lastAutoPilotTopic, setLastAutoPilotTopic] =
+    useState<AutoPilotTopicDecision | null>(null);
+
+  const autoPilotInFlightRef = useRef<boolean>(false);
+  const autoPilotEnabledRef = useRef<boolean>(true);
+  autoPilotEnabledRef.current = autoPilotEnabled;
+
+  const setAutoPilotEnabled = useCallback((enabled: boolean) => {
+    setAutoPilotEnabledState(enabled);
+    autoPilotEnabledRef.current = enabled;
+    try {
+      window.localStorage.setItem(AUTOPILOT_STORAGE_KEY, enabled ? "1" : "0");
+    } catch {
+      // ignore
+    }
+    if (!enabled) {
+      setAutoPilotStatus("paused");
+      setAutoPilotCountdownSec(0);
+      setAutoPilotMessage("Auto-Pilot dijeda oleh Bos (aktifkan kapan saja).");
+    } else {
+      setAutoPilotStatus("idle");
+      setAutoPilotMessage("Auto-Pilot aktif — AI siap bekerja mandiri.");
+    }
+  }, []);
+
   const episodesRef = useRef<RealEpisode[]>(episodes);
   episodesRef.current = episodes;
 
-  // Hydrate persisted real episodes & division KPI history from localStorage
+  // Hydrate persisted real episodes, division KPI history & Auto-Pilot toggle from localStorage
   useEffect(() => {
     try {
+      const savedAuto = window.localStorage.getItem(AUTOPILOT_STORAGE_KEY);
+      if (savedAuto === "0") {
+        setAutoPilotEnabledState(false);
+        autoPilotEnabledRef.current = false;
+        setAutoPilotStatus("paused");
+        setAutoPilotMessage("Auto-Pilot dijeda oleh Bos.");
+      }
       const rawEp = window.localStorage.getItem(EPISODES_STORAGE_KEY);
       if (rawEp) {
         const parsed = JSON.parse(rawEp) as RealEpisode[];
@@ -1260,6 +1334,234 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
   const activeEpisode =
     episodes.find((e) => e.id === activeEpisodeId) ?? episodes[0] ?? null;
 
+  /**
+   * ZERO-CLICK AUTONOMOUS VIDEO PRODUCTION (Orca + OpenRig + Hyperframes + Voicebox + AI-Memory):
+   * 1. AI CEO autonomously picks a brand-new viral Indonesian topic via `/api/agents/autopilot-topic`
+   * 2. Immediately runs ALL 7 Divisions end-to-end:
+   *    Riset -> SEO -> Naskah -> Suara Neural MP3 -> Motion Grafis Kinetik -> Editing Render Video -> QC
+   * 3. Stores compressed learnings into Persistent AI Long-Term Memory (`ai-memory` / `claude-mem`)
+   */
+  const triggerAutonomousEpisode = useCallback(async (): Promise<RealEpisode | null> => {
+    if (autoPilotInFlightRef.current) return null;
+    autoPilotInFlightRef.current = true;
+
+    try {
+      setAutoPilotStatus("choosing_topic");
+      setAutoPilotCountdownSec(0);
+      setAutoPilotMessage(
+        "🧠 AI CEO sedang meriset topik viral baru (marketingskills + scrapegraph-ai + ai-memory)..."
+      );
+
+      const mem = loadLongTermMemory();
+      const pastTopics = Array.from(
+        new Set([
+          ...episodesRef.current.map(
+            (e) => e.divisions.seo.output?.title || e.bossTheme
+          ),
+          ...mem.completedTopics,
+        ])
+      ).slice(0, 25);
+
+      const res = await fetch("/api/agents/autopilot-topic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pastTopics,
+          compressedMemories: buildCompressedMemoryContext(8),
+          episodeCount: episodesRef.current.length,
+        }),
+      });
+
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        provider?: string;
+        activeSkillsUsed?: string[];
+        data?: {
+          theme: string;
+          platform: PublishPlatform;
+          niche: string;
+          reasoning: string;
+          viralHookPreview: string;
+        };
+      };
+
+      const chosen = payload?.data ?? {
+        theme:
+          "3 tools AI gratis 2026 yang menghemat 4 jam kerja konten kreator tiap hari",
+        platform: "youtube_shorts" as PublishPlatform,
+        niche: "AI & Produktivitas",
+        reasoning: "Topik praktis berdaya tarik tinggi dengan retensi optimal.",
+        viralHookPreview:
+          "Masih kerja manual berjam-jam? 3 AI gratis ini bisa selesaikan dalam menit!",
+      };
+
+      const skillsUsed =
+        payload?.activeSkillsUsed && payload.activeSkillsUsed.length > 0
+          ? payload.activeSkillsUsed
+          : INSTALLED_GITHUB_SKILLS.slice(0, 8).map((s) => s.repo);
+
+      const decisionRecord: AutoPilotTopicDecision = {
+        ...chosen,
+        provider: (payload?.provider || "ai").toUpperCase(),
+        activeSkillsUsed: skillsUsed,
+        decidedAt: nowClock(),
+      };
+      setLastAutoPilotTopic(decisionRecord);
+
+      recordMemoryEvent({
+        kind: "topic_selected",
+        actor: "AI CEO Auto-Pilot",
+        summary: `Memilih topik "${chosen.theme}" (${chosen.niche}) — ${chosen.reasoning}`,
+        topic: chosen.theme,
+        skillsUsed,
+      });
+
+      addActivity(
+        `AI AUTO-PILOT (${decisionRecord.provider})`,
+        "system",
+        `🤖 Memilih topik otomatis: "${chosen.theme}" → langsung produksi 7 divisi sampai video + suara + motion teks jadi!`,
+        "success",
+        "Auto-Pilot Video"
+      );
+
+      setAutoPilotStatus("producing");
+      setAutoPilotMessage(
+        `🎬 Tim AI memproduksi otomatis: "${chosen.theme.slice(0, 68)}..."`
+      );
+
+      const produced = await startNewEpisode(chosen.theme, chosen.platform);
+
+      if (produced) {
+        const finalTitle =
+          produced.divisions.seo.output?.title || produced.bossTheme;
+        const qcScore = produced.divisions.qc.output?.score ?? 100;
+        const allSkillRepos = INSTALLED_GITHUB_SKILLS.map((s) => s.repo);
+
+        recordMemoryEvent({
+          kind: "episode",
+          actor: "Tim 7 Divisi Fajrezzz",
+          summary: `Ep #${produced.episodeNumber} "${finalTitle}" selesai diproduksi otomatis (QC ${qcScore}/100, Suara Neural + Motion Teks + Video WebM).`,
+          topic: finalTitle,
+          skillsUsed: allSkillRepos,
+        });
+      }
+
+      if (autoPilotEnabledRef.current) {
+        setAutoPilotStatus("cooldown");
+        setAutoPilotCountdownSec(AUTOPILOT_COOLDOWN_SEC);
+        setAutoPilotMessage(
+          `✅ Video selesai dibuat otomatis! Episode baru berikutnya dimulai dalam ${AUTOPILOT_COOLDOWN_SEC} detik.`
+        );
+      }
+      return produced;
+    } catch {
+      if (autoPilotEnabledRef.current) {
+        setAutoPilotStatus("cooldown");
+        setAutoPilotCountdownSec(60);
+        setAutoPilotMessage(
+          "Auto-Pilot menunggu 60 detik sebelum mencoba produksi episode berikutnya..."
+        );
+      }
+      return null;
+    } finally {
+      autoPilotInFlightRef.current = false;
+    }
+  }, [addActivity, startNewEpisode]);
+
+  // Auto-start Zero-Click Video Production when the app loads & schedule subsequent episodes!
+  useEffect(() => {
+    if (!hydrated || !autoPilotEnabled) return;
+    if (autoPilotInFlightRef.current || runningDivision) return;
+
+    // 1. Check if there's an unfinished episode from a previous session -> auto-finish it!
+    const unfinished = episodesRef.current.find((ep) =>
+      PIPELINE_DIVISIONS.some((d) => ep.divisions[d.key].status !== "done")
+    );
+
+    if (episodesRef.current.length === 0) {
+      setAutoPilotMessage(
+        "🚀 Auto-Pilot aktif — AI CEO mulai memilih topik & bikin video otomatis dalam 3 detik..."
+      );
+      const t = window.setTimeout(() => {
+        if (autoPilotEnabledRef.current && !autoPilotInFlightRef.current) {
+          void triggerAutonomousEpisode();
+        }
+      }, 3500);
+      return () => window.clearTimeout(t);
+    }
+
+    if (unfinished && autoPilotStatus === "idle") {
+      setAutoPilotStatus("producing");
+      setAutoPilotMessage(
+        `⚙️ Melanjutkan produksi otomatis Ep #${unfinished.episodeNumber} sampai video & suara jadi...`
+      );
+      const t = window.setTimeout(async () => {
+        if (!autoPilotEnabledRef.current || autoPilotInFlightRef.current) return;
+        autoPilotInFlightRef.current = true;
+        try {
+          await continueEpisodeAuto(unfinished.id);
+        } finally {
+          autoPilotInFlightRef.current = false;
+          if (autoPilotEnabledRef.current) {
+            setAutoPilotStatus("cooldown");
+            setAutoPilotCountdownSec(AUTOPILOT_COOLDOWN_SEC);
+            setAutoPilotMessage(
+              `✅ Ep #${unfinished.episodeNumber} tuntas! Episode berikutnya dalam ${AUTOPILOT_COOLDOWN_SEC} detik.`
+            );
+          }
+        }
+      }, 4500);
+      return () => window.clearTimeout(t);
+    }
+
+    // 2. If all existing episodes are done and we're idle (e.g. fresh reload), queue next autonomous episode in 45s
+    if (!unfinished && autoPilotStatus === "idle") {
+      setAutoPilotStatus("cooldown");
+      setAutoPilotCountdownSec(45);
+      setAutoPilotMessage(
+        "🤖 Semua episode sebelumnya selesai — AI siap produksi episode baru otomatis dalam 45 detik."
+      );
+    }
+  }, [
+    hydrated,
+    autoPilotEnabled,
+    autoPilotStatus,
+    runningDivision,
+    continueEpisodeAuto,
+    triggerAutonomousEpisode,
+  ]);
+
+  // Countdown ticker during Auto-Pilot cooldown -> triggers next fresh video episode automatically
+  useEffect(() => {
+    if (!autoPilotEnabled || autoPilotStatus !== "cooldown") return;
+    if (autoPilotCountdownSec <= 0) {
+      if (!autoPilotInFlightRef.current && !runningDivision) {
+        void triggerAutonomousEpisode();
+      }
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setAutoPilotCountdownSec((prev) => {
+        const next = Math.max(0, prev - 1);
+        setAutoPilotMessage(
+          next > 0
+            ? `🤖 Auto-Pilot aktif — AI akan membuat episode baru otomatis dalam ${next} detik.`
+            : "🧠 Memulai produksi video otonom berikutnya..."
+        );
+        return next;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(id);
+  }, [
+    autoPilotEnabled,
+    autoPilotStatus,
+    autoPilotCountdownSec,
+    runningDivision,
+    triggerAutonomousEpisode,
+  ]);
+
   const getAgentSnapshot = useCallback(
     (agentId: string): AgentRealStateSnapshot | null => {
       const meta = PIPELINE_DIVISIONS.find((d) => d.agentId === agentId);
@@ -1300,6 +1602,13 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         videoBlobUrls,
         editingProgressPct,
         runningDivision,
+        autoPilotEnabled,
+        setAutoPilotEnabled,
+        autoPilotStatus,
+        autoPilotMessage,
+        autoPilotCountdownSec,
+        lastAutoPilotTopic,
+        triggerAutonomousEpisode,
         startNewEpisode,
         selectIdeaAndContinue,
         runDivision,

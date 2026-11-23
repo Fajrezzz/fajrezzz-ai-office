@@ -19,6 +19,10 @@ import {
   INITIAL_WORKSTATIONS,
   OFFICE_WAYPOINTS,
 } from "@/lib/data/initial-office-data";
+import {
+  buildCompressedMemoryContext,
+  recordMemoryEvent,
+} from "@/lib/ai/agent-memory";
 import type { CreateTaskInput } from "@/lib/services/data-adapter";
 import type {
   ActivityEvent,
@@ -1035,6 +1039,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           .map((ev) => `[${ev.actor}] ${ev.message}`);
         const wp = OFFICE_WAYPOINTS[targetAgent.currentWaypointId];
 
+        const longTermMem = buildCompressedMemoryContext(4);
+        const mergedMemory = [...longTermMem, ...recentMemory].slice(0, 7);
+
         const res = await fetch("/api/agents/think", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1044,7 +1051,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
             agentRole: targetAgent.role,
             currentStatus: targetAgent.status,
             currentLocation: wp?.label ?? `Lantai ${targetAgent.floor}`,
-            recentMemory,
+            recentMemory: mergedMemory,
           }),
         });
 
@@ -1053,6 +1060,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           provider?: string;
           model?: string;
           timestamp?: string;
+          activeSkillsUsed?: string[];
           data?: {
             thought: string;
             decision: "work_desk" | "collaborate" | "coffee_break" | "director_briefing";
@@ -1125,6 +1133,13 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           "success",
           `Otak AI · ${targetAgent.role}`
         );
+
+        recordMemoryEvent({
+          kind: "thought",
+          actor: targetAgent.name,
+          summary: `${d.deliverableTitle} — ${d.thought}`,
+          skillsUsed: payload.activeSkillsUsed ?? [],
+        });
       } catch {
         // Silent resilience if user is temporarily offline
       } finally {

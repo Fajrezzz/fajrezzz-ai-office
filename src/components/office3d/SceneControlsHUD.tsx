@@ -218,6 +218,9 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     getAgentSnapshot,
     runDivision,
     runningDivision,
+    autoPilotEnabled,
+    setAutoPilotEnabled,
+    autoPilotMessage,
   } = useAgency();
 
   const [clockText, setClockText] = useState("11:45");
@@ -552,14 +555,25 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
         {/* Collapsible Glassmorphism Neon Control Drawer (All Direct Pickers, >=44px Touch Targets) */}
         {isBarExpanded && (
           <div className="w-full max-w-xl space-y-2.5 rounded-2xl border border-cyan-400/35 bg-slate-950/82 p-3 shadow-[0_8px_36px_rgba(14,165,233,0.22)] backdrop-blur-xl">
-            {/* Otak AI Otonom (Staf Berpikir & Bekerja Sendiri pakai Groq/Gemini) */}
+            {/* Otak AI Otonom (Staf Berpikir & Bekerja Sendiri + 19 GitHub Skills + Auto-Pilot Video) */}
             <div className="space-y-1.5 rounded-xl border border-cyan-400/30 bg-slate-900/80 p-2.5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-cyan-300 uppercase">
                   <Brain className="h-3.5 w-3.5 text-cyan-300" />
-                  <span>Otak AI Otonom (Groq / Gemini)</span>
+                  <span>Otak AI Otonom · 19 GitHub Skills</span>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAutoPilotEnabled(!autoPilotEnabled)}
+                    className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
+                      autoPilotEnabled
+                        ? "border-violet-400/60 bg-violet-500/20 text-violet-200"
+                        : "border-slate-700 bg-slate-800 text-slate-400"
+                    }`}
+                  >
+                    {autoPilotEnabled ? "Video Auto ON" : "Video Auto OFF"}
+                  </button>
                   <button
                     type="button"
                     disabled={Boolean(thinkingAgentId)}
@@ -580,6 +594,9 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
                     {autonomousAiEnabled ? "ON" : "OFF"}
                   </button>
                 </div>
+              </div>
+              <div className="rounded-lg border border-violet-500/25 bg-violet-950/30 px-2 py-1 text-[10px] text-violet-100">
+                {autoPilotMessage}
               </div>
               {latestAiThought ? (
                 <button

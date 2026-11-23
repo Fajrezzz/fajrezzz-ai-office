@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
+import { buildInstalledSkillsPrompt } from "@/lib/ai/github-skills-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,8 +47,12 @@ export async function POST(req: Request) {
       (body.channelGoal || "").trim() ||
       "Mencapai monetisasi YouTube YPP (1.000 subscriber + 10 juta Shorts views / 4.000 jam tayang) dan viral di TikTok untuk brand Fajrezzz AI Office.";
 
+    const { promptBlock, activeSkillRepos } = buildInstalledSkillsPrompt("think");
+
     const systemPrompt = `Kamu adalah ${agentName}, seorang staf AI otonom yang bekerja secara nyata di kantor virtual "FAJREZZZ AI OFFICE" sebagai "${agentRole}".
-Kamu punya otak AI sendiri, inisiatif sendiri, dan bisa memutuskan sendiri langkah kerja paling berdampak bagi target channel Bos Fajrez.
+Kamu punya otak AI sendiri, inisiatif sendiri, memori jangka panjang, dan telah terpasang modul GitHub AI Skills profesional untuk meningkatkan kecerdasanmu.
+
+${promptBlock}
 
 ATURAN WAJIB:
 1. Berpikir secara konkret, segar, dan spesifik sesuai keahlianmu ("${agentRole}") — JANGAN generik atau klise.
@@ -133,6 +138,7 @@ Sekarang pikirkan secara mandiri apa yang paling penting kamu kerjakan detik ini
       provider: result.provider,
       model: result.model,
       durationMs: result.durationMs,
+      activeSkillsUsed: activeSkillRepos,
       data: clean,
       timestamp: new Date().toISOString(),
     });

@@ -1243,19 +1243,25 @@ const POOL_WATER_FRAGMENT = /* glsl */ `
   }
 `;
 
-/** Modern Architectural Street Lamp with Soft Volumetric Light Cone onto Sidewalk & Wet Asphalt */
+/** Modern Architectural Street Lamp — White & Warm Yellow shining cleanly downward onto the road */
 function StreetLampWithCone({
   position,
   isNight,
   isSunset,
-  isCyan = false,
+  isWarmYellow = false,
+  withPointLight = false,
 }: {
   position: [number, number, number];
   isNight: boolean;
   isSunset: boolean;
-  isCyan?: boolean;
+  isWarmYellow?: boolean;
+  withPointLight?: boolean;
 }) {
-  const lampColor = isCyan ? "#00f0ff" : "#a855f7";
+  // Pure Crisp Warm-White (#fff9eb) & Golden Street Yellow (#ffd166) strictly aimed down onto the road
+  const bulbColor = isWarmYellow ? "#ffe8a3" : "#ffffff";
+  const beamColor = isWarmYellow ? "#fbbf24" : "#fff7db";
+  const ringColor = isWarmYellow ? "#fcd34d" : "#f8fafc";
+  const isLit = isNight || isSunset;
 
   return (
     <group position={position}>
@@ -1268,30 +1274,87 @@ function StreetLampWithCone({
         <cylinderGeometry args={[0.065, 0.095, 5.2, 10]} />
         <meshStandardMaterial color="#273140" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Sleek Cyberpunk Neon Accent Ring on Pole */}
+      {/* Subtle White / Warm Yellow Accent Collar on Pole */}
       <mesh position={[0, 4.45, 0]}>
-        <cylinderGeometry args={[0.088, 0.088, 0.22, 10]} />
+        <cylinderGeometry args={[0.088, 0.088, 0.18, 10]} />
         <meshStandardMaterial
-          color="#ffffff"
-          emissive={lampColor}
-          emissiveIntensity={isNight ? 2.4 : isSunset ? 1.2 : 0.35}
+          color={bulbColor}
+          emissive={ringColor}
+          emissiveIntensity={isNight ? 1.8 : isSunset ? 0.9 : 0.25}
         />
       </mesh>
-      {/* Cantilevered Head overhanging the Avenue */}
-      <mesh position={[0, 5.28, 0.72]} rotation={[0.12, 0, 0]}>
-        <boxGeometry args={[0.16, 0.1, 1.55]} />
+      {/* Cantilevered Arm overhanging the Road (+Z) */}
+      <mesh position={[0, 5.28, 0.78]} rotation={[0.14, 0, 0]}>
+        <boxGeometry args={[0.15, 0.095, 1.68]} />
         <meshStandardMaterial color="#1e293b" metalness={0.78} roughness={0.28} />
       </mesh>
-      {/* Clean Cyberpunk RGB LED Street Luminaire (no bulky yellow cone blocking view) */}
-      <mesh position={[0, 5.22, 1.32]}>
-        <boxGeometry args={[0.42, 0.08, 0.28]} />
+      {/* Top Hood Shield directing light strictly downward onto the road */}
+      <mesh position={[0, 5.24, 1.44]} rotation={[0.18, 0, 0]}>
+        <boxGeometry args={[0.5, 0.06, 0.36]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {/* Bright White / Warm Yellow LED Street Luminaire facing down toward asphalt */}
+      <mesh position={[0, 5.18, 1.44]} rotation={[0.18, 0, 0]}>
+        <boxGeometry args={[0.42, 0.06, 0.28]} />
         <meshStandardMaterial
-          color="#ffffff"
-          emissive={lampColor}
-          emissiveIntensity={isNight ? 2.8 : isSunset ? 1.5 : 0.3}
-          toneMapped={!(isNight || isSunset)}
+          color={bulbColor}
+          emissive={beamColor}
+          emissiveIntensity={isNight ? 3.2 : isSunset ? 1.8 : 0.35}
+          toneMapped={!isLit}
         />
       </mesh>
+
+      {/* Directional Downward Street Light Beam aimed toward the Road (+Z) */}
+      {isLit && (
+        <>
+          <mesh position={[0, 2.62, 2.15]} rotation={[-0.26, 0, 0]}>
+            <cylinderGeometry args={[0.18, 2.45, 5.35, 18, 1, true]} />
+            <meshBasicMaterial
+              color={beamColor}
+              transparent
+              opacity={isNight ? 0.085 : 0.042}
+              side={THREE.DoubleSide}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+
+          {/* Outer Soft Light Pool on Road Asphalt */}
+          <mesh position={[0, -0.098, 2.9]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[3.45, 24]} />
+            <meshBasicMaterial
+              color={beamColor}
+              transparent
+              opacity={isNight ? 0.2 : 0.09}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+
+          {/* Brighter Inner Core Pool directly under Street Lamp on Road */}
+          <mesh position={[0, -0.094, 2.78]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[1.55, 20]} />
+            <meshBasicMaterial
+              color={bulbColor}
+              transparent
+              opacity={isNight ? 0.32 : 0.14}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+
+          {/* Real Dynamic Point Light over the Road Lane so passing cars & asphalt catch white/yellow light */}
+          {withPointLight && (
+            <pointLight
+              position={[0, 3.85, 2.35]}
+              color={beamColor}
+              intensity={isNight ? 4.8 : 1.8}
+              distance={14}
+              decay={2}
+            />
+          )}
+        </>
+      )}
     </group>
   );
 }
@@ -1524,18 +1587,18 @@ export function CyberOutdoorCampus({
       {isNight && (
         <group position={[0, 0.008, 24.5]}>
           {[
-            { x: -12, z: -1.4, w: 6.5, d: 2.2, col: "#00f0ff" },
-            { x: 0, z: -0.6, w: 8.5, d: 2.6, col: "#8b5cf6" },
-            { x: 11, z: -1.2, w: 6.8, d: 2.2, col: "#ec4899" },
-            { x: -24, z: -2.0, w: 4.5, d: 1.8, col: "#38bdf8" },
-            { x: 24, z: -2.0, w: 4.5, d: 1.8, col: "#a855f7" },
+            { x: -24, z: -1.6, w: 5.2, d: 2.2, col: "#fff7db" },
+            { x: -12, z: -1.4, w: 5.6, d: 2.4, col: "#fbbf24" },
+            { x: 0, z: -1.2, w: 6.2, d: 2.5, col: "#fff7db" },
+            { x: 12, z: -1.4, w: 5.6, d: 2.4, col: "#fbbf24" },
+            { x: 24, z: -1.6, w: 5.2, d: 2.2, col: "#fff7db" },
           ].map((p, idx) => (
             <mesh key={idx} position={[p.x, 0, p.z]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[p.w, p.d]} />
               <meshBasicMaterial
                 color={p.col}
                 transparent
-                opacity={0.14}
+                opacity={0.11}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
               />
@@ -1567,14 +1630,15 @@ export function CyberOutdoorCampus({
         </mesh>
       ))}
 
-      {/* 5 Modern Street Lamps with Warm Architectural Light Cones along Front Sidewalk */}
+      {/* 5 Modern Street Lamps — Alternating Crisp White & Warm Yellow shining down onto the Road */}
       {[-24, -12, 0, 12, 24].map((x, i) => (
         <StreetLampWithCone
           key={`streetlamp-${i}`}
           position={[x, 0.12, 19.65]}
           isNight={isNight}
           isSunset={isSunset}
-          isCyan={i % 2 === 0}
+          isWarmYellow={i % 2 === 1}
+          withPointLight={i === 0 || i === 2 || i === 4}
         />
       ))}
 

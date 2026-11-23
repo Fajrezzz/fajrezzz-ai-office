@@ -352,6 +352,13 @@ export async function runEditingDivisionBrowser(
   if (synthBed.audioCtx && synthBed.voiceBus) {
     const audioCtx = synthBed.audioCtx;
     const voiceBus = synthBed.voiceBus;
+    // Gently attempt AudioContext resume (non-blocking in zero-click Auto-Pilot mode)
+    if (audioCtx.state === "suspended") {
+      await Promise.race([
+        audioCtx.resume().catch(() => {}),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 250)),
+      ]);
+    }
     const decodedBuffers = await Promise.all(
       sceneClips.map(async (clip) => {
         if (!clip) return null;
