@@ -84,3 +84,39 @@ Setelah binary tersedia di worker, `GET /api/pipeline/capabilities` otomatis men
 - **Rahasia & Kredensial**: Tidak ada API key di kode sumber; seluruh kredensial dibaca dari environment variables.
 - **`yt-dlp` Policy Guard**: Dinonaktifkan secara default (`inactive`). Jika diaktifkan pada worker khusus di masa depan, hanya boleh memproses aset berlisensi terbuka atau milik sendiri dengan persetujuan eksplisit.
 - **Kejujuran Spesifikasi**: Sistem dilarang mengklaim 4K/120 FPS atau skor viral yang tidak benar-benar dihasilkan. Semua laporan QC harus berasal dari pengukuran aktual (`ActualVideoQcTelemetry` / `ffprobe`).
+
+---
+
+## 5. Gaya Visual `zine_glitch` (Look Signature Channel)
+
+Gaya default renderer sekarang **`zine_glitch`** — hasil studi 7 frame referensi video
+yang dikirim Bos (folder Drive `VIDEO AI`): kolase kertas + tipografi kinetik ekstrem.
+
+| Elemen | Implementasi (`src/lib/pipeline/zine-style.ts`) |
+|---|---|
+| Latar | kertas krem (`#F1EBE0`) + fiber/grain bergerak, tanpa gradient UI |
+| Tipografi | huruf kapital 900 (Helvetica/Inter-like), auto-fit ke lebar & tinggi band, slab hitam miring yang **menempel di teks** (boleh bleeding keluar frame) |
+| Artwork | B-roll `/api/ai/scene-image` diperlakukan sebagai potongan kertas: kartu miring, border putih, duotone merah/amber, halftone |
+| Tanpa B-roll | 4 varian panel kolase bergilir: ink blot merah, setengah lingkaran halftone, bola prisma RGB, strip diagonal + nomor scene |
+| Aksen | RGB channel split (cyan/magenta) di awal/akhir scene, speed-lines ala manga saat cut, stiker bola prisma + chip `EP xx · nn/mm` |
+| Ritme | band headline & band artwork bertukar posisi tiap scene; punch-in 1.10 → 1.0 + zoom drift 5,5% + tilt ±0,5° |
+| Safe zone | blok teks dibatasi di dalam band aman TikTok 9:16 (0,10h–0,905h) |
+
+Pemilihan gaya:
+- Pipeline memakai `resolveVisualStyle()`; **tanpa instruksi eksplisit = `zine_glitch`**.
+- Agen/prompt tetap bisa memaksa gaya lain lewat `Style: dark_ai_cinematic | cyberpunk_dev | …`.
+- Preset baru `zine_glitch_editorial` (cut 1,9 s, FPS 60) dipilih otomatis untuk brief
+  yang mengandung kata `zine`, `collage`, `glitch`, `kinetic`, atau `typography`.
+
+Preview cepat tanpa browser (memakai `@napi-rs/canvas`):
+
+```bash
+npm run preview:zine -- "KANTOR AI INI KERJA SENDIRI"
+# → .zine-preview/*.png (7 frame: hook, transisi, artwork, scene hitam, CTA)
+```
+
+Contoh hasil (frame hook, artwork B-roll, dan scene dominan hitam):
+
+![Hook zine](../docs/preview/zine-hook.png)
+![Artwork B-roll kolase](../docs/preview/zine-artwork.png)
+![Scene dominan hitam](../docs/preview/zine-black-scene.png)

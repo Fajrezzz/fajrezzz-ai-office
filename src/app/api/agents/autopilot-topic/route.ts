@@ -56,6 +56,7 @@ const VALID_STYLES: VisualStyleId[] = [
   "agent_3d_network",
   "minimal_kinetic",
   "high_energy_news",
+  "zine_glitch",
 ];
 
 const CURATED_AI_AGENT_FALLBACKS: Array<{

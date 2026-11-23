@@ -18,7 +18,8 @@ export type CinematicPresetId =
   | "claude_code_tutorial"
   | "ai_agent_explainer"
   | "futuristic_tech_showcase"
-  | "pro_short_form_storytelling";
+  | "pro_short_form_storytelling"
+  | "zine_glitch_editorial";
 
 export interface FajrezzzCinematicPreset {
   id: CinematicPresetId;
@@ -449,6 +450,72 @@ export const FAJREZZZ_CINEMATIC_PRESETS: FajrezzzCinematicPreset[] = [
       closingAnimation: "fast_loop_bridge",
     },
   },
+  {
+    id: "zine_glitch_editorial",
+    name: "Zine Glitch Editorial",
+    tagline:
+      "Kolase kertas + tipografi kinetik raksasa yang terpotong frame, halftone duotone, glitch RGB, dan hard cut super cepat.",
+    mappedVisualStyle: "zine_glitch",
+    recommendedTopics: [
+      "Kinetic Typography Hook",
+      "AI Opinion / Hot Take",
+      "Collage Explainer",
+    ],
+    introAnimation: {
+      hookWindowSec: 1.2,
+      entryEffect: "glitch_snap_reveal",
+      hookTextScale: 1.28,
+      accentBadge: "FAJREZZZ",
+    },
+    sceneTransition: {
+      primary: "whip-up",
+      secondary: "zoom-through",
+      durationSec: 0.22,
+      gsapEase: "expo.inOut",
+    },
+    typography: {
+      headlineFont: '"Helvetica Neue", "Arial Black", Inter, sans-serif',
+      bodyFont: "Inter, system-ui, sans-serif",
+      monoFont: "JetBrains Mono, monospace",
+      headlineWeight: 900,
+      uppercaseHook: true,
+      maxWordsPerLine: 2,
+    },
+    subtitle: {
+      animationStyle: "rapid_punch_highlight",
+      activeWordColor: "#E23A2E",
+      baseTextColor: "#0A0A0B",
+      pillBackground: "rgba(241, 235, 224, 0.94)",
+      safeBottomPct: 22,
+    },
+    colorPalette: {
+      bgPrimary: "#F1EBE0",
+      bgSecondary: "#E3D9C8",
+      accentPrimary: "#E23A2E",
+      accentSecondary: "#0A0A0B",
+      highlightHex: "#F5A623",
+    },
+    motionSettings: {
+      targetFps: 60,
+      avgSceneDurationSec: 1.9,
+      zoomInRange: [1.08, 1.22],
+      parallaxDepth: 0.6,
+      enableGridOverlay: false,
+      enableHudTelemetry: false,
+    },
+    soundDesign: {
+      bgmMood: "Distorted Paper Drum Loop (128 BPM)",
+      bgmDuckDb: -14,
+      transitionSfx: "digital_glitch_tick",
+      voicePacingWpm: 182,
+      autoTrimSilenceDb: -36,
+    },
+    outro: {
+      durationSec: 1.6,
+      ctaHeadline: "Simpan biar nggak ketinggalan.",
+      closingAnimation: "brand_lockup_pulse",
+    },
+  },
 ];
 
 export function getCinematicPresetById(
@@ -468,6 +535,9 @@ export function autoSelectCinematicPresetForTopic(
   topic: string
 ): FajrezzzCinematicPreset {
   const low = topic.toLowerCase();
+  if (/zine|collage|kolase|glitch|kinetic|manga|komik|typograph/.test(low)) {
+    return getCinematicPresetById("zine_glitch_editorial");
+  }
   if (/claude\s*code|coding\s*agent|cli|terminal|tutorial|cara|how\s+ai\s+coding/.test(low)) {
     return getCinematicPresetById("claude_code_tutorial");
   }

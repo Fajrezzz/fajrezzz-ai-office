@@ -71,6 +71,13 @@ const ACCENT_MAP: Record<
     accent: "#22d3ee",
     accent2: "#818cf8",
   },
+  zine_glitch: {
+    isLight: true,
+    bg: "linear-gradient(160deg, #F1EBE0 0%, #E3D9C8 100%)",
+    surface: "rgba(10, 10, 11, 0.94)",
+    accent: "#E23A2E",
+    accent2: "#F5A623",
+  },
 };
 
 const SceneSlide: React.FC<{

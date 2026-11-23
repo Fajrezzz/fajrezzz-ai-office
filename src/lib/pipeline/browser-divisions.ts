@@ -21,6 +21,10 @@ import {
   type SceneAudioScheduleItem,
 } from "@/lib/pipeline/video-engine-v3";
 import { trimAudioBufferDeadAir } from "@/lib/pipeline/auto-editor-pacing";
+import {
+  fetchEpisodeBRollImages,
+  getCachedSceneBRoll,
+} from "@/lib/pipeline/scene-broll-client";
 import type {
   EditingOutput,
   ExportQualityPreset,
@@ -418,10 +422,12 @@ export async function runMotionDivisionBrowser(
 
   const sceneFrames: SceneMotionFrame[] = [];
   let cursorSec = 0;
+  // Artwork kolase yang sudah ter-cache dari render sebelumnya (tanpa request baru)
+  const previewArtwork = getCachedSceneBRoll(editorial, "shorts");
 
   for (const scene of editorial.scenes) {
     const sampleTime = cursorSec + Math.min(scene.durationSec * 0.55, scene.durationSec - 0.35);
-    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime);
+    renderEditorialFrame(ctx, previewW, previewH, editorial, sampleTime, previewArtwork);
     const keyframeDataUrl = canvas.toDataURL("image/jpeg", 0.86);
     sceneFrames.push({
       sceneNumber: scene.sceneNumber,
@@ -519,6 +525,12 @@ export async function runEditingDivisionBrowser(
   const syncedEditorial =
     buildEditorialEpisode(episode, exactDurations) ?? baseEditorial;
 
+  // v9 — artwork kolase per scene (soft-fail: tanpa API key panel ink digambar sendiri)
+  const sceneArtwork = await fetchEpisodeBRollImages(
+    syncedEditorial,
+    _format ?? "shorts"
+  ).catch(() => syncedEditorial.scenes.map(() => null));
+
   const totalSec = Math.max(
     8,
     syncedEditorial.scenes.reduce((acc, s) => acc + s.durationSec, 0)
@@ -540,7 +552,7 @@ export async function runEditingDivisionBrowser(
   });
 
   // 2. Render crisp TikTok 9:16 vertical cover PNG (1080x1920)
-  const thumbnailDataUrl = renderEditorialThumbnail(syncedEditorial);
+  const thumbnailDataUrl = renderEditorialThumbnail(syncedEditorial, sceneArtwork);
 
   // 3. Render video via V3 Extreme Quality Engine (WebCodecs MP4 primary -> MediaRecorder fallback)
   const result = await renderTikTokVideoV3({
@@ -549,7 +561,7 @@ export async function runEditingDivisionBrowser(
     schedule,
     signal: options?.signal,
     renderFrame: (ctx, w, h, elapsedSec) => {
-      renderEditorialFrame(ctx, w, h, syncedEditorial, elapsedSec);
+      renderEditorialFrame(ctx, w, h, syncedEditorial, elapsedSec, sceneArtwork);
     },
     onProgress: (snap) => {
       onProgress?.(snap.percent, snap);
