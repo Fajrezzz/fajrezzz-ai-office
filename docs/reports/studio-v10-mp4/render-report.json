@@ -1,0 +1,458 @@
+{
+  "generatedAt": "2026-11-23T19:35:34.152Z",
+  "toolchain": {
+    "ffmpeg": "ffmpeg version n9.0.2-17-g2a571b6068-20260930 Copyright (c) 2000-2026 the FFmpeg developers",
+    "ffprobe": "ffprobe version 4.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2018 the FFmpeg developers",
+    "note": "dipasang lokal (imageio-ffmpeg + ffprobe-static); tidak di-commit ke repo"
+  },
+  "honesty": {
+    "audio": "Track audio = AAC senyap (anullsrc). Narasi TTS TIDAK dibuat karena butuh jaringan layanan suara.",
+    "subtitles": "Subtitle di-burn ke video (libass) memakai timing kata dari computeWordTimings, disinkronkan ke timeline naskah — bukan ke waveform suara karena belum ada narasi.",
+    "assets": "Latar digenerate di Node dari palet blueprint (gradasi + berkas aksen + grain); B-roll AI tidak dipakai karena butuh API key.",
+    "publication": "Tidak ada unggah/publikasi otomatis. Video menunggu persetujuan manual Bos."
+  },
+  "validation": {
+    "expected": {
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "videoCodec": "h264",
+      "pixFmt": "yuv420p"
+    },
+    "allValid": true
+  },
+  "episodes": [
+    {
+      "episode": 1,
+      "title": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+      "file": "docs/reports/studio-v10-mp4/episode-1.mp4",
+      "bytes": 9131330,
+      "renderMs": 83775,
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "fps": 30,
+        "videoCodec": "h264",
+        "pixFmt": "yuv420p",
+        "audioCodec": "aac",
+        "durationSec": 43.9,
+        "bitrateKbps": 1664,
+        "subtitleStreams": 0,
+        "faststart": true
+      },
+      "decodeCheck": {
+        "ok": true,
+        "detail": "53123 ms encode, decode bersih tanpa error"
+      },
+      "audioSilenceDb": -91,
+      "frames": [
+        "docs/reports/studio-v10-mp4/frames/episode-1-1s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-1-15s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-1-31s.png"
+      ],
+      "metadata": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+            "profile": "High",
+            "codec_type": "video",
+            "codec_time_base": "1/60",
+            "codec_tag_string": "avc1",
+            "codec_tag": "0x31637661",
+            "width": 1080,
+            "height": 1920,
+            "coded_width": 1088,
+            "coded_height": 1920,
+            "has_b_frames": 2,
+            "pix_fmt": "yuv420p",
+            "level": 40,
+            "chroma_location": "left",
+            "refs": 1,
+            "is_avc": "true",
+            "nal_length_size": "4",
+            "r_frame_rate": "30/1",
+            "avg_frame_rate": "30/1",
+            "time_base": "1/15360",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 674304,
+            "duration": "43.900000",
+            "bit_rate": "1652694",
+            "bits_per_raw_sample": "8",
+            "nb_frames": "1317",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "VideoHandler",
+              "encoder": "Lavc63.1.102 libx264"
+            }
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_long_name": "AAC (Advanced Audio Coding)",
+            "profile": "LC",
+            "codec_type": "audio",
+            "codec_time_base": "1/48000",
+            "codec_tag_string": "mp4a",
+            "codec_tag": "0x6134706d",
+            "sample_fmt": "fltp",
+            "sample_rate": "48000",
+            "channels": 2,
+            "channel_layout": "stereo",
+            "bits_per_sample": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/48000",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 2106368,
+            "duration": "43.882667",
+            "bit_rate": "2274",
+            "max_bit_rate": "128000",
+            "nb_frames": "2058",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "SoundHandler"
+            }
+          }
+        ],
+        "format": {
+          "filename": "/home/user/fajrezzz-ai-office/docs/reports/studio-v10-mp4/episode-1.mp4",
+          "nb_streams": 2,
+          "nb_programs": 0,
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "format_long_name": "QuickTime / MOV",
+          "start_time": "0.000000",
+          "duration": "43.900000",
+          "size": "9131330",
+          "bit_rate": "1664023",
+          "probe_score": 100,
+          "tags": {
+            "major_brand": "isom",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2avc1mp41",
+            "encoder": "Lavf63.1.102"
+          }
+        }
+      }
+    },
+    {
+      "episode": 2,
+      "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+      "file": "docs/reports/studio-v10-mp4/episode-2.mp4",
+      "bytes": 11472722,
+      "renderMs": 100306,
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "fps": 30,
+        "videoCodec": "h264",
+        "pixFmt": "yuv420p",
+        "audioCodec": "aac",
+        "durationSec": 53.5,
+        "bitrateKbps": 1716,
+        "subtitleStreams": 0,
+        "faststart": true
+      },
+      "decodeCheck": {
+        "ok": true,
+        "detail": "64229 ms encode, decode bersih tanpa error"
+      },
+      "audioSilenceDb": -91,
+      "frames": [
+        "docs/reports/studio-v10-mp4/frames/episode-2-1s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-2-19s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-2-37s.png"
+      ],
+      "metadata": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+            "profile": "High",
+            "codec_type": "video",
+            "codec_time_base": "1/60",
+            "codec_tag_string": "avc1",
+            "codec_tag": "0x31637661",
+            "width": 1080,
+            "height": 1920,
+            "coded_width": 1088,
+            "coded_height": 1920,
+            "has_b_frames": 2,
+            "pix_fmt": "yuv420p",
+            "level": 40,
+            "chroma_location": "left",
+            "refs": 1,
+            "is_avc": "true",
+            "nal_length_size": "4",
+            "r_frame_rate": "30/1",
+            "avg_frame_rate": "30/1",
+            "time_base": "1/15360",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 821760,
+            "duration": "53.500000",
+            "bit_rate": "1704286",
+            "bits_per_raw_sample": "8",
+            "nb_frames": "1605",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "VideoHandler",
+              "encoder": "Lavc63.1.102 libx264"
+            }
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_long_name": "AAC (Advanced Audio Coding)",
+            "profile": "LC",
+            "codec_type": "audio",
+            "codec_time_base": "1/48000",
+            "codec_tag_string": "mp4a",
+            "codec_tag": "0x6134706d",
+            "sample_fmt": "fltp",
+            "sample_rate": "48000",
+            "channels": 2,
+            "channel_layout": "stereo",
+            "bits_per_sample": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/48000",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 2567168,
+            "duration": "53.482667",
+            "bit_rate": "2272",
+            "max_bit_rate": "128000",
+            "nb_frames": "2508",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "SoundHandler"
+            }
+          }
+        ],
+        "format": {
+          "filename": "/home/user/fajrezzz-ai-office/docs/reports/studio-v10-mp4/episode-2.mp4",
+          "nb_streams": 2,
+          "nb_programs": 0,
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "format_long_name": "QuickTime / MOV",
+          "start_time": "0.000000",
+          "duration": "53.500000",
+          "size": "11472722",
+          "bit_rate": "1715547",
+          "probe_score": 100,
+          "tags": {
+            "major_brand": "isom",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2avc1mp41",
+            "encoder": "Lavf63.1.102"
+          }
+        }
+      }
+    },
+    {
+      "episode": 3,
+      "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+      "file": "docs/reports/studio-v10-mp4/episode-3.mp4",
+      "bytes": 10895384,
+      "renderMs": 92856,
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "fps": 30,
+        "videoCodec": "h264",
+        "pixFmt": "yuv420p",
+        "audioCodec": "aac",
+        "durationSec": 49.9,
+        "bitrateKbps": 1747,
+        "subtitleStreams": 0,
+        "faststart": true
+      },
+      "decodeCheck": {
+        "ok": true,
+        "detail": "58089 ms encode, decode bersih tanpa error"
+      },
+      "audioSilenceDb": -91,
+      "frames": [
+        "docs/reports/studio-v10-mp4/frames/episode-3-1s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-3-17s.png",
+        "docs/reports/studio-v10-mp4/frames/episode-3-35s.png"
+      ],
+      "metadata": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+            "profile": "High",
+            "codec_type": "video",
+            "codec_time_base": "1/60",
+            "codec_tag_string": "avc1",
+            "codec_tag": "0x31637661",
+            "width": 1080,
+            "height": 1920,
+            "coded_width": 1088,
+            "coded_height": 1920,
+            "has_b_frames": 2,
+            "pix_fmt": "yuv420p",
+            "level": 40,
+            "chroma_location": "left",
+            "refs": 1,
+            "is_avc": "true",
+            "nal_length_size": "4",
+            "r_frame_rate": "30/1",
+            "avg_frame_rate": "30/1",
+            "time_base": "1/15360",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 766464,
+            "duration": "49.900000",
+            "bit_rate": "1735460",
+            "bits_per_raw_sample": "8",
+            "nb_frames": "1497",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "VideoHandler",
+              "encoder": "Lavc63.1.102 libx264"
+            }
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_long_name": "AAC (Advanced Audio Coding)",
+            "profile": "LC",
+            "codec_type": "audio",
+            "codec_time_base": "1/48000",
+            "codec_tag_string": "mp4a",
+            "codec_tag": "0x6134706d",
+            "sample_fmt": "fltp",
+            "sample_rate": "48000",
+            "channels": 2,
+            "channel_layout": "stereo",
+            "bits_per_sample": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/48000",
+            "start_pts": 0,
+            "start_time": "0.000000",
+            "duration_ts": 2395136,
+            "duration": "49.898667",
+            "bit_rate": "2274",
+            "max_bit_rate": "128000",
+            "nb_frames": "2340",
+            "disposition": {
+              "default": 1,
+              "dub": 0,
+              "original": 0,
+              "comment": 0,
+              "lyrics": 0,
+              "karaoke": 0,
+              "forced": 0,
+              "hearing_impaired": 0,
+              "visual_impaired": 0,
+              "clean_effects": 0,
+              "attached_pic": 0,
+              "timed_thumbnails": 0
+            },
+            "tags": {
+              "language": "und",
+              "handler_name": "SoundHandler"
+            }
+          }
+        ],
+        "format": {
+          "filename": "/home/user/fajrezzz-ai-office/docs/reports/studio-v10-mp4/episode-3.mp4",
+          "nb_streams": 2,
+          "nb_programs": 0,
+          "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+          "format_long_name": "QuickTime / MOV",
+          "start_time": "0.000000",
+          "duration": "49.900000",
+          "size": "10895384",
+          "bit_rate": "1746754",
+          "probe_score": 100,
+          "tags": {
+            "major_brand": "isom",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2avc1mp41",
+            "encoder": "Lavf63.1.102"
+          }
+        }
+      }
+    }
+  ]
+}
