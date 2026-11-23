@@ -42,8 +42,10 @@ const sceneTexts = Array.from({ length: Math.min(5, words.length) }, (_, i) =>
   words.slice(i * (chunk - 1), i * (chunk - 1) + chunk).join(" ")
 );
 
+const episodeNumber = Number(process.env.ZINE_EP ?? 27) || 27;
+
 const episode = {
-  episodeNumber: 27,
+  episodeNumber,
   title: topic,
   themeLabel: "AI Office",
   niche: "AI agents",
@@ -54,7 +56,10 @@ const episode = {
     label: ["HOOK", "BUKTI", "TURN", "HASIL", "CTA"][i % 5],
     durationSec: 2,
     onScreenText: text,
-    narration: text,
+    // Narration asli lebih panjang dari onScreenText → caption penjelas ikut tampil
+    narration:
+      process.env.ZINE_NARRATION?.split("|")[i] ??
+      `AI membaca ${text.toLowerCase()} langkah demi langkah, lalu menjelaskannya ke penonton dengan bahasa sehari-hari.`,
   })),
 } as unknown as Parameters<typeof renderZineFrame>[3];
 
@@ -84,7 +89,10 @@ ag.ellipse(400, 320, 140, 180, 0, 0, Math.PI * 2);
 ag.fill();
 ag.fillRect(240, 480, 320, 300);
 
-const outDir = path.resolve(process.cwd(), ".zine-preview");
+const outDir = path.resolve(
+  process.cwd(),
+  process.env.ZINE_OUT ?? ".zine-preview"
+);
 fs.mkdirSync(outDir, { recursive: true });
 
 const times: Array<[string, number]> = [

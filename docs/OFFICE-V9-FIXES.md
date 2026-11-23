@@ -48,3 +48,40 @@ dan langkah kaki mengikuti posisi kok. Diuji: pada detik kontak, |x_kok − x_ra
 
 ## 7. Tujuh repo rujukan
 Lihat `docs/SKILL-PACKS.md` — status jujur per repo (aktif sebagai pola / worker-required).
+
+---
+
+# v9.2 — Kursi L3, Pot Berserakan & Video yang Selalu Sama
+
+## 8. Kursi L3 terlihat seperti balok & arahnya salah
+**Penyebab:** `SimpleChair` v9 hanya kotak dudukan + sandaran tipis tanpa kaki, jadi dari
+kamera HP (layar 722×1600) bentuknya terbaca sebagai balok mengambang.
+**Perbaikan:** `src/components/office3d/InteriorFurnishing.tsx`
+- `SimpleChair` ditulis ulang: 4 kaki kayu meruncing, dudukan berlapis bantalan,
+  sandaran miring 10° dengan 2 tiang, dan armrest — arah hadap = sumbu −Z lokal,
+  jadi `rotationY` sekarang benar-benar menentukan arah kursi.
+- `PotPlant` ditulis ulang: tatakan + pot keramik (silinder menyempit) + tanah +
+  batang + 5 gumpal daun, dengan prop `scale` (bukan `height`).
+- `LoungeSofaSet` L3: sofa 3 dudukan menyatu + armchair + meja kopi + lampu lantai.
+
+## 9. Pot bunga berserakan di tengah lantai
+**Penyebab:** posisi planter L2/L3 ada di jalur promenade (z 1.6–2.9) sehingga terlihat
+seperti pot yang jatuh berhamburan dari kamera atas.
+**Perbaikan:** `src/lib/office3d/interior-layout.ts` — semua planter menempel dinding:
+L2 `[±17.2, 3.4]`, L3 `[-17.2, 1.1]` dan `[14.2, 3.9]`; sofa L3 `[8.6, 2.7]` rotY 0
+menghadap ruang tengah. Diverifikasi `tests/office-layout-v9.test.ts` (11 tes).
+
+## 10. Output video selalu itu-itu saja
+**Penyebab:** urutan visual zine hard-coded — kertas krem → panel 0..3 → slab hitam,
+di semua episode, di semua scene.
+**Perbaikan:** `src/lib/pipeline/visual-variation.ts` (baru) + `zine-style.ts`:
+lihat `docs/VIDEO-VARIATION.md`. Ringkasnya, setiap episode punya tone kertas, set aksen,
+mode layout, gaya tipografi, gaya transisi, rotasi kartu, dan offset panel sendiri —
+deterministik dari judul + nomor episode, jadi QC tetap bisa mengulang hasil yang sama.
+
+## 11. Video belum menjelaskan AI ke penonton awam
+**Perbaikan:** prompt Divisi Naskah (`/api/pipeline/[division]`) menambah aturan wajib:
+setiap istilah teknis diberi analogi sehari-hari, alur "apa itu → kenapa penting → contoh →
+kesimpulan", larangan mengarang angka. Di sisi render, frame zine kini menambahkan
+**caption penjelas** (kalimat narasi utuh) di bawah headline, jadi penonton yang mematikan
+suara tetap paham konteks adegan.
