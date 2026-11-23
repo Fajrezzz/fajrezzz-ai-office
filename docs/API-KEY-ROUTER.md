@@ -49,6 +49,10 @@ Router mengembalikan kode `NO_PROVIDER_CONFIGURED` + link Vercel, jadi tidak ada
 | `GEMINI_API_KEY` | Google Gemini | Reasoning, research, planning, strategy, keputusan agent (gemini-2.5-flash / flash-lite) | ~10–15 RPM, 250–1.500 request/hari | <https://aistudio.google.com/apikey> |
 | `GROQ_API_KEY` | Groq Cloud | Tugas cepat: klasifikasi, ringkasan, text processing (llama-3.3-70b / 3.1-8b) | ~30 RPM, 1.000–14.400 request/hari | <https://console.groq.com/keys> |
 | `OPENROUTER_API_KEY` | OpenRouter | Alternatif & fallback (hanya model `:free` by default) | ~20 RPM, 50 request/hari | <https://openrouter.ai/keys> |
+| `GEMINI_MODEL` *(opsional)* | Google Gemini | Ganti model tanpa deploy, contoh `gemini-flash-latest` atau `gemini-3-flash,gemini-2.5-flash` | – | lihat bagian 9 |
+| `GROQ_MODEL` *(opsional)* | Groq | Ganti model Groq, contoh `llama-3.3-70b-versatile` | – | lihat bagian 9 |
+| `OPENROUTER_MODEL` *(opsional)* | OpenRouter | Ganti model `:free` (model non-`:free` tetap ditolak router) | – | lihat bagian 9 |
+| `GEMINI_IMAGE_MODEL` *(opsional)* | Google Gemini | Model gambar B-Roll; boleh daftar dipisah koma | – | lihat bagian 9 |
 | `HINDSIGHT_API_KEY` | Hindsight | Memori jangka panjang agent (opsional) | – | sesuai dashboard Hindsight |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase | Simpan state cloud (opsional) | – | Supabase → Project Settings → API |
 
@@ -153,3 +157,38 @@ lalu buat key baru. Jangan pakai prefix `NEXT_PUBLIC_` untuk key apa pun.
 
 Detail implementasi: `src/lib/ai/llm-provider.ts` (server-only).
 Kebijakan & angka FPS/ketajaman render: `docs/VISUAL-QUALITY-FPS.md`.
+
+---
+
+## 9. Kalau muncul `HTTP 404 · This model ... is not found`
+
+Ini bukan berarti key-nya salah. Artinya **nama model di kode sudah tidak ada** di akun/API
+Google (deprecate), atau endpoint kompatibilitas OpenAI tidak mengekspos model itu.
+
+Router v9.4 menangani ini berlapis, tanpa perlu ubah kode:
+
+1. **Alias stabil lebih dulu** — urutan model Gemini sekarang
+   `gemini-flash-latest` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`.
+   Alias `-latest` selalu menunjuk model flash terbaru, jadi tidak ikut pensiun.
+2. **Penyelamat native** — kalau endpoint compat membalas 404 padahal `/v1beta/models`
+   menyebut model itu hidup, router otomatis mengulang lewat
+   `:generateContent` (endpoint native). Model yang berhasil lewat jalur ini ditandai
+   `(native)` di telemetry.
+3. **Memo model mati** — model yang tetap 404 tidak dicoba lagi selama 15 menit
+   (menghemat kuota & waktu). Daftarnya tampil di panel sebagai *Model 404 / pensiun*.
+4. **Ganti model tanpa deploy** — set salah satu variabel berikut di Vercel lalu Redeploy:
+
+   | Variabel | Contoh isi |
+   | --- | --- |
+   | `GEMINI_MODEL` | `gemini-flash-latest` |
+   | `GEMINI_MODEL` (beberapa) | `gemini-3-flash,gemini-2.5-flash` |
+   | `GROQ_MODEL` | `llama-3.3-70b-versatile` |
+   | `OPENROUTER_MODEL` | `meta-llama/llama-3.3-70b-instruct:free` |
+   | `GEMINI_IMAGE_MODEL` | `gemini-2.5-flash-image` |
+
+5. **Model image** — `GEMINI_IMAGE_MODEL` boleh berisi beberapa nama dipisah koma; endpoint
+   B-Roll mencoba berurutan dan hanya lanjut ke kandidat berikutnya kalau errornya 404.
+
+Cara cek cepat: buka panel **Telemetry → AI Router**, lihat kartu provider. Kalau ada
+tulisan *Model 404 / pensiun*, nama model itulah yang harus diganti lewat env di atas.
+Dijaga `tests/ai-model-recovery-v94.test.ts` (11 tes).

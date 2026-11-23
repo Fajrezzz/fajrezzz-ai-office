@@ -491,9 +491,32 @@ export function AiRouterMonitoringPanel() {
                 </div>
               )}
 
+              {p.deprecatedModels && p.deprecatedModels.length > 0 && (
+                <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-400/35 bg-amber-950/35 px-2 py-1.5 text-[10px] text-amber-200">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span className="min-w-0">
+                    <strong className="font-bold">Model 404 / pensiun:</strong>{" "}
+                    <span className="font-mono break-all">{p.deprecatedModels.join(", ")}</span>
+                    <br />
+                    Router otomatis pindah ke model lain. Kalau semua kena 404, ganti
+                    model tanpa deploy: set{" "}
+                    <code className="font-mono font-bold">{p.modelEnvVar}</code> di Vercel
+                    (contoh: <code className="font-mono">gemini-flash-latest</code>).
+                  </span>
+                </div>
+              )}
+
               {p.lastError && (
-                <div className="mt-2 truncate rounded-lg border border-rose-500/30 bg-rose-950/30 px-2 py-1 text-[10px] text-rose-200">
-                  Last error: {p.lastError}
+                <div
+                  className="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/30 px-2 py-1 text-[10px] text-rose-200"
+                  title={p.lastError}
+                >
+                  <span className="line-clamp-2 break-words">Last error: {p.lastError}</span>
+                  {/\b404\b|not found|is not supported/i.test(p.lastError) && (
+                    <span className="mt-1 block font-semibold text-amber-200">
+                      Model ini tidak dikenali provider → lihat catatan model 404 di atas.
+                    </span>
+                  )}
                 </div>
               )}
             </div>

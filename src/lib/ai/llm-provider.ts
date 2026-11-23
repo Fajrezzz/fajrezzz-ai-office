@@ -135,6 +135,12 @@ export interface ProviderHealthMetrics {
   lastCheckedAt: string | null;
   rateLimitRemaining: string | null;
   rateLimitReset: string | null;
+  /** Model yang dibalas 404 oleh provider (di-skip sementara, 15 menit). */
+  deprecatedModels: string[];
+  /** Env var untuk mengganti model tanpa deploy (GEMINI_MODEL / GROQ_MODEL / OPENROUTER_MODEL). */
+  modelEnvVar: string;
+  /** Model yang BENAR-BENAR dipakai sekarang (env override > alias stabil > statis). */
+  preferredModels: string[];
 }
 
 export interface RouterTelemetrySnapshot {
@@ -182,7 +188,8 @@ const PROVIDER_TARGETS: Record<LlmProviderId, ProviderTarget> = {
     envVar: "GEMINI_API_KEY",
     endpoint:
       "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    models: ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
+    // v9.4: alias stabil lebih dulu (auto menunjuk model flash terbaru), baru versi beku.
+    models: ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
     role: "Primary: Reasoning, Research, Planning, Strategy & Agent Decisions",
   },
   groq: {
@@ -264,6 +271,212 @@ export function isOpenRouterFreeModel(model: string): boolean {
 }
 
 /* ============================================================================
+ * v9.4 FIX — Model bisa di-override tanpa deploy + memo model mati (HTTP 404)
+ *
+ * Masalah nyata di preview: Google Gemini membalas
+ *   404 "This model ... is not found for API version v1beta"
+ * untuk model statis `gemini-2.5-flash`, jadi 4 percobaan habis sia-sia
+ * (error rate 50%). Tiga lapis perbaikan:
+ *   1. Model alias stabil (`gemini-flash-latest`) didahulukan, bukan versi beku.
+ *   2. Nama model bisa diganti lewat env GEMINI_MODEL / GROQ_MODEL /
+ *      OPENROUTER_MODEL (pisahkan dengan koma) tanpa ubah kode.
+ *   3. Model yang sudah membalas 404 dicatat "mati" 15 menit supaya router
+ *      tidak membuang waktu & kuota mencoba model yang sama berulang-ulang.
+ * ========================================================================== */
+
+const MODEL_ENV: Record<LlmProviderId, string> = {
+  gemini: "GEMINI_MODEL",
+  groq: "GROQ_MODEL",
+  openrouter: "OPENROUTER_MODEL",
+};
+
+const DEPRECATED_MODEL_TTL_MS = 15 * 60 * 1000;
+const DEPRECATED_MODELS = new Map<string, number>();
+
+function deprecatedKey(provider: LlmProviderId, model: string): string {
+  return `${provider}:${model.trim().toLowerCase()}`;
+}
+
+/** Catat model yang dibalas 404 oleh provider (di-skip selama 15 menit). */
+export function markModelDeprecated(
+  provider: LlmProviderId,
+  model: string,
+  nowMs: number = Date.now()
+): void {
+  if (!model.trim()) return;
+  DEPRECATED_MODELS.set(deprecatedKey(provider, model), nowMs + DEPRECATED_MODEL_TTL_MS);
+}
+
+export function isModelDeprecated(
+  provider: LlmProviderId,
+  model: string,
+  nowMs: number = Date.now()
+): boolean {
+  const key = deprecatedKey(provider, model);
+  const until = DEPRECATED_MODELS.get(key);
+  if (until === undefined) return false;
+  if (nowMs >= until) {
+    DEPRECATED_MODELS.delete(key);
+    return false;
+  }
+  return true;
+}
+
+export function getDeprecatedModels(
+  provider?: LlmProviderId,
+  nowMs: number = Date.now()
+): string[] {
+  const out: string[] = [];
+  for (const [key, until] of DEPRECATED_MODELS.entries()) {
+    if (nowMs >= until) {
+      DEPRECATED_MODELS.delete(key);
+      continue;
+    }
+    const [prov, ...rest] = key.split(":");
+    if (provider && prov !== provider) continue;
+    out.push(`${prov}:${rest.join(":")}`);
+  }
+  return out;
+}
+
+export function resetDeprecatedModels(): void {
+  DEPRECATED_MODELS.clear();
+}
+
+/** Pesan provider yang menandakan model tidak ada / sudah dipensiunkan. */
+export function isModelNotFoundError(status: number | undefined, message: string): boolean {
+  if (status === 404) return true;
+  return /(model).*(not found|does not exist|is not supported|deprecated|no longer available|not available)/i.test(
+    message
+  );
+}
+
+/**
+ * Daftar model yang dipakai router untuk satu provider.
+ * Urutan: env override (kalau ada) → alias stabil → model statis lama.
+ * OpenRouter tetap dijaga hanya model `:free`.
+ */
+export function resolveProviderModels(provider: LlmProviderId): string[] {
+  const envName = MODEL_ENV[provider];
+  const fromEnv = (process.env[envName] ?? "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const base = fromEnv.length > 0 ? fromEnv : [...PROVIDER_TARGETS[provider].models];
+  const filtered =
+    provider === "openrouter" ? base.filter((m) => isOpenRouterFreeModel(m)) : base;
+  return [...new Set(filtered)];
+}
+
+export interface NativeGeminiResult {
+  ok: boolean;
+  status: number;
+  rawText: string;
+  usage: LlmTokenUsage;
+  durationMs: number;
+  error?: string;
+}
+
+/**
+ * Panggil Gemini lewat endpoint NATIVE (`:generateContent`), bukan lapisan
+ * kompatibilitas OpenAI. Dipakai sebagai penyelamat ketika endpoint
+ * `/v1beta/openai/chat/completions` membalas 404 padahal `/v1beta/models`
+ * (dipakai discovery) menyebut model itu hidup.
+ */
+export async function callGeminiNative(
+  options: {
+    model: string;
+    systemPrompt: string;
+    userPrompt: string;
+    temperature?: number;
+    maxTokens?: number;
+    expectJson?: boolean;
+    apiKey: string;
+  },
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs: number = 15_000
+): Promise<NativeGeminiResult> {
+  const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const model = options.model.replace(/^models\//, "");
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
+    `?key=${encodeURIComponent(options.apiKey)}`;
+  try {
+    const res = await fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: options.systemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: options.userPrompt }] }],
+        generationConfig: {
+          temperature: options.temperature ?? 0.7,
+          maxOutputTokens: options.maxTokens ?? 2048,
+          ...(options.expectJson ? { responseMimeType: "application/json" } : {}),
+        },
+      }),
+      signal: controller.signal,
+    });
+    const durationMs = Date.now() - startedAt;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      return {
+        ok: false,
+        status: res.status,
+        rawText: "",
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        durationMs,
+        error: sanitizeErrorMessage(errText || res.statusText || `HTTP ${res.status}`),
+      };
+    }
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+    };
+    const rawText =
+      json.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text ?? "")
+        .join("")
+        .trim() ?? "";
+    return {
+      ok: Boolean(rawText),
+      status: res.status,
+      rawText,
+      usage: {
+        promptTokens: json.usageMetadata?.promptTokenCount ?? 0,
+        completionTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens: json.usageMetadata?.totalTokenCount ?? 0,
+      },
+      durationMs,
+      error: rawText ? undefined : "Respons Gemini native kosong.",
+    };
+  } catch (err) {
+    const durationMs = Date.now() - startedAt;
+    const rawMessage =
+      err instanceof Error && err.name === "AbortError"
+        ? `Timeout melebihi ${Math.round(timeoutMs / 1000)} detik`
+        : err instanceof Error
+          ? err.message
+          : "Kesalahan jaringan saat menghubungi Gemini native";
+    return {
+      ok: false,
+      status: 0,
+      rawText: "",
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      durationMs,
+      error: sanitizeErrorMessage(rawMessage),
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/* ============================================================================
  * LIVE MODEL DISCOVERY — anti "model sudah di-deprecate" (HTTP 404)
  * ========================================================================== */
 
@@ -283,7 +496,7 @@ const DISCOVERY_ENDPOINTS: Record<LlmProviderId, string> = {
 
 /** Urutan prioritas model murah/cepat per provider saat discovery berhasil. */
 const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
-  gemini: [/gemini-2\.5-flash-lite/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /flash/i],
+  gemini: [/flash-latest/i, /gemini-2\.5-flash-lite/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /flash/i],
   groq: [/llama-3\.3-70b/i, /gpt-oss-120b/i, /gpt-oss-20b/i, /llama-3\.1-8b/i, /qwen/i, /llama/i],
   openrouter: [/llama-3\.3-70b[^:]*:free/i, /gemma-3[^:]*:free/i, /qwen[^:]*:free/i, /:free/i],
 };
@@ -669,6 +882,9 @@ export function getRouterTelemetrySnapshot(): RouterTelemetrySnapshot {
       lastCheckedAt: st.lastCheckedAt,
       rateLimitRemaining: st.rateLimitRemaining,
       rateLimitReset: st.rateLimitReset,
+      deprecatedModels: getDeprecatedModels(id).map((entry) => entry.split(":").slice(1).join(":")),
+      modelEnvVar: MODEL_ENV[id],
+      preferredModels: resolveProviderModels(id),
     };
   });
 
@@ -764,6 +980,25 @@ function extractJsonString(raw: string): string {
     return trimmed.slice(firstBracket, lastBracket + 1);
   }
   return trimmed;
+}
+
+/**
+ * Parse keluaran model. Dipakai jalur OpenAI-compat DAN jalur native Gemini
+ * supaya perilaku JSON-mode-nya identik.
+ */
+export function parseModelOutput<T>(
+  rawText: string,
+  expectJson: boolean
+): { ok: true; parsed: T } | { ok: false; error: string } {
+  if (!expectJson) return { ok: true, parsed: rawText as unknown as T };
+  try {
+    return { ok: true, parsed: JSON.parse(extractJsonString(rawText)) as T };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Gagal mem-parse JSON dari AI",
+    };
+  }
 }
 
 function makeCacheKey(
@@ -929,6 +1164,76 @@ export async function callCentralAIRouter<T = unknown>(
   const HARD_DEADLINE_MS = 24_000;
   let deadlineHit = false;
 
+  /**
+   * Satu pintu keluar untuk semua jalur sukses (OpenAI-compat & native Gemini):
+   * mencatat telemetry, fallback counter, attempt, cache, lalu mengembalikan hasil.
+   */
+  const finalizeSuccess = (args: {
+    provider: LlmProviderId;
+    model: string;
+    rawText: string;
+    parsed: T;
+    status: number;
+    durationMs: number;
+    usage: LlmTokenUsage;
+    headers?: Headers;
+  }): LlmCallResult<T> => {
+    recordProviderSuccess(
+      args.provider,
+      args.model,
+      args.durationMs,
+      args.usage,
+      args.headers
+    );
+
+    const fallbackUsed = Boolean(failedPrimary && failedPrimary !== args.provider);
+    if (fallbackUsed && failedPrimary) {
+      totalFallbacks += 1;
+      providerStates[failedPrimary].fallbackFromCount += 1;
+      providerStates[args.provider].fallbackToCount += 1;
+      recentFallbacks.unshift({
+        at: new Date().toISOString(),
+        from: failedPrimary,
+        to: args.provider,
+        reason:
+          attempts.find((a) => a.provider === failedPrimary)?.error ??
+          "Primary provider error",
+      });
+      if (recentFallbacks.length > 20) recentFallbacks.pop();
+    }
+
+    attempts.push({
+      provider: args.provider,
+      model: args.model,
+      ok: true,
+      status: args.status,
+      durationMs: args.durationMs,
+    });
+
+    totalSuccesses += 1;
+
+    const successResult: LlmCallResult<T> = {
+      ok: true,
+      rawText: args.rawText,
+      parsed: args.parsed,
+      provider: args.provider,
+      model: args.model,
+      durationMs: args.durationMs,
+      usage: args.usage,
+      estimatedCostUsd: 0,
+      tier: "free-tier",
+      attempts,
+      taskClassification: classification,
+      fallbackUsed,
+    };
+
+    if (cacheKey) {
+      setBoundedCache(cacheKey, successResult as LlmCallResult<unknown>);
+    }
+
+    return successResult;
+  };
+
   try {
     for (const target of activeTargets) {
       // Check Circuit Breaker (unless this is the ONLY explicitly targeted provider)
@@ -947,24 +1252,36 @@ export async function callCentralAIRouter<T = unknown>(
 
       const apiKey = target.envVar ? process.env[target.envVar]?.trim() ?? "" : "";
 
-      // Resolve candidate models for this provider
+      // Resolve candidate models for this provider (env override > alias stabil > statis)
       let modelsToTry =
         preferredProvider === target.provider && preferredModel
           ? [preferredModel]
-          : [...target.models];
+          : resolveProviderModels(target.provider);
 
       if (target.provider === "openrouter" && !allowPaidOpenRouter) {
         modelsToTry = modelsToTry.filter((m) => isOpenRouterFreeModel(m));
       }
 
-      // Model statis bisa sudah di-deprecate. Gabungkan dengan model live dari /models
-      // provider supaya router tidak mati total hanya karena daftar lama (HTTP 404).
+      // Model yang sudah dibalas 404 oleh provider tidak dicoba lagi (hemat kuota).
+      const deprecatedHere = modelsToTry.filter((m) =>
+        isModelDeprecated(target.provider, m)
+      );
+      modelsToTry = modelsToTry.filter((m) => !isModelDeprecated(target.provider, m));
+
+      // Model statis bisa sudah di-deprecate. Tambahkan model live dari /models
+      // SETELAH daftar pilihan utama supaya kurasi kita tetap diutamakan.
       if (apiKey) {
         const liveModels = await discoverLiveModels(target.provider, apiKey, fetchImpl);
         if (liveModels.length > 0) {
-          const merged = [...liveModels, ...modelsToTry];
+          const merged = [...modelsToTry, ...liveModels];
           modelsToTry = [...new Set(merged)].slice(0, 6);
         }
+      }
+
+      // Semua kandidat pernah 404 → tetap coba satu (mungkin 404-nya sementara),
+      // dan catat ke telemetry supaya Bos tahu harus set env model.
+      if (modelsToTry.length === 0) {
+        modelsToTry = (deprecatedHere.length > 0 ? deprecatedHere : resolveProviderModels(target.provider)).slice(0, 1);
       }
 
       for (let mIdx = 0; mIdx < modelsToTry.length; mIdx += 1) {
@@ -1030,6 +1347,75 @@ export async function callCentralAIRouter<T = unknown>(
               const shortErr = sanitizeErrorMessage(errText || res.statusText);
               const isRateLimit = res.status === 429;
               if (isRateLimit) sawRateLimit = true;
+              const modelMissing = isModelNotFoundError(res.status, shortErr);
+
+              /*
+               * v9.4 — Penyelamat 404 Gemini.
+               * Endpoint kompatibilitas OpenAI kadang tidak mengenal model yang
+               * justru hidup di endpoint native (`:generateContent`) — persis
+               * kasus "This model ... is not found for API version v1beta" di
+               * panel telemetry. Sebelum menyerah: coba jalur native.
+               */
+              if (target.provider === "gemini" && modelMissing && apiKey) {
+                const native = await callGeminiNative(
+                  {
+                    model,
+                    systemPrompt,
+                    userPrompt,
+                    temperature,
+                    maxTokens: safeMaxTokens,
+                    expectJson,
+                    apiKey,
+                  },
+                  fetchImpl,
+                  Math.min(timeoutMs, 12_000)
+                );
+                const totalDurationMs = Date.now() - start;
+                const nativeParse = native.ok
+                  ? parseModelOutput<T>(native.rawText, Boolean(expectJson))
+                  : { ok: false as const, error: native.error ?? "Gemini native gagal" };
+
+                if (native.ok && nativeParse.ok) {
+                  return finalizeSuccess({
+                    provider: target.provider,
+                    model: `${model} (native)`,
+                    rawText: native.rawText,
+                    parsed: nativeParse.parsed,
+                    status: native.status,
+                    durationMs: totalDurationMs,
+                    usage: native.usage,
+                  });
+                }
+
+                if (isModelNotFoundError(native.status, native.error ?? "")) {
+                  markModelDeprecated(target.provider, model);
+                }
+
+                const nativeErr = !native.ok
+                  ? native.error ?? "Gemini native gagal"
+                  : !nativeParse.ok
+                    ? nativeParse.error
+                    : "Gemini native gagal";
+                recordProviderFailure(
+                  target.provider,
+                  totalDurationMs,
+                  `HTTP ${res.status}: ${shortErr} · native ${native.status}: ${nativeErr}`,
+                  false
+                );
+                attempts.push({
+                  provider: target.provider,
+                  model,
+                  ok: false,
+                  status: res.status,
+                  durationMs: totalDurationMs,
+                  error: `HTTP ${res.status} (compat) + native ${native.status}: ${nativeErr}`,
+                });
+                break;
+              }
+
+              if (modelMissing) {
+                markModelDeprecated(target.provider, model);
+              }
 
               recordProviderFailure(
                 target.provider,
@@ -1090,97 +1476,40 @@ export async function callCentralAIRouter<T = unknown>(
               break;
             }
 
-            let parsed: T;
-            if (expectJson) {
-              try {
-                parsed = JSON.parse(extractJsonString(rawText)) as T;
-              } catch (parseErr) {
-                lastParseError =
-                  parseErr instanceof Error
-                    ? parseErr.message
-                    : "Gagal mem-parse JSON dari AI";
-                recordProviderFailure(
-                  target.provider,
-                  durationMs,
-                  `JSON tidak valid: ${lastParseError}`,
-                  false
-                );
-                attempts.push({
-                  provider: target.provider,
-                  model,
-                  ok: false,
-                  status: res.status,
-                  durationMs,
-                  error: `JSON tidak valid: ${lastParseError}`,
-                });
-                break;
-              }
-            } else {
-              parsed = rawText as unknown as T;
-            }
-
-            const usage: LlmTokenUsage = {
-              promptTokens: json.usage?.prompt_tokens ?? 0,
-              completionTokens: json.usage?.completion_tokens ?? 0,
-              totalTokens: json.usage?.total_tokens ?? 0,
-            };
-
-            recordProviderSuccess(
-              target.provider,
-              model,
-              durationMs,
-              usage,
-              res.headers
-            );
-
-            const fallbackUsed = Boolean(
-              failedPrimary && failedPrimary !== target.provider
-            );
-            if (fallbackUsed && failedPrimary) {
-              totalFallbacks += 1;
-              providerStates[failedPrimary].fallbackFromCount += 1;
-              providerStates[target.provider].fallbackToCount += 1;
-              recentFallbacks.unshift({
-                at: new Date().toISOString(),
-                from: failedPrimary,
-                to: target.provider,
-                reason:
-                  attempts.find((a) => a.provider === failedPrimary)?.error ??
-                  "Primary provider error",
+            const parseResult = parseModelOutput<T>(rawText, Boolean(expectJson));
+            if (!parseResult.ok) {
+              lastParseError = parseResult.error;
+              recordProviderFailure(
+                target.provider,
+                durationMs,
+                `JSON tidak valid: ${lastParseError}`,
+                false
+              );
+              attempts.push({
+                provider: target.provider,
+                model,
+                ok: false,
+                status: res.status,
+                durationMs,
+                error: `JSON tidak valid: ${lastParseError}`,
               });
-              if (recentFallbacks.length > 20) recentFallbacks.pop();
+              break;
             }
 
-            attempts.push({
+            return finalizeSuccess({
               provider: target.provider,
               model,
-              ok: true,
+              rawText,
+              parsed: parseResult.parsed,
               status: res.status,
               durationMs,
+              usage: {
+                promptTokens: json.usage?.prompt_tokens ?? 0,
+                completionTokens: json.usage?.completion_tokens ?? 0,
+                totalTokens: json.usage?.total_tokens ?? 0,
+              },
+              headers: res.headers,
             });
-
-            totalSuccesses += 1;
-
-            const successResult: LlmCallResult<T> = {
-              ok: true,
-              rawText,
-              parsed,
-              provider: target.provider,
-              model,
-              durationMs,
-              usage,
-              estimatedCostUsd: 0,
-              tier: "free-tier",
-              attempts,
-              taskClassification: classification,
-              fallbackUsed,
-            };
-
-            if (cacheKey) {
-              setBoundedCache(cacheKey, successResult as LlmCallResult<unknown>);
-            }
-
-            return successResult;
           } catch (err) {
             const durationMs = Date.now() - start;
             const rawMessage =
