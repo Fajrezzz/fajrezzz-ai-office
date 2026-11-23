@@ -1,77 +1,364 @@
-"use client";
+import type {
+  PipelineScene,
+  RealEpisode,
+  VisualStyleId,
+  WordTimingCue,
+} from "@/types/pipeline";
+import {
+  computeSyncedSceneDuration,
+  computeWordTimings,
+  findActiveWordIndex,
+  getTikTokSafeZone,
+  SPEECH_START_OFFSET_SEC,
+} from "./video-engine-v3.ts";
 
-import type { RealEpisode } from "@/types/pipeline";
+/* ============================================================================
+   FAJREZZZ AI OFFICE — V3 TIKTOK AI AGENT & CLAUDE CODE MOTION ENGINE
+   - Resolution-Independent Native Vector Rendering (1080p / 2K / 4K 2160x3840)
+   - 0ms-Drift Word-Level Audio-Subtitle Synchronization
+   - Strict TikTok 9:16 Safe Zone (clears right buttons + top/bottom UI)
+   - 7 Auto-Selected AI Visual Styles (A-G) + 8 Specialized AI/Coding Templates
+   - 5 Dual-Scene Cross-Transitions with Motion Blur Streaks & 2.5D Camera Drift
+   ============================================================================ */
+
+export type SceneTemplateId =
+  | "claude_terminal"
+  | "ai_network_flow"
+  | "github_pr_workflow"
+  | "code_diff_editor"
+  | "bezier_chart"
+  | "cursor_cards"
+  | "split_contrast"
+  | "cta_finale";
+
+export type TransitionTypeId =
+  | "whip-up"
+  | "iris-circle"
+  | "zoom-through"
+  | "whip-left"
+  | "push-pull";
 
 export interface EditorialScene {
   sceneNumber: number;
   label: string;
   durationSec: number;
+  speechOffsetSec: number;
+  speechDurationSec: number;
   narration: string;
-  visualPrompt: string;
   onScreenText: string;
-  mood: "bright" | "curious" | "dramatic" | "warm";
+  visualCue: string;
+  visualPrompt: string;
+  mood: PipelineScene["mood"];
+  template: SceneTemplateId;
+  transitionIn: TransitionTypeId;
+  codeSnippet?: string;
+  wordTimings: WordTimingCue[];
 }
 
 export interface EditorialEpisode {
   episodeNumber: number;
   title: string;
+  themeLabel: string;
   niche: string;
-  storyStructure: string;
-  moralLesson: string;
+  visualStyle: VisualStyleId;
+  sourceLabel: string | null;
   scenes: EditorialScene[];
 }
 
-function mapSceneMood(
-  mood: "intro" | "problem" | "action" | "solve" | "celebrate"
-): EditorialScene["mood"] {
-  switch (mood) {
-    case "problem":
-      return "dramatic";
-    case "action":
-      return "curious";
-    case "celebrate":
-      return "warm";
-    case "solve":
-    case "intro":
-    default:
-      return "bright";
-  }
+interface StylePalette {
+  id: VisualStyleId;
+  name: string;
+  isLight: boolean;
+  bg0: string;
+  bg1: string;
+  surface: string;
+  surfaceAlt: string;
+  border: string;
+  text: string;
+  muted: string;
+  accent: string;
+  accent2: string;
+  accent3: string;
+  glow: string;
+  gridColor: string;
 }
 
+const STYLE_PALETTES: Record<VisualStyleId, StylePalette> = {
+  dark_ai_cinematic: {
+    id: "dark_ai_cinematic",
+    name: "Dark Futuristic AI Cinematic",
+    isLight: false,
+    bg0: "#06080f",
+    bg1: "#0e1528",
+    surface: "rgba(17, 24, 39, 0.90)",
+    surfaceAlt: "rgba(30, 41, 59, 0.65)",
+    border: "rgba(255, 255, 255, 0.13)",
+    text: "#f8fafc",
+    muted: "#94a3b8",
+    accent: "#d97757", // Claude signature coral
+    accent2: "#38bdf8",
+    accent3: "#10b981",
+    glow: "rgba(217, 119, 87, 0.35)",
+    gridColor: "rgba(148, 163, 184, 0.075)",
+  },
+  tech_documentary: {
+    id: "tech_documentary",
+    name: "Premium Technology Documentary",
+    isLight: true,
+    bg0: "#f7f4ed",
+    bg1: "#ebe6db",
+    surface: "#ffffff",
+    surfaceAlt: "#f1ede4",
+    border: "rgba(15, 23, 42, 0.12)",
+    text: "#111318",
+    muted: "#57534e",
+    accent: "#d95b38",
+    accent2: "#0284c7",
+    accent3: "#059669",
+    glow: "rgba(217, 91, 56, 0.22)",
+    gridColor: "rgba(15, 23, 42, 0.055)",
+  },
+  cyberpunk_dev: {
+    id: "cyberpunk_dev",
+    name: "Cyberpunk Developer Environment",
+    isLight: false,
+    bg0: "#070412",
+    bg1: "#140b2d",
+    surface: "rgba(18, 12, 38, 0.92)",
+    surfaceAlt: "rgba(34, 21, 68, 0.72)",
+    border: "rgba(0, 240, 255, 0.24)",
+    text: "#f5f3ff",
+    muted: "#a78bfa",
+    accent: "#00f0ff",
+    accent2: "#ff2e97",
+    accent3: "#a3e635",
+    glow: "rgba(0, 240, 255, 0.36)",
+    gridColor: "rgba(0, 240, 255, 0.08)",
+  },
+  clean_tutorial: {
+    id: "clean_tutorial",
+    name: "Clean Professional Software Tutorial",
+    isLight: false,
+    bg0: "#0b1120",
+    bg1: "#13203b",
+    surface: "rgba(15, 23, 42, 0.94)",
+    surfaceAlt: "rgba(30, 41, 59, 0.78)",
+    border: "rgba(56, 189, 248, 0.22)",
+    text: "#f8fafc",
+    muted: "#94a3b8",
+    accent: "#38bdf8",
+    accent2: "#10b981",
+    accent3: "#f59e0b",
+    glow: "rgba(56, 189, 248, 0.34)",
+    gridColor: "rgba(56, 189, 248, 0.07)",
+  },
+  agent_3d_network: {
+    id: "agent_3d_network",
+    name: "3D AI Agent Visualization",
+    isLight: false,
+    bg0: "#040814",
+    bg1: "#0c1936",
+    surface: "rgba(12, 22, 46, 0.90)",
+    surfaceAlt: "rgba(23, 37, 84, 0.68)",
+    border: "rgba(99, 102, 241, 0.28)",
+    text: "#eef2ff",
+    muted: "#94a3b8",
+    accent: "#818cf8",
+    accent2: "#2dd4bf",
+    accent3: "#f472b6",
+    glow: "rgba(129, 140, 248, 0.38)",
+    gridColor: "rgba(129, 140, 248, 0.08)",
+  },
+  minimal_kinetic: {
+    id: "minimal_kinetic",
+    name: "Minimalist Kinetic Typography",
+    isLight: true,
+    bg0: "#fafaf8",
+    bg1: "#efefef",
+    surface: "#ffffff",
+    surfaceAlt: "#f4f4f2",
+    border: "rgba(10, 10, 14, 0.12)",
+    text: "#0a0a0e",
+    muted: "#52525b",
+    accent: "#111827",
+    accent2: "#ea580c",
+    accent3: "#16a34a",
+    glow: "rgba(234, 88, 12, 0.24)",
+    gridColor: "rgba(10, 10, 14, 0.05)",
+  },
+  high_energy_news: {
+    id: "high_energy_news",
+    name: "High-Energy Tech News",
+    isLight: false,
+    bg0: "#0a0608",
+    bg1: "#1c0d14",
+    surface: "rgba(24, 14, 20, 0.92)",
+    surfaceAlt: "rgba(42, 20, 30, 0.72)",
+    border: "rgba(255, 59, 48, 0.28)",
+    text: "#fff7f7",
+    muted: "#fca5a5",
+    accent: "#ff3b30",
+    accent2: "#fbbf24",
+    accent3: "#38bdf8",
+    glow: "rgba(255, 59, 48, 0.38)",
+    gridColor: "rgba(255, 59, 48, 0.075)",
+  },
+};
+
+const VALID_STYLES = Object.keys(STYLE_PALETTES) as VisualStyleId[];
+
+export function resolveVisualStyle(
+  explicit: VisualStyleId | undefined,
+  textHint: string
+): VisualStyleId {
+  if (explicit && VALID_STYLES.includes(explicit)) return explicit;
+  const low = textHint.toLowerCase();
+  if (/breaking|resmi|rilis|update|baru|openai|anthropic/.test(low)) return "high_energy_news";
+  if (/tutorial|cara|step|panduan|belajar|install/.test(low)) return "clean_tutorial";
+  if (/multi-agent|network|orkestrasi|virtual|karyawan/.test(low)) return "agent_3d_network";
+  if (/cyber|hack|terminal|cli|github/.test(low)) return "cyberpunk_dev";
+  if (/mitos|fakta|vs|perbandingan|eksperimen/.test(low)) return "tech_documentary";
+  return "dark_ai_cinematic";
+}
+
+function chooseSceneTemplate(
+  scene: PipelineScene,
+  index: number,
+  total: number
+): SceneTemplateId {
+  if (scene.visualTemplate) return scene.visualTemplate;
+  if (index === 0) return "claude_terminal";
+  if (index === total - 1) return "cta_finale";
+
+  const cue = `${scene.label} ${scene.visualCue} ${scene.narration}`.toLowerCase();
+  if (/github|commit|pull request|\bpr\b|repo|deploy/.test(cue)) return "github_pr_workflow";
+  if (/multi-agent|agent|orkestrasi|jaringan|workflow|otomatis/.test(cue) && index % 2 === 1) {
+    return "ai_network_flow";
+  }
+  if (/kode|code|script|function|diff|terminal|syntax/.test(cue)) return "code_diff_editor";
+  if (/vs|manual|lama|baru|sebelum|sesudah|hemat|perbandingan/.test(cue)) return "split_contrast";
+  if (/data|persen|%|grafik|cepat|angka|statistik|naik/.test(cue)) return "bezier_chart";
+
+  const rotation: SceneTemplateId[] = [
+    "ai_network_flow",
+    "code_diff_editor",
+    "cursor_cards",
+    "split_contrast",
+    "github_pr_workflow",
+    "bezier_chart",
+  ];
+  return rotation[(index - 1) % rotation.length];
+}
+
+function chooseTransition(scene: PipelineScene, index: number): TransitionTypeId {
+  if (scene.transitionIn) return scene.transitionIn;
+  const order: TransitionTypeId[] = [
+    "whip-up",
+    "iris-circle",
+    "zoom-through",
+    "whip-left",
+    "push-pull",
+  ];
+  return order[index % order.length];
+}
+
+/**
+ * Builds a render-ready, audio-duration-locked EditorialEpisode from RealEpisode.
+ * Uses actual measured voice durations from Divisi Suara (when available) so preview & export
+ * are ALWAYS 100% locked to the spoken voiceover!
+ */
 export function buildEditorialEpisode(
-  episode: RealEpisode
+  episode: RealEpisode,
+  measuredAudioDurationsSec?: Array<number | null>
 ): EditorialEpisode | null {
   const script = episode.divisions.script.output;
   if (!script || script.scenes.length === 0) return null;
 
-  const selectedIdea = episode.divisions.research.output?.ideas.find(
-    (i) => i.id === episode.selectedIdeaId
+  const seo = episode.divisions.seo.output;
+  const ideas = episode.divisions.research.output?.ideas ?? [];
+  const selectedIdea = ideas.find((i) => i.id === episode.selectedIdeaId) ?? ideas[0];
+  const voiceTracks = episode.divisions.voice.output?.sceneTracks ?? [];
+
+  const title = seo?.title || selectedIdea?.title || episode.bossTheme;
+  const style = resolveVisualStyle(
+    script.visualStyle ?? selectedIdea?.visualStyle,
+    `${title} ${episode.bossTheme} ${script.storyStructure}`
   );
-  const title =
-    episode.divisions.seo.output?.title ||
-    selectedIdea?.title ||
-    episode.bossTheme;
+
+  const sourceLabel =
+    selectedIdea?.sourceVerified && selectedIdea.sourceName
+      ? `${selectedIdea.sourceName}${
+          selectedIdea.sourcePublishedAt
+            ? ` · ${selectedIdea.sourcePublishedAt.slice(0, 10)}`
+            : ""
+        }`
+      : null;
+
+  const total = script.scenes.length;
+  const usedMidTemplates = new Set<SceneTemplateId>();
+
+  const scenes: EditorialScene[] = script.scenes.map((sc, idx) => {
+    const voiceTrack = voiceTracks[idx];
+    const measuredSec =
+      measuredAudioDurationsSec?.[idx] ??
+      voiceTrack?.actualAudioSec ??
+      (voiceTrack?.status === "ready" ? voiceTrack.estimatedSec : null);
+
+    const { sceneDurationSec, speechOffsetSec, speechDurationSec } =
+      computeSyncedSceneDuration(measuredSec, sc.durationSec);
+
+    let tpl = chooseSceneTemplate(sc, idx, total);
+    // Guarantee visual variety: avoid back-to-back identical templates on middle scenes!
+    if (idx > 0 && idx < total - 1 && usedMidTemplates.has(tpl)) {
+      const pool: SceneTemplateId[] = [
+        "ai_network_flow",
+        "code_diff_editor",
+        "github_pr_workflow",
+        "bezier_chart",
+        "cursor_cards",
+        "split_contrast",
+      ];
+      tpl = pool.find((p) => !usedMidTemplates.has(p)) ?? tpl;
+    }
+    if (idx > 0 && idx < total - 1) usedMidTemplates.add(tpl);
+
+    const wordTimings = computeWordTimings(
+      sc.narration,
+      speechOffsetSec,
+      speechDurationSec
+    );
+
+    return {
+      sceneNumber: sc.sceneNumber,
+      label: sc.label,
+      durationSec: sceneDurationSec,
+      speechOffsetSec,
+      speechDurationSec,
+      narration: sc.narration,
+      onScreenText: (sc.visualCue || sc.subtitle || sc.label).trim(),
+      visualCue: sc.visualCue,
+      visualPrompt: sc.visualCue,
+      mood: sc.mood,
+      template: tpl,
+      transitionIn: chooseTransition(sc, idx),
+      codeSnippet: sc.codeSnippet,
+      wordTimings,
+    };
+  });
 
   return {
     episodeNumber: episode.episodeNumber,
     title,
-    niche: episode.bossTheme,
-    storyStructure: script.storyStructure,
-    moralLesson: script.moralLesson,
-    scenes: script.scenes.map((sc) => ({
-      sceneNumber: sc.sceneNumber,
-      label: sc.label,
-      durationSec: Math.max(3.5, sc.durationSec),
-      narration: sc.narration,
-      visualPrompt: sc.visualCue,
-      onScreenText: sc.subtitle || sc.visualCue,
-      mood: mapSceneMood(sc.mood),
-    })),
+    themeLabel: selectedIdea?.storyStructure || script.storyStructure || "AI Agent Studio",
+    niche: selectedIdea?.storyStructure || "AI Agent",
+    visualStyle: style,
+    sourceLabel,
+    scenes,
   };
 }
 
 /* ============================================================================
-   1. PRECISION REMOTION / AFTER EFFECTS MOTION PHYSICS LIBRARY
+   1. PRECISION PHYSICS & EASING ENGINE
    ============================================================================ */
 
 function clamp01(v: number): number {
@@ -82,35 +369,28 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** Snappy After Effects cubic-bezier(0.16, 1, 0.3, 1) */
 function expoOut(t: number): number {
   const x = clamp01(t);
   return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
 }
 
-/** Dramatic Whip-Pan cubic-bezier(0.87, 0, 0.13, 1) */
 function expoInOut(t: number): number {
   const x = clamp01(t);
-  if (x === 0) return 0;
-  if (x === 1) return 1;
+  if (x === 0 || x === 1) return x;
   return x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2;
 }
 
-/** Crisp Apple/Remotion under-damped spring */
-function spring(t: number, damping = 7.4, freq = 11.2): number {
+function spring(t: number, damping = 7.2, freq = 10.5): number {
   const x = clamp01(t);
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
+  if (x === 0 || x === 1) return x;
   return 1 - Math.exp(-damping * x) * Math.cos(freq * x);
 }
 
-/** Juicy pop-in overshoot for cards, icons & callouts */
-function backOut(t: number, s = 1.55): number {
+function backOut(t: number, s = 1.6): number {
   const x = clamp01(t) - 1;
   return 1 + (s + 1) * x * x * x + s * x * x;
 }
 
-/** Evaluate smooth cubic Bezier curve for animated MacOS cursor paths */
 function cubicBezierPt(
   p0: [number, number],
   p1: [number, number],
@@ -118,122 +398,19 @@ function cubicBezierPt(
   p3: [number, number],
   t: number
 ): [number, number] {
-  const u = clamp01(t);
-  const inv = 1 - u;
-  const x =
-    inv * inv * inv * p0[0] +
-    3 * inv * inv * u * p1[0] +
-    3 * inv * u * u * p2[0] +
-    u * u * u * p3[0];
-  const y =
-    inv * inv * inv * p0[1] +
-    3 * inv * inv * u * p1[1] +
-    3 * inv * u * u * p2[1] +
-    u * u * u * p3[1];
-  return [x, y];
+  const u = 1 - clamp01(t);
+  const tt = clamp01(t);
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * tt * tt;
+  return [
+    uuu * p0[0] + 3 * uu * tt * p1[0] + 3 * u * tt * tt * p2[0] + ttt * p3[0],
+    uuu * p0[1] + 3 * uu * tt * p1[1] + 3 * u * tt * tt * p2[1] + ttt * p3[1],
+  ];
 }
 
 /* ============================================================================
-   2. EDITORIAL THEME PALETTES (CLAUDE CODE OBSIDIAN <-> WARM IVORY CONTRAST)
-   ============================================================================ */
-
-interface SceneTheme {
-  isLight: boolean;
-  bg1: string;
-  bg2: string;
-  ink: string;
-  muted: string;
-  accent: string;
-  accent2: string;
-  cardBg: string;
-  cardBorder: string;
-  glow: string;
-  gridCol: string;
-}
-
-const DARK_CLAUDE_THEME: SceneTheme = {
-  isLight: false,
-  bg1: "#07080d",
-  bg2: "#10131e",
-  ink: "#f8fafc",
-  muted: "#94a3b8",
-  accent: "#d97757", // Signature Claude Coral
-  accent2: "#38bdf8", // Crisp Cyan
-  cardBg: "rgba(18, 22, 34, 0.92)",
-  cardBorder: "rgba(255, 255, 255, 0.14)",
-  glow: "rgba(217, 119, 87, 0.32)",
-  gridCol: "rgba(148, 163, 184, 0.08)",
-};
-
-const IVORY_EDITORIAL_THEME: SceneTheme = {
-  isLight: true,
-  bg1: "#f7f5f0",
-  bg2: "#ede9df",
-  ink: "#111318",
-  muted: "#525866",
-  accent: "#d97757", // Claude Coral on Warm Ivory
-  accent2: "#2563eb", // Crisp Editorial Cobalt
-  cardBg: "rgba(255, 255, 255, 0.94)",
-  cardBorder: "rgba(17, 19, 24, 0.11)",
-  glow: "rgba(217, 119, 87, 0.22)",
-  gridCol: "rgba(17, 19, 24, 0.06)",
-};
-
-const LINEAR_CYBER_THEME: SceneTheme = {
-  isLight: false,
-  bg1: "#060812",
-  bg2: "#0f1428",
-  ink: "#ffffff",
-  muted: "#94a3b8",
-  accent: "#38bdf8",
-  accent2: "#a855f7",
-  cardBg: "rgba(15, 20, 36, 0.92)",
-  cardBorder: "rgba(56, 189, 248, 0.24)",
-  glow: "rgba(56, 189, 248, 0.30)",
-  gridCol: "rgba(56, 189, 248, 0.07)",
-};
-
-const EMERALD_FINALE_THEME: SceneTheme = {
-  isLight: false,
-  bg1: "#060c0e",
-  bg2: "#0d1f1d",
-  ink: "#f8fafc",
-  muted: "#94a3b8",
-  accent: "#10b981",
-  accent2: "#d97757",
-  cardBg: "rgba(12, 24, 24, 0.92)",
-  cardBorder: "rgba(16, 185, 129, 0.26)",
-  glow: "rgba(16, 185, 129, 0.30)",
-  gridCol: "rgba(16, 185, 129, 0.07)",
-};
-
-type MotionTemplateKey =
-  | "claude_terminal"
-  | "bezier_chart"
-  | "cursor_cards"
-  | "split_contrast"
-  | "orbit_typography"
-  | "cta_finale";
-
-function getSceneTemplate(index: number, total: number): {
-  template: MotionTemplateKey;
-  theme: SceneTheme;
-} {
-  if (index === 0) {
-    return { template: "claude_terminal", theme: DARK_CLAUDE_THEME };
-  }
-  if (index === total - 1 && total > 1) {
-    return { template: "cta_finale", theme: EMERALD_FINALE_THEME };
-  }
-  const cycle = (index - 1) % 4;
-  if (cycle === 0) return { template: "bezier_chart", theme: IVORY_EDITORIAL_THEME };
-  if (cycle === 1) return { template: "cursor_cards", theme: LINEAR_CYBER_THEME };
-  if (cycle === 2) return { template: "split_contrast", theme: DARK_CLAUDE_THEME };
-  return { template: "orbit_typography", theme: IVORY_EDITORIAL_THEME };
-}
-
-/* ============================================================================
-   3. CRISP VECTOR DRAWING PRIMITIVES (CLAUDE SPARKLE, MAC CURSOR, MASKED TEXT)
+   2. RESOLUTION-INDEPENDENT VECTOR PRIMITIVES (SCALES CLEANLY TO 4K 2160x3840)
    ============================================================================ */
 
 function drawRoundedRect(
@@ -243,14 +420,14 @@ function drawRoundedRect(
   w: number,
   h: number,
   r: number
-) {
-  const rr = Math.min(r, Math.max(0, w / 2), Math.max(0, h / 2));
+): void {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
   ctx.closePath();
 }
 
@@ -258,275 +435,316 @@ function wrapLines(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number,
-  maxLines = 4
+  maxLines: number
 ): string[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
   const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-      if (lines.length >= maxLines - 1) continue;
+  let cur = words[0];
+  for (let i = 1; i < words.length; i++) {
+    const next = `${cur} ${words[i]}`;
+    if (ctx.measureText(next).width <= maxWidth) {
+      cur = next;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(cur);
+      cur = words[i];
     } else {
-      line = test;
+      // Keep remaining short words on final line instead of silently dropping them
+      const candidate = `${cur} ${words[i]}`;
+      if (ctx.measureText(candidate).width <= maxWidth * 1.12) {
+        cur = candidate;
+      } else {
+        break;
+      }
     }
   }
-  if (line) lines.push(line);
-  if (lines.length > maxLines) {
-    const trimmed = lines.slice(0, maxLines);
-    const last = trimmed[maxLines - 1];
-    trimmed[maxLines - 1] =
-      last.length > 3 ? `${last.slice(0, Math.max(1, last.length - 3))}…` : `${last}…`;
-    return trimmed;
-  }
+  lines.push(cur);
   return lines;
 }
 
-/** Iconic Claude 12-ray crisp geometric sunburst logo */
+function getContrastTextColor(hexColor: string): string {
+  const clean = hexColor.replace("#", "");
+  if (clean.length !== 6) return "#ffffff";
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.64 ? "#070b14" : "#ffffff";
+}
+
 function drawClaudeSparkle(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
-  radius: number,
-  rotation: number,
+  r: number,
+  rot: number,
   color: string
-) {
+): void {
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.rotate(rotation);
-  ctx.strokeStyle = color;
-  ctx.lineCap = "round";
-  const rays = 10;
-  for (let i = 0; i < rays; i++) {
-    const a = (i * Math.PI * 2) / rays;
-    const len = i % 2 === 0 ? radius : radius * 0.72;
-    ctx.lineWidth = Math.max(2.2, radius * (i % 2 === 0 ? 0.16 : 0.12));
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a) * radius * 0.2, Math.sin(a) * radius * 0.2);
-    ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
-    ctx.stroke();
-  }
+  ctx.rotate(rot);
   ctx.fillStyle = color;
+  const rays = 12;
+  for (let i = 0; i < rays; i++) {
+    ctx.save();
+    ctx.rotate((i / rays) * Math.PI * 2);
+    drawRoundedRect(ctx, -r * 0.095, -r, r * 0.19, r * 0.84, r * 0.095);
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.beginPath();
-  ctx.arc(0, 0, radius * 0.16, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 0.24, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
-/** Crisp Apple/MacOS vector arrow cursor with subtle drop shadow & click press scale */
 function drawMacCursor(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  scale = 1,
-  clickCompression = 0
-) {
+  scale: number,
+  clickPress: number
+): void {
+  const s = scale * (1 - clickPress * 0.16);
   ctx.save();
   ctx.translate(x, y);
-  const s = scale * (1 - clickCompression * 0.16);
   ctx.scale(s, s);
-  ctx.shadowColor = "rgba(0, 0, 0, 0.38)";
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetY = 5;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = 12 * scale;
+  ctx.shadowOffsetY = 5 * scale;
 
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.lineTo(0, 27);
-  ctx.lineTo(7.2, 21.2);
-  ctx.lineTo(12.2, 31.5);
-  ctx.lineTo(16.2, 29.6);
-  ctx.lineTo(11.4, 19.4);
-  ctx.lineTo(19.6, 19.4);
+  ctx.lineTo(0, 31);
+  ctx.lineTo(7.8, 24.4);
+  ctx.lineTo(13.2, 35.8);
+  ctx.lineTo(17.8, 33.6);
+  ctx.lineTo(12.4, 22.3);
+  ctx.lineTo(22.2, 22.3);
   ctx.closePath();
 
-  ctx.fillStyle = "#111318";
+  ctx.fillStyle = "#0a0c12";
   ctx.fill();
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 2.6;
   ctx.strokeStyle = "#ffffff";
   ctx.lineJoin = "round";
   ctx.stroke();
+
+  if (clickPress > 0.05) {
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(0, 0, clickPress * 30, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(217, 119, 87, ${(1 - clickPress) * 0.9})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
-/** Expanding click ripple + clean geometric spark burst */
 function drawClickBurst(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   progress: number,
-  accent: string,
-  accent2: string
-) {
-  if (progress <= 0 || progress >= 1) return;
-  const p = expoOut(progress);
-  const alpha = 1 - progress;
-
+  s: number,
+  color1: string,
+  color2: string
+): void {
+  const p = clamp01(progress);
+  if (p <= 0 || p >= 1) return;
+  const eased = expoOut(p);
+  const alpha = 1 - p;
   ctx.save();
-  // Ripple ring
-  ctx.beginPath();
-  ctx.arc(cx, cy, 8 + p * 54, 0, Math.PI * 2);
-  ctx.strokeStyle = accent;
-  ctx.globalAlpha = alpha * 0.85;
-  ctx.lineWidth = Math.max(1, 3.5 * (1 - p));
-  ctx.stroke();
-
-  // 8 crisp spark dashes radiating outward
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4 + 0.2;
-    const r1 = 12 + p * 34;
-    const r2 = 20 + p * 58;
+  ctx.globalAlpha = alpha;
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2 + 0.2;
+    const dist = (18 + (i % 3) * 14) * s + eased * 82 * s;
+    const px = cx + Math.cos(ang) * dist;
+    const py = cy + Math.sin(ang) * dist;
+    const rad = Math.max(1.5 * s, (1 - p) * (i % 2 === 0 ? 7.5 : 5) * s);
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
-    ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
-    ctx.strokeStyle = i % 2 === 0 ? accent : accent2;
-    ctx.lineWidth = 3 * (1 - p * 0.6);
-    ctx.lineCap = "round";
-    ctx.stroke();
+    ctx.arc(px, py, rad, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? color1 : color2;
+    ctx.fill();
   }
   ctx.restore();
 }
 
-/**
- * SIGNATURE REMOTION / APPLE KEYNOTE MASKED LINE-BY-LINE TEXT REVEAL
- * Each line slides cleanly UP from behind an invisible clip rectangle with stagger!
- */
+function drawLightSweep(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number,
+  progress: number
+): void {
+  const p = clamp01(progress);
+  if (p <= 0 || p >= 1) return;
+  ctx.save();
+  drawRoundedRect(ctx, x, y, w, h, radius);
+  ctx.clip();
+  const sweepX = lerp(x - w * 0.6, x + w * 1.4, p);
+  const grad = ctx.createLinearGradient(sweepX - w * 0.25, y, sweepX + w * 0.25, y + h);
+  grad.addColorStop(0, "rgba(255,255,255,0)");
+  grad.addColorStop(0.5, "rgba(255,255,255,0.16)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
 function drawMaskedHeadline(
   ctx: CanvasRenderingContext2D,
-  lines: string[],
+  text: string,
   x: number,
-  startY: number,
-  lineHeight: number,
+  y: number,
+  maxWidth: number,
+  fontSize: number,
+  maxLines: number,
   align: CanvasTextAlign,
   localSec: number,
-  delaySec: number,
+  startDelay: number,
   staggerSec: number,
   color: string,
-  highlightLastLineColor?: string,
-  highlightTextColor = "#ffffff"
-) {
-  lines.forEach((line, idx) => {
-    const p = expoOut((localSec - delaySec - idx * staggerSec) / 0.52);
-    if (p <= 0.001) return;
+  accentPillBg?: string,
+  accentPillText?: string
+): number {
+  void accentPillText;
+  ctx.font = `900 ${fontSize}px system-ui, -apple-system, "Inter", "Segoe UI", sans-serif`;
+  const lines = wrapLines(ctx, text, maxWidth, maxLines);
+  const lineH = fontSize * 1.18;
 
-    const ly = startY + idx * lineHeight;
-    const isHighlight = Boolean(highlightLastLineColor && idx === lines.length - 1);
+  lines.forEach((line, idx) => {
+    const t = expoOut((localSec - (startDelay + idx * staggerSec)) / 0.42);
+    if (t <= 0.005) return;
+    const ly = y + idx * lineH;
+    const offsetY = (1 - t) * (lineH * 1.05);
 
     ctx.save();
-    // Clip strictly to this line's bounding strip so text slides smoothly out of nowhere!
     ctx.beginPath();
-    ctx.rect(0, ly - lineHeight * 0.65, ctx.canvas.width, lineHeight * 1.28);
+    ctx.rect(0, ly - lineH * 0.56, ctx.canvas.width, lineH * 1.12);
     ctx.clip();
 
-    const offsetY = (1 - p) * lineHeight * 1.15;
-
-    if (isHighlight && highlightLastLineColor) {
-      const tw = ctx.measureText(line).width;
-      const padH = 18;
-      const pillH = lineHeight * 0.94;
-      const pillW = tw + padH * 2;
-      const pillX =
-        align === "center" ? x - pillW / 2 : align === "right" ? x - pillW : x - padH;
-      const pillY = ly - pillH * 0.5 + offsetY;
-      const sweep = expoOut((localSec - delaySec - idx * staggerSec - 0.14) / 0.44);
-
-      if (sweep > 0.01) {
-        drawRoundedRect(ctx, pillX, pillY, pillW * sweep, pillH, 14);
-        ctx.fillStyle = highlightLastLineColor;
-        ctx.fill();
-      }
-      ctx.fillStyle = sweep > 0.45 ? highlightTextColor : color;
-    } else {
-      ctx.fillStyle = color;
-    }
-
+    ctx.globalAlpha = clamp01(t * 1.3);
+    ctx.font = `900 ${fontSize}px system-ui, -apple-system, "Inter", "Segoe UI", sans-serif`;
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
-    ctx.fillText(line, x, ly + offsetY);
+
+    if (accentPillBg && idx === lines.length - 1 && lines.length >= 2) {
+      const tw = ctx.measureText(line).width;
+      const padX = fontSize * 0.28;
+      const pillW = tw + padX * 2;
+      const pillH = fontSize * 1.1;
+      const px = align === "center" ? x - pillW / 2 : x - padX;
+      drawRoundedRect(ctx, px, ly + offsetY - pillH / 2, pillW, pillH, fontSize * 0.2);
+      ctx.fillStyle = accentPillBg;
+      ctx.fill();
+      ctx.fillStyle = getContrastTextColor(accentPillBg);
+      ctx.fillText(line, x, ly + offsetY + fontSize * 0.03);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fillText(line, x, ly + offsetY);
+    }
     ctx.restore();
   });
-}
 
-function extractMetrics(scene: EditorialScene): number[] {
-  const combined = `${scene.onScreenText} ${scene.narration} ${scene.visualPrompt}`;
-  const matches = Array.from(combined.matchAll(/(\d{1,3})\s*%/g))
-    .map((m) => Math.max(12, Math.min(98, Number(m[1]))))
-    .filter((n) => !Number.isNaN(n));
-  if (matches.length >= 2) {
-    return [24, Math.min(55, matches[0]), Math.max(62, matches[1]), Math.min(96, Math.max(matches[0], matches[1]) + 8)];
-  }
-  if (matches.length === 1) {
-    const v = matches[0];
-    return [18, Math.round(v * 0.52), Math.round(v * 0.84), Math.max(v, 76)];
-  }
-  return [22, 41, 67, 94];
-}
-
-function extractKeyPoints(scene: EditorialScene): string[] {
-  const clean = scene.narration
-    .replace(/[.!?]+/g, "|")
-    .split("|")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 6);
-
-  if (clean.length >= 3) {
-    return clean.slice(0, 3).map((s) => s.slice(0, 44));
-  }
-  const words = scene.narration.trim().split(/\s+/).filter(Boolean);
-  const third = Math.max(3, Math.ceil(words.length / 3));
-  return [
-    words.slice(0, third).join(" ").slice(0, 44) || scene.label,
-    words.slice(third, third * 2).join(" ").slice(0, 44) || scene.onScreenText.slice(0, 44),
-    words.slice(third * 2).join(" ").slice(0, 44) || "Eksekusi langsung terbukti",
-  ];
+  return lines.length * lineH;
 }
 
 /* ============================================================================
-   4. INDIVIDUAL CHOREOGRAPHED CLAUDE CODE / REMOTION SCENE RENDERERS
+   3. 2.5D DEPTH BACKDROP + ANIMATED GRADIENT ORBS + PARALLAX PARTICLES
    ============================================================================ */
 
-function drawSceneBackdrop(
+function getScenePalette(
+  baseStyle: VisualStyleId,
+  sceneIndex: number,
+  template: SceneTemplateId
+): StylePalette {
+  const primary = STYLE_PALETTES[baseStyle] ?? STYLE_PALETTES.dark_ai_cinematic;
+  // Provide intentional editorial dark<->ivory visual contrast on bezier_chart when not cyberpunk
+  if (
+    template === "bezier_chart" &&
+    baseStyle !== "cyberpunk_dev" &&
+    baseStyle !== "high_energy_news"
+  ) {
+    return STYLE_PALETTES.tech_documentary;
+  }
+  if (sceneIndex % 3 === 2 && baseStyle === "minimal_kinetic") {
+    return STYLE_PALETTES.dark_ai_cinematic;
+  }
+  return primary;
+}
+
+function drawCinematicBackdrop(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  theme: SceneTheme,
-  elapsedSec: number,
+  s: number,
+  palette: StylePalette,
+  globalSec: number,
   sceneIndex: number
-) {
-  const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, theme.bg1);
-  bg.addColorStop(1, theme.bg2);
+): void {
+  // Base animated diagonal gradient
+  const gx = Math.sin(globalSec * 0.45 + sceneIndex) * w * 0.12;
+  const bg = ctx.createLinearGradient(gx, 0, w - gx, h);
+  bg.addColorStop(0, palette.bg0);
+  bg.addColorStop(1, palette.bg1);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  // Smooth drifting soft ambient glow orb (creates silky depth without visual noise)
-  const ox = w * (0.28 + Math.sin(elapsedSec * 0.7 + sceneIndex) * 0.18);
-  const oy = h * (0.26 + Math.cos(elapsedSec * 0.55 + sceneIndex) * 0.12);
-  const g1 = ctx.createRadialGradient(ox, oy, 10, ox, oy, Math.max(w, h) * 0.65);
-  g1.addColorStop(0, theme.glow);
+  // Depth-layered animated ambient mesh orbs
+  const orb1X = w * (0.24 + Math.sin(globalSec * 0.6 + sceneIndex) * 0.14);
+  const orb1Y = h * (0.22 + Math.cos(globalSec * 0.48) * 0.08);
+  const g1 = ctx.createRadialGradient(orb1X, orb1Y, 0, orb1X, orb1Y, w * 0.65);
+  g1.addColorStop(0, palette.glow);
   g1.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
-  // Clean subtle architectural blueprint grid drifting softly
-  const step = w < h ? 44 : 52;
-  const dx = (elapsedSec * 14) % step;
-  const dy = (elapsedSec * 9) % step;
-  ctx.strokeStyle = theme.gridCol;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = -step + dx; x < w + step; x += step) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
+  const orb2X = w * (0.78 + Math.cos(globalSec * 0.52 + sceneIndex) * 0.12);
+  const orb2Y = h * (0.68 + Math.sin(globalSec * 0.4) * 0.09);
+  const g2 = ctx.createRadialGradient(orb2X, orb2Y, 0, orb2X, orb2Y, w * 0.58);
+  g2.addColorStop(
+    0,
+    palette.isLight ? "rgba(2, 132, 199, 0.10)" : "rgba(56, 189, 248, 0.14)"
+  );
+  g2.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, w, h);
+
+  // 2.5D Parallax Tech Dot Matrix Grid
+  const step = Math.round(48 * s);
+  const driftX = (globalSec * 16 * s) % step;
+  const driftY = (globalSec * 11 * s) % step;
+  ctx.fillStyle = palette.gridColor;
+  for (let x = -step; x < w + step; x += step) {
+    for (let y = -step; y < h + step; y += step) {
+      ctx.fillRect(x + driftX, y + driftY, Math.max(1.5, 2.2 * s), Math.max(1.5, 2.2 * s));
+    }
   }
-  for (let y = -step + dy; y < h + step; y += step) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
+
+  // Depth-parallax floating bokeh particles (3 depth layers)
+  for (let i = 0; i < 18; i++) {
+    const depth = (i % 3) + 1;
+    const speed = depth * 18 * s;
+    const seedX = ((i * 197.3 + sceneIndex * 71) % 100) / 100;
+    const seedY = ((i * 313.7 + sceneIndex * 43) % 100) / 100;
+    const px = ((seedX * w + globalSec * speed * 0.35) % (w + 60 * s)) - 30 * s;
+    const py = ((seedY * h - globalSec * speed * 0.45) % (h + 60 * s) + h + 60 * s) % (h + 60 * s) - 30 * s;
+    const pr = (1.6 + depth * 1.4) * s;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? palette.accent : palette.accent2;
+    ctx.globalAlpha = palette.isLight ? 0.12 : 0.14 + depth * 0.05;
+    ctx.fill();
   }
-  ctx.stroke();
+  ctx.globalAlpha = 1;
 }
+
+/* ============================================================================
+   4. EIGHT SPECIALIZED AI AGENT & CLAUDE CODE SCENE CHOREOGRAPHIES
+   ============================================================================ */
 
 function renderSingleScene(
   ctx: CanvasRenderingContext2D,
@@ -535,832 +753,930 @@ function renderSingleScene(
   episode: EditorialEpisode,
   sceneIndex: number,
   localSec: number,
-  elapsedSec: number
-) {
+  globalSec: number
+): void {
+  const s = w / 1080;
   const scene = episode.scenes[sceneIndex] ?? episode.scenes[0];
-  const { template, theme } = getSceneTemplate(sceneIndex, episode.scenes.length);
-  const isVertical = h > w;
-  const padX = isVertical ? Math.round(w * 0.08) : Math.round(w * 0.08);
-  const safeW = w - padX * 2;
-  const sceneDur = Math.max(3, scene.durationSec);
+  const palette = getScenePalette(episode.visualStyle, sceneIndex, scene.template);
+  const safe = getTikTokSafeZone(w, h);
+  const sceneDur = Math.max(2, scene.durationSec);
   const sceneProg = clamp01(localSec / sceneDur);
 
-  // Subtle living camera breathe/zoom so ZERO frames ever feel frozen
-  const camZoom = 1 + sceneProg * 0.032;
-  const camFloatY = Math.sin(elapsedSec * 1.4 + sceneIndex) * 3.5;
+  drawCinematicBackdrop(ctx, w, h, s, palette, globalSec, sceneIndex);
 
-  drawSceneBackdrop(ctx, w, h, theme, elapsedSec, sceneIndex);
+  // Subtle 2.5D continuous camera micro-dolly + handheld float (NEVER static!)
+  const camZoom = 1.0 + Math.sin(sceneProg * Math.PI) * 0.022;
+  const camX = Math.sin(globalSec * 1.15 + sceneIndex) * 4.5 * s;
+  const camY = Math.cos(globalSec * 0.9 + sceneIndex) * 4.0 * s;
 
   ctx.save();
-  ctx.translate(w / 2, h / 2 + camFloatY);
+  ctx.translate(safe.centerX + camX, h * 0.44 + camY);
   ctx.scale(camZoom, camZoom);
-  ctx.translate(-w / 2, -h / 2);
+  ctx.translate(-safe.centerX, -h * 0.44);
 
-  // Stage vertical bounds (leaves room for top chapter bar & clean floating captions below)
-  const stageTop = isVertical ? Math.round(h * 0.125) : Math.round(h * 0.14);
-  const stageBottom = isVertical ? Math.round(h * 0.74) : Math.round(h * 0.73);
-  const stageH = stageBottom - stageTop;
-  const stageCY = stageTop + stageH * 0.5;
+  const stageX = safe.left;
+  const stageW = safe.width;
+  const stageTop = safe.stageTop;
+  const stageH = safe.stageHeight;
+  const stageBottom = safe.stageBottom;
+  const stageCX = safe.centerX;
 
   /* --------------------------------------------------------------------------
-     TEMPLATE 1: CLAUDE CODE LIVE TERMINAL -> CURSOR CLICK -> KINETIC HOOK SLAM
+     TEMPLATE 1: CLAUDE CODE LIVE TERMINAL + IMMEDIATE 0-2s HOOK HEADLINE
      -------------------------------------------------------------------------- */
-  if (template === "claude_terminal") {
-    const morphT = expoInOut((localSec - 1.95) / 0.62); // Terminal morphs up into sleek badge!
-    const termEnter = backOut(localSec / 0.55);
-
-    const termW = Math.min(safeW, isVertical ? w * 0.86 : w * 0.68);
-    const termHFull = isVertical ? 196 : 168;
-    const termHCompact = isVertical ? 58 : 50;
-    const termH = lerp(termHFull, termHCompact, morphT);
-    const termX = (w - termW) / 2;
-    const termY = lerp(stageCY - termHFull / 2, stageTop + 6, morphT);
-
-    // Terminal Window Shadow & Crisp Frame
+  if (scene.template === "claude_terminal") {
+    // Immediate 0-2s HOOK headline at top of safe stage (synced to narrator at 0.08s!)
+    const badgePop = spring((localSec - 0.04) / 0.35);
     ctx.save();
-    ctx.translate(termX + termW / 2, termY + termH / 2);
-    const sEnter = lerp(0.86, 1.0, clamp01(termEnter));
-    ctx.scale(sEnter, sEnter);
-    ctx.translate(-(termX + termW / 2), -(termY + termH / 2));
+    ctx.globalAlpha = clamp01(badgePop);
+    drawClaudeSparkle(ctx, stageX + 22 * s, stageTop + 26 * s, 18 * s, globalSec * 1.6, palette.accent);
+    ctx.font = `800 ${Math.round(24 * s)}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.fillStyle = palette.accent;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(scene.label.toUpperCase().slice(0, 26), stageX + 52 * s, stageTop + 27 * s);
+    ctx.restore();
 
-    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-    ctx.shadowBlur = 32;
-    ctx.shadowOffsetY = 14;
-    drawRoundedRect(ctx, termX, termY, termW, termH, lerp(24, 16, morphT));
-    ctx.fillStyle = "#111521";
+    const headFont = Math.round(62 * s);
+    const usedH = drawMaskedHeadline(
+      ctx,
+      scene.onScreenText || episode.title,
+      stageX,
+      stageTop + 96 * s,
+      stageW,
+      headFont,
+      3,
+      "left",
+      localSec,
+      0.08, // Instant 0-2s scroll-stopper!
+      0.09,
+      palette.text,
+      palette.accent,
+      "#ffffff"
+    );
+
+    // Sleek Interactive Claude Code CLI Window right below hook
+    const winEnter = spring((localSec - 0.16) / 0.48);
+    const winY = stageTop + Math.max(290 * s, 108 * s + usedH + 26 * s);
+    const winH = Math.max(360 * s, stageBottom - winY - 12 * s);
+    const winW = stageW;
+
+    ctx.save();
+    ctx.translate(stageCX, winY + winH / 2);
+    ctx.scale(lerp(0.92, 1, winEnter), lerp(0.92, 1, winEnter));
+    ctx.globalAlpha = clamp01(winEnter * 1.3);
+    ctx.translate(-stageCX, -(winY + winH / 2));
+
+    ctx.shadowColor = "rgba(0,0,0,0.52)";
+    ctx.shadowBlur = 42 * s;
+    ctx.shadowOffsetY = 18 * s;
+    drawRoundedRect(ctx, stageX, winY, winW, winH, 26 * s);
+    ctx.fillStyle = "#0c101b";
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = palette.accent;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2.2 * s;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    ctx.strokeStyle = morphT > 0.5 ? `${theme.accent}99` : "rgba(255,255,255,0.16)";
-    ctx.lineWidth = 1.8;
+    // Window traffic lights + title
+    const headerH = 54 * s;
+    ["#ff5f56", "#ffbd2e", "#27c93f"].forEach((col, i) => {
+      ctx.beginPath();
+      ctx.arc(stageX + (28 + i * 24) * s, winY + headerH / 2, 7.5 * s, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
+    });
+    ctx.font = `700 ${Math.round(21 * s)}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.fillStyle = "#94a3b8";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("claude-code · agent-session", stageCX, winY + headerH / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(stageX, winY + headerH);
+    ctx.lineTo(stageX + winW, winY + headerH);
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1.5 * s;
     ctx.stroke();
 
-    // Traffic light dots + Claude Sparkle header
-    const dotY = termY + (morphT > 0.5 ? termH / 2 : 26);
-    if (morphT < 0.7) {
-      ctx.globalAlpha = 1 - morphT * 1.4;
-      ["#ff5f56", "#ffbd2e", "#27c93f"].forEach((col, di) => {
-        ctx.beginPath();
-        ctx.arc(termX + 24 + di * 18, dotY, 5.5, 0, Math.PI * 2);
-        ctx.fillStyle = col;
-        ctx.fill();
-      });
-      ctx.font = `700 ${isVertical ? 14 : 13}px ui-monospace, SFMono-Regular, monospace`;
-      ctx.fillStyle = "#64748b";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillText("claude-code · v2.6", termX + termW - 22, dotY);
-      ctx.globalAlpha = 1;
-    }
+    // Live character-by-character typing prompt!
+    const cmdPrompt =
+      scene.codeSnippet ||
+      `claude "automate ${episode.title.split(" ").slice(0, 5).join(" ")}"`;
+    const typeP = clamp01((localSec - 0.25) / Math.min(1.15, sceneDur * 0.38));
+    const typedText = cmdPrompt.slice(0, Math.floor(cmdPrompt.length * typeP));
 
-    // Claude Sparkle + Live Typed Prompt Text
-    const sparkX = termX + 34;
-    const sparkY = morphT > 0.5 ? termY + termH / 2 : termY + 86;
-    drawClaudeSparkle(ctx, sparkX, sparkY, lerp(16, 11, morphT), elapsedSec * 1.8, theme.accent);
-
-    const promptFull = `> ${(scene.onScreenText || episode.title).slice(0, 44)}`;
-    const charsTyped = Math.floor(clamp01((localSec - 0.2) / 1.15) * promptFull.length);
-    const visiblePrompt = promptFull.slice(0, Math.max(2, charsTyped));
-    const blinkOn = Math.floor(elapsedSec * 5) % 2 === 0;
-
-    ctx.font = `700 ${isVertical ? (morphT > 0.5 ? 16 : 21) : (morphT > 0.5 ? 15 : 20)}px ui-monospace, SFMono-Regular, monospace`;
-    ctx.fillStyle = "#f8fafc";
+    ctx.font = `700 ${Math.round(26 * s)}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    const promptDrawX = sparkX + 26;
-    ctx.fillText(
-      visiblePrompt + (morphT < 0.4 && blinkOn ? "▌" : ""),
-      promptDrawX,
-      sparkY + 1
-    );
+    ctx.textBaseline = "top";
+    ctx.fillStyle = palette.accent;
+    ctx.fillText("❯", stageX + 26 * s, winY + headerH + 24 * s);
 
-    // Glowing "Run ↵" Pill inside Terminal before morph
-    const runBtnW = 104;
-    const runBtnH = 38;
-    const runBtnX = termX + termW - runBtnW - 20;
-    const runBtnY = termY + termH - runBtnH - 18;
-    const clickT = clamp01((localSec - 1.65) / 0.25);
-    const clickPress = clickT > 0 && clickT < 1 ? Math.sin(clickT * Math.PI) : 0;
+    ctx.fillStyle = "#f8fafc";
+    const promptLines = wrapLines(ctx, typedText, winW - 88 * s, 2);
+    promptLines.forEach((ln, li) => {
+      const ly = winY + headerH + 24 * s + li * 36 * s;
+      ctx.fillText(ln, stageX + 56 * s, ly);
+      if (li === promptLines.length - 1 && Math.floor(globalSec * 4) % 2 === 0) {
+        const cw = ctx.measureText(ln).width;
+        ctx.fillStyle = palette.accent;
+        ctx.fillRect(stageX + 59 * s + cw, ly + 2 * s, 12 * s, 28 * s);
+      }
+    });
 
-    if (morphT < 0.35) {
+    // Live Agent Execution Log Steps appearing right after RUN click!
+    const clickAt = Math.min(1.38, sceneDur * 0.42);
+    const logs = [
+      { icon: "⚡", text: "Scanning repo & git diff...", col: "#38bdf8", at: clickAt + 0.12 },
+      { icon: "✓", text: "Generated 3 files (+142 -18 lines)", col: "#34d399", at: clickAt + 0.48 },
+      { icon: "✓", text: "Tests passed · Ready to deploy", col: "#a3e635", at: clickAt + 0.85 },
+    ];
+    logs.forEach((log, li) => {
+      const lp = expoOut((localSec - log.at) / 0.32);
+      if (lp <= 0.01) return;
       ctx.save();
-      ctx.globalAlpha = 1 - morphT * 3;
-      ctx.translate(runBtnX + runBtnW / 2, runBtnY + runBtnH / 2);
-      ctx.scale(1 - clickPress * 0.1, 1 - clickPress * 0.1);
-      drawRoundedRect(ctx, -runBtnW / 2, -runBtnH / 2, runBtnW, runBtnH, 12);
-      ctx.fillStyle = theme.accent;
-      ctx.fill();
-      ctx.font = "800 15px system-ui, -apple-system, sans-serif";
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("RUN ↵", 0, 1);
+      ctx.globalAlpha = lp;
+      const ly = winY + headerH + 114 * s + li * 42 * s + (1 - lp) * 14 * s;
+      ctx.font = `700 ${Math.round(22 * s)}px ui-monospace, SFMono-Regular, monospace`;
+      ctx.fillStyle = log.col;
+      ctx.fillText(`${log.icon} ${log.text}`, stageX + 30 * s, ly);
       ctx.restore();
+    });
+
+    // RUN Button + MacOS Cursor gliding & clicking it!
+    const btnW = 166 * s;
+    const btnH = 54 * s;
+    const btnX = stageX + winW - btnW - 24 * s;
+    const btnY = winY + winH - btnH - 22 * s;
+    const clickP = clamp01((localSec - clickAt) / 0.24);
+    const pressScale = clickP > 0 && clickP < 1 ? 1 - Math.sin(clickP * Math.PI) * 0.1 : 1;
+
+    ctx.save();
+    ctx.translate(btnX + btnW / 2, btnY + btnH / 2);
+    ctx.scale(pressScale, pressScale);
+    drawRoundedRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 14 * s);
+    ctx.fillStyle = localSec >= clickAt ? "#10b981" : palette.accent;
+    ctx.fill();
+    ctx.font = `900 ${Math.round(22 * s)}px system-ui, sans-serif`;
+    ctx.fillStyle = getContrastTextColor(localSec >= clickAt ? "#10b981" : palette.accent);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(localSec >= clickAt ? "RUNNING ✓" : "RUN ↵", 0, 1 * s);
+    ctx.restore();
+
+    drawLightSweep(ctx, stageX, winY, winW, winH, 26 * s, (localSec - 0.5) / 1.4);
+
+    if (localSec > 0.65 && localSec < clickAt + 1.1) {
+      const moveT = expoOut((localSec - 0.65) / Math.max(0.25, clickAt - 0.65));
+      const [cx, cy] = cubicBezierPt(
+        [stageX + winW * 0.15, winY + winH + 40 * s],
+        [stageX + winW * 0.45, winY + winH * 0.88],
+        [btnX - 30 * s, btnY + 35 * s],
+        [btnX + btnW * 0.58, btnY + btnH * 0.54],
+        moveT
+      );
+      drawMacCursor(ctx, cx, cy, 1.35 * s, clickP > 0 && clickP < 1 ? Math.sin(clickP * Math.PI) : 0);
+    }
+    if (localSec >= clickAt) {
+      drawClickBurst(ctx, btnX + btnW * 0.58, btnY + btnH * 0.5, (localSec - clickAt) / 0.6, s, "#34d399", palette.accent);
     }
     ctx.restore();
 
-    // Animated MacOS Cursor swooping to click RUN ↵ (1.05s -> 1.85s)
-    if (localSec > 0.95 && localSec < 2.25) {
-      const moveT = expoOut((localSec - 0.95) / 0.68);
-      const fadeOut = localSec > 1.9 ? clamp01(1 - (localSec - 1.9) / 0.32) : 1;
-      const [cx, cy] = cubicBezierPt(
-        [w * 0.88, h * 0.72],
-        [w * 0.82, termY + termH + 40],
-        [runBtnX + 80, runBtnY + 48],
-        [runBtnX + runBtnW * 0.52, runBtnY + runBtnH * 0.55],
-        moveT
-      );
-      ctx.save();
-      ctx.globalAlpha = fadeOut;
-      drawMacCursor(ctx, cx, cy, isVertical ? 1.25 : 1.15, clickPress);
-      ctx.restore();
-    }
-
-    // Burst ripple right when RUN is clicked!
-    if (localSec > 1.66) {
-      drawClickBurst(
-        ctx,
-        runBtnX + runBtnW * 0.5,
-        runBtnY + runBtnH * 0.5,
-        (localSec - 1.66) / 0.55,
-        theme.accent,
-        theme.accent2
-      );
-    }
-
-    // BEAT 3: GIANT MASKED KINETIC HEADLINE EXPLOSION (2.15s -> end)
-    if (localSec > 2.05) {
-      const headlineSize = isVertical ? Math.round(w * 0.088) : Math.round(w * 0.052);
-      ctx.font = `900 ${headlineSize}px system-ui, -apple-system, "Inter", sans-serif`;
-      const heroText = episode.title;
-      const lines = wrapLines(ctx, heroText, safeW - 12, isVertical ? 4 : 3);
-      const lineH = headlineSize * 1.22;
-      const blockTop =
-        stageTop + termHCompact + 42 + (stageH - termHCompact - 42 - lines.length * lineH) * 0.46 + lineH * 0.5;
-
-      drawMaskedHeadline(
-        ctx,
-        lines,
-        w / 2,
-        blockTop,
-        lineH,
-        "center",
-        localSec,
-        2.12,
-        0.11,
-        "#ffffff",
-        theme.accent,
-        "#ffffff"
-      );
-
-      // Sleek animated accent underline sweeping beneath headline
-      const lineSweep = expoOut((localSec - 2.65) / 0.45);
-      if (lineSweep > 0.01) {
-        const uw = Math.min(safeW * 0.48, 220) * lineSweep;
-        const uy = blockTop + (lines.length - 0.3) * lineH + 14;
-        drawRoundedRect(ctx, (w - uw) / 2, uy, uw, 5, 3);
-        ctx.fillStyle = theme.accent2;
-        ctx.fill();
-      }
-    }
-  } else if (template === "bezier_chart") {
-    /* ------------------------------------------------------------------------
-       TEMPLATE 2: WARM IVORY EDITORIAL — LIVE SMOOTH BEZIER CURVE + ODOMETER
-       ------------------------------------------------------------------------ */
-    const titleSize = isVertical ? Math.round(w * 0.068) : Math.round(w * 0.039);
-    ctx.font = `900 ${titleSize}px system-ui, -apple-system, "Inter", sans-serif`;
-    const headText = scene.onScreenText || scene.label;
-    const hLines = wrapLines(ctx, headText, safeW, 2);
-    const hLineH = titleSize * 1.2;
-
+  /* --------------------------------------------------------------------------
+     TEMPLATE 2: 2.5D MULTI-AGENT AI NETWORK & ANIMATED DATA FLOW
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "ai_network_flow") {
+    const headFont = Math.round(54 * s);
     drawMaskedHeadline(
       ctx,
-      hLines,
-      padX,
-      stageTop + hLineH * 0.5,
-      hLineH,
+      scene.onScreenText || scene.label,
+      stageX,
+      stageTop + 56 * s,
+      stageW,
+      headFont,
+      2,
       "left",
       localSec,
       0.08,
-      0.1,
-      theme.ink,
-      theme.accent,
+      0.09,
+      palette.text,
+      palette.accent,
       "#ffffff"
     );
 
-    // Chart Stage Geometry
-    const chartTop = stageTop + hLines.length * hLineH + (isVertical ? 46 : 30);
-    const chartBottom = stageBottom - (isVertical ? 44 : 28);
-    const chartH = Math.max(150, chartBottom - chartTop);
-    const chartL = padX + 8;
-    const chartR = w - padX - 8;
-    const chartW = chartR - chartL;
+    const netTop = stageTop + 215 * s;
+    const netH = stageBottom - netTop - 20 * s;
+    const hubX = stageCX;
+    const hubY = netTop + netH * 0.46;
+    const rx = stageW * 0.34;
+    const ry = netH * 0.34;
 
-    // Animated Horizontal Guide Lines drawing left-to-right
-    const gridDraw = expoOut((localSec - 0.22) / 0.55);
-    for (let g = 0; g <= 3; g++) {
-      const gy = chartTop + (chartH * g) / 3;
-      ctx.strokeStyle = "rgba(17, 19, 24, 0.11)";
-      ctx.lineWidth = 1.4;
+    const nodes = [
+      { label: "TERMINAL", sub: "CLI Shell", ang: -Math.PI * 0.72, col: "#38bdf8" },
+      { label: "GITHUB", sub: "Auto PR", ang: -Math.PI * 0.28, col: "#a78bfa" },
+      { label: "CODEBASE", sub: "Diff Edit", ang: Math.PI * 0.24, col: "#10b981" },
+      { label: "QA TEST", sub: "Verify", ang: Math.PI * 0.76, col: "#f59e0b" },
+    ];
+
+    // Orbital connection rings
+    ctx.save();
+    ctx.strokeStyle = palette.border;
+    ctx.lineWidth = 2 * s;
+    ctx.setLineDash([8 * s, 10 * s]);
+    ctx.beginPath();
+    ctx.ellipse(hubX, hubY, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Animated Bezier edges + pulsing glowing data packets!
+    nodes.forEach((node, ni) => {
+      const nEnter = spring((localSec - (0.16 + ni * 0.14)) / 0.48);
+      if (nEnter <= 0.01) return;
+      const nx = hubX + Math.cos(node.ang + Math.sin(globalSec * 0.7 + ni) * 0.04) * rx;
+      const ny = hubY + Math.sin(node.ang + Math.cos(globalSec * 0.6 + ni) * 0.04) * ry;
+      const cpx = lerp(hubX, nx, 0.5) + (ni % 2 === 0 ? -38 * s : 38 * s);
+      const cpy = lerp(hubY, ny, 0.5) - 24 * s;
+
+      // Edge line
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(chartL, gy);
-      ctx.lineTo(chartL + chartW * gridDraw, gy);
+      ctx.moveTo(hubX, hubY);
+      ctx.quadraticCurveTo(cpx, cpy, nx, ny);
+      ctx.strokeStyle = node.col;
+      ctx.globalAlpha = 0.42 * clamp01(nEnter);
+      ctx.lineWidth = 3.2 * s;
+      ctx.stroke();
+
+      // Animated Data Packet traveling back & forth along edge!
+      const pktT = (globalSec * 0.95 + ni * 0.27) % 1;
+      const u = 1 - pktT;
+      const px = u * u * hubX + 2 * u * pktT * cpx + pktT * pktT * nx;
+      const py = u * u * hubY + 2 * u * pktT * cpy + pktT * pktT * ny;
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = node.col;
+      ctx.shadowBlur = 18 * s;
+      ctx.beginPath();
+      ctx.arc(px, py, 8 * s, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Floating 2.5D Agent Node Card
+      const cardW = 215 * s;
+      const cardH = 92 * s;
+      ctx.translate(nx, ny);
+      ctx.scale(clamp01(nEnter), clamp01(nEnter));
+      drawRoundedRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 20 * s);
+      ctx.fillStyle = palette.surface;
+      ctx.fill();
+      ctx.strokeStyle = node.col;
+      ctx.lineWidth = 2.4 * s;
+      ctx.stroke();
+
+      ctx.font = `900 ${Math.round(22 * s)}px ui-monospace, monospace`;
+      ctx.fillStyle = node.col;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(node.label, 0, -14 * s);
+
+      ctx.font = `700 ${Math.round(19 * s)}px system-ui, sans-serif`;
+      ctx.fillStyle = palette.text;
+      ctx.fillText(node.sub, 0, 17 * s);
+      ctx.restore();
+    });
+
+    // Central AI Orchestrator Core Hub
+    const hubEnter = backOut((localSec - 0.08) / 0.45);
+    const pulse = 1 + Math.sin(globalSec * 4.2) * 0.04;
+    ctx.save();
+    ctx.translate(hubX, hubY);
+    ctx.scale(clamp01(hubEnter) * pulse, clamp01(hubEnter) * pulse);
+    ctx.shadowColor = palette.accent;
+    ctx.shadowBlur = 40 * s;
+    ctx.beginPath();
+    ctx.arc(0, 0, 76 * s, 0, Math.PI * 2);
+    ctx.fillStyle = palette.accent;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    drawClaudeSparkle(ctx, 0, -14 * s, 26 * s, globalSec * 1.1, "#ffffff");
+    ctx.font = `900 ${Math.round(21 * s)}px ui-monospace, monospace`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("AI AGENT", 0, 28 * s);
+    ctx.restore();
+
+  /* --------------------------------------------------------------------------
+     TEMPLATE 3: GITHUB PULL REQUEST & CI PIPELINE WORKFLOW
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "github_pr_workflow") {
+    const headFont = Math.round(54 * s);
+    drawMaskedHeadline(
+      ctx,
+      scene.onScreenText || scene.label,
+      stageX,
+      stageTop + 56 * s,
+      stageW,
+      headFont,
+      2,
+      "left",
+      localSec,
+      0.08,
+      0.09,
+      palette.text,
+      palette.accent2,
+      "#06101b"
+    );
+
+    const panelY = stageTop + 215 * s;
+    const panelH = stageBottom - panelY - 12 * s;
+    const enter = spring((localSec - 0.14) / 0.46);
+
+    ctx.save();
+    ctx.translate(0, (1 - enter) * 45 * s);
+    ctx.globalAlpha = clamp01(enter * 1.25);
+
+    drawRoundedRect(ctx, stageX, panelY, stageW, panelH, 26 * s);
+    ctx.fillStyle = "#0d1117";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(139, 148, 158, 0.35)";
+    ctx.lineWidth = 2.2 * s;
+    ctx.stroke();
+
+    // PR Header pill (OPEN -> MERGED transition!)
+    const mergedAt = Math.min(sceneDur * 0.62, 2.1);
+    const isMerged = localSec >= mergedAt;
+    const pillW = 185 * s;
+    const pillH = 48 * s;
+    drawRoundedRect(ctx, stageX + 28 * s, panelY + 28 * s, pillW, pillH, 24 * s);
+    ctx.fillStyle = isMerged ? "#8957e5" : "#238636";
+    ctx.fill();
+    ctx.font = `900 ${Math.round(21 * s)}px ui-monospace, monospace`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(isMerged ? "● MERGED" : "● OPEN PR", stageX + 28 * s + pillW / 2, panelY + 52 * s);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = `800 ${Math.round(24 * s)}px ui-monospace, monospace`;
+    ctx.fillText("feat/ai-agent-autopilot", stageX + 230 * s, panelY + 52 * s);
+
+    // Animated Git Diff File Rows
+    const files = [
+      { name: "src/agent/orchestrator.ts", add: "+128", del: "-14", at: 0.32 },
+      { name: "src/tools/github-cli.ts", add: "+86", del: "-6", at: 0.72 },
+      { name: "tests/pipeline.spec.ts", add: "+64", del: "-0", at: 1.12 },
+    ];
+    files.forEach((f, fi) => {
+      const fp = expoOut((localSec - f.at) / 0.36);
+      if (fp <= 0.01) return;
+      const ry = panelY + 108 * s + fi * 84 * s;
+      ctx.save();
+      ctx.globalAlpha = fp;
+      ctx.translate((1 - fp) * 30 * s, 0);
+      drawRoundedRect(ctx, stageX + 26 * s, ry, stageW - 52 * s, 68 * s, 16 * s);
+      ctx.fillStyle = "rgba(33, 38, 45, 0.92)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1.5 * s;
+      ctx.stroke();
+
+      ctx.font = `700 ${Math.round(22 * s)}px ui-monospace, monospace`;
+      ctx.fillStyle = "#e6edf3";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(f.name, stageX + 46 * s, ry + 34 * s);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#3fb950";
+      ctx.fillText(f.add, stageX + stageW - 115 * s, ry + 34 * s);
+      ctx.fillStyle = "#f85149";
+      ctx.fillText(f.del, stageX + stageW - 44 * s, ry + 34 * s);
+      ctx.restore();
+    });
+
+    // CI Checks Bar at bottom of PR Card
+    const ciY = panelY + panelH - 122 * s;
+    const ciItems = [
+      { label: "TypeCheck", at: 1.05 },
+      { label: "Unit Tests", at: 1.45 },
+      { label: "Prod Build", at: 1.85 },
+    ];
+    const ciW = (stageW - 52 * s - 24 * s) / 3;
+    ciItems.forEach((ci, idx) => {
+      const ok = localSec >= ci.at;
+      const cx = stageX + 26 * s + idx * (ciW + 12 * s);
+      drawRoundedRect(ctx, cx, ciY, ciW, 88 * s, 16 * s);
+      ctx.fillStyle = ok ? "rgba(35, 134, 54, 0.25)" : "rgba(33, 38, 45, 0.85)";
+      ctx.fill();
+      ctx.strokeStyle = ok ? "#3fb950" : "rgba(139, 148, 158, 0.25)";
+      ctx.lineWidth = 2 * s;
+      ctx.stroke();
+
+      ctx.font = `900 ${Math.round(24 * s)}px system-ui, sans-serif`;
+      ctx.fillStyle = ok ? "#3fb950" : "#8b949e";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(ok ? "✓ PASS" : "⋯ RUN", cx + ciW / 2, ciY + 30 * s);
+
+      ctx.font = `700 ${Math.round(19 * s)}px ui-monospace, monospace`;
+      ctx.fillStyle = "#e6edf3";
+      ctx.fillText(ci.label, cx + ciW / 2, ciY + 62 * s);
+    });
+
+    drawLightSweep(ctx, stageX, panelY, stageW, panelH, 26 * s, (localSec - mergedAt) / 0.8);
+    if (isMerged) {
+      drawClickBurst(ctx, stageX + 120 * s, panelY + 52 * s, (localSec - mergedAt) / 0.65, s, "#a78bfa", "#3fb950");
+    }
+    ctx.restore();
+
+  /* --------------------------------------------------------------------------
+     TEMPLATE 4: LIVE CODE DIFF EDITOR (SYNTAX TYPING + DIFF HIGHLIGHTS)
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "code_diff_editor") {
+    const headFont = Math.round(54 * s);
+    drawMaskedHeadline(
+      ctx,
+      scene.onScreenText || scene.label,
+      stageX,
+      stageTop + 56 * s,
+      stageW,
+      headFont,
+      2,
+      "left",
+      localSec,
+      0.08,
+      0.09,
+      palette.text,
+      palette.accent,
+      "#ffffff"
+    );
+
+    const edY = stageTop + 215 * s;
+    const edH = stageBottom - edY - 12 * s;
+    const enter = spring((localSec - 0.14) / 0.46);
+
+    ctx.save();
+    ctx.translate(0, (1 - enter) * 40 * s);
+    drawRoundedRect(ctx, stageX, edY, stageW, edH, 24 * s);
+    ctx.fillStyle = "#0b1020";
+    ctx.fill();
+    ctx.strokeStyle = palette.border;
+    ctx.lineWidth = 2.2 * s;
+    ctx.stroke();
+
+    // Editor file tab header
+    drawRoundedRect(ctx, stageX + 20 * s, edY + 16 * s, 270 * s, 44 * s, 12 * s);
+    ctx.fillStyle = "rgba(56, 189, 248, 0.16)";
+    ctx.fill();
+    ctx.font = `800 ${Math.round(21 * s)}px ui-monospace, monospace`;
+    ctx.fillStyle = "#38bdf8";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("agent-workflow.ts", stageX + 38 * s, edY + 38 * s);
+
+    const codeLines = [
+      { kind: "norm", text: "const agent = createClaudeAgent({" },
+      { kind: "add", text: "+  tools: ['terminal', 'github', 'tests']," },
+      { kind: "add", text: "+  mode: 'autonomous-verify'," },
+      { kind: "norm", text: "});" },
+      { kind: "del", text: "- // manual copy-paste debugging" },
+      { kind: "add", text: "+ const pr = await agent.shipFeature();" },
+      { kind: "add", text: "+ console.log('LIVE:', pr.url);" },
+    ];
+
+    const revealLines = Math.min(
+      codeLines.length,
+      Math.max(1, Math.ceil(expoOut(localSec / Math.min(sceneDur * 0.72, 2.4)) * codeLines.length))
+    );
+
+    codeLines.slice(0, revealLines).forEach((ln, li) => {
+      const ly = edY + 86 * s + li * 62 * s;
+      if (ly + 52 * s > edY + edH - 16 * s) return;
+
+      if (ln.kind === "add") {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.16)";
+        ctx.fillRect(stageX + 8 * s, ly - 10 * s, stageW - 16 * s, 50 * s);
+        ctx.fillStyle = "#10b981";
+        ctx.fillRect(stageX + 8 * s, ly - 10 * s, 6 * s, 50 * s);
+      } else if (ln.kind === "del") {
+        ctx.fillStyle = "rgba(244, 63, 94, 0.16)";
+        ctx.fillRect(stageX + 8 * s, ly - 10 * s, stageW - 16 * s, 50 * s);
+        ctx.fillStyle = "#f43f5e";
+        ctx.fillRect(stageX + 8 * s, ly - 10 * s, 6 * s, 50 * s);
+      }
+
+      ctx.font = `700 ${Math.round(23 * s)}px ui-monospace, SFMono-Regular, monospace`;
+      ctx.fillStyle = "rgba(148,163,184,0.45)";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(li + 1), stageX + 52 * s, ly + 15 * s);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle =
+        ln.kind === "add" ? "#6ee7b7" : ln.kind === "del" ? "#fda4af" : "#e2e8f0";
+      ctx.fillText(ln.text.slice(0, 42), stageX + 68 * s, ly + 15 * s);
+    });
+
+    drawLightSweep(ctx, stageX, edY, stageW, edH, 24 * s, (localSec - 0.8) / 1.4);
+    ctx.restore();
+
+  /* --------------------------------------------------------------------------
+     TEMPLATE 5: EDITORIAL SMOOTH BEZIER CURVE CHART + GLIDING ODOMETER
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "bezier_chart") {
+    const headFont = Math.round(54 * s);
+    drawMaskedHeadline(
+      ctx,
+      scene.onScreenText || scene.label,
+      stageX,
+      stageTop + 56 * s,
+      stageW,
+      headFont,
+      2,
+      "left",
+      localSec,
+      0.08,
+      0.09,
+      palette.text,
+      palette.accent,
+      "#ffffff"
+    );
+
+    const cardY = stageTop + 218 * s;
+    const cardH = stageBottom - cardY - 12 * s;
+    const enter = spring((localSec - 0.12) / 0.45);
+
+    ctx.save();
+    ctx.translate(0, (1 - enter) * 40 * s);
+    drawRoundedRect(ctx, stageX, cardY, stageW, cardH, 28 * s);
+    ctx.fillStyle = palette.surface;
+    ctx.fill();
+    ctx.strokeStyle = palette.border;
+    ctx.lineWidth = 2.2 * s;
+    ctx.stroke();
+
+    const plotL = stageX + 46 * s;
+    const plotR = stageX + stageW - 46 * s;
+    const plotT = cardY + 95 * s;
+    const plotB = cardY + cardH - 72 * s;
+    const plotW = plotR - plotL;
+    const plotH = plotB - plotT;
+
+    // Subtle horizontal gridlines
+    ctx.strokeStyle = palette.border;
+    ctx.lineWidth = 1.4 * s;
+    for (let g = 0; g <= 3; g++) {
+      const gy = lerp(plotT, plotB, g / 3);
+      ctx.beginPath();
+      ctx.moveTo(plotL, gy);
+      ctx.lineTo(plotR, gy);
       ctx.stroke();
     }
 
-    // Build smooth spline sample points from scene data
-    const vals = extractMetrics(scene);
-    const ctrlPts = vals.map((v, i) => ({
-      x: chartL + (chartW * i) / (vals.length - 1),
-      y: chartBottom - (chartH * clamp01(v / 100)) * 0.88 - 10,
-      val: v,
-    }));
-
-    // Sample 60 ultra-smooth points along piecewise smooth Catmull/Cubic segments
-    const samples: Array<{ x: number; y: number; val: number }> = [];
-    const stepsPerSeg = 20;
-    for (let s = 0; s < ctrlPts.length - 1; s++) {
-      const a = ctrlPts[s];
-      const b = ctrlPts[s + 1];
-      const midX = (a.x + b.x) / 2;
-      for (let k = 0; k <= stepsPerSeg; k++) {
-        if (s > 0 && k === 0) continue;
-        const u = k / stepsPerSeg;
-        const [sx, sy] = cubicBezierPt(
-          [a.x, a.y],
-          [midX, a.y],
-          [midX, b.y],
-          [b.x, b.y],
-          u
-        );
-        samples.push({ x: sx, y: sy, val: lerp(a.val, b.val, u) });
-      }
+    const drawP = expoOut((localSec - 0.25) / Math.min(sceneDur * 0.62, 1.8));
+    const samples = 44;
+    const pts: Array<[number, number]> = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = (i / samples) * drawP;
+      const x = plotL + t * plotW;
+      const curveY = Math.pow(t, 1.55) * 0.84 + Math.sin(t * Math.PI * 2.1) * 0.055;
+      const y = plotB - clamp01(curveY) * plotH;
+      pts.push([x, y]);
     }
 
-    const drawProg = expoOut((localSec - 0.45) / 1.85);
-    const drawCount = Math.max(2, Math.floor(samples.length * drawProg));
-    const visiblePts = samples.slice(0, drawCount);
-    const tip = visiblePts[visiblePts.length - 1];
-
-    // Translucent Gradient Area Fill beneath smooth curve
-    if (visiblePts.length >= 2) {
-      ctx.save();
+    if (pts.length > 1) {
+      // Soft gradient area fill
       ctx.beginPath();
-      ctx.moveTo(visiblePts[0].x, chartBottom);
-      visiblePts.forEach((pt) => ctx.lineTo(pt.x, pt.y));
-      ctx.lineTo(tip.x, chartBottom);
+      ctx.moveTo(pts[0][0], plotB);
+      pts.forEach(([px, py]) => ctx.lineTo(px, py));
+      ctx.lineTo(pts[pts.length - 1][0], plotB);
       ctx.closePath();
-      const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
-      areaGrad.addColorStop(0, "rgba(217, 119, 87, 0.34)");
-      areaGrad.addColorStop(1, "rgba(217, 119, 87, 0.0)");
-      ctx.fillStyle = areaGrad;
+      const fillG = ctx.createLinearGradient(0, plotT, 0, plotB);
+      fillG.addColorStop(0, palette.glow);
+      fillG.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fillG;
       ctx.fill();
 
-      // Bold Glowing Smooth Curve Stroke
+      // Smooth stroke line
       ctx.beginPath();
-      ctx.moveTo(visiblePts[0].x, visiblePts[0].y);
-      visiblePts.forEach((pt) => ctx.lineTo(pt.x, pt.y));
-      ctx.strokeStyle = theme.accent;
-      ctx.lineWidth = isVertical ? 6.5 : 5.5;
+      pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+      ctx.strokeStyle = palette.accent;
+      ctx.lineWidth = 7 * s;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.stroke();
-      ctx.restore();
 
-      // Pulsing Radar Node at Live Curve Tip
-      const pulse = 10 + Math.sin(elapsedSec * 7) * 3.5;
+      // Gliding dot + live odometer pill!
+      const tip = pts[pts.length - 1];
       ctx.beginPath();
-      ctx.arc(tip.x, tip.y, pulse, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(217, 119, 87, 0.25)";
+      ctx.arc(tip[0], tip[1], 13 * s, 0, Math.PI * 2);
+      ctx.fillStyle = palette.accent;
       ctx.fill();
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = theme.accent;
-      ctx.fill();
+      ctx.lineWidth = 4 * s;
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Floating Dark Odometer Pill gliding directly above the curve tip!
-      const pillW = isVertical ? 114 : 102;
-      const pillH = isVertical ? 48 : 42;
-      const pillX = Math.max(chartL, Math.min(chartR - pillW, tip.x - pillW / 2));
-      const pillY = Math.max(chartTop - 16, tip.y - pillH - 18);
-
-      ctx.save();
-      ctx.shadowColor = "rgba(17, 19, 24, 0.22)";
-      ctx.shadowBlur = 18;
-      ctx.shadowOffsetY = 8;
-      drawRoundedRect(ctx, pillX, pillY, pillW, pillH, 14);
-      ctx.fillStyle = "#111318";
+      const liveMetric = Math.round(drawP * 94);
+      const pillW = 148 * s;
+      const pillH = 54 * s;
+      const px = Math.min(plotR - pillW, Math.max(plotL, tip[0] - pillW / 2));
+      const py = Math.max(cardY + 24 * s, tip[1] - 78 * s);
+      drawRoundedRect(ctx, px, py, pillW, pillH, 16 * s);
+      ctx.fillStyle = palette.accent;
       ctx.fill();
-      ctx.restore();
-
-      ctx.font = `900 ${isVertical ? 24 : 20}px ui-monospace, SFMono-Regular, monospace`;
+      ctx.font = `900 ${Math.round(28 * s)}px ui-monospace, monospace`;
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${Math.round(tip.val)}%`, pillX + pillW / 2, pillY + pillH / 2 + 1);
+      ctx.fillText(`+${liveMetric}%`, px + pillW / 2, py + pillH / 2);
     }
 
-    // Bottom X-axis stage labels
-    const axisLabels = ["AWAL", "OPTIMASI", "SKALA", "PUNCAK"];
-    ctx.font = `800 ${isVertical ? 15 : 13}px ui-monospace, monospace`;
-    ctx.fillStyle = theme.muted;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctrlPts.forEach((pt, idx) => {
-      ctx.fillText(axisLabels[idx] || `0${idx + 1}`, pt.x, chartBottom + 12);
-    });
-  } else if (template === "cursor_cards") {
-    /* ------------------------------------------------------------------------
-       TEMPLATE 3: LINEAR / APPLE CARD STACK + ANIMATED MAC CURSOR CLICKING!
-       ------------------------------------------------------------------------ */
-    const hSize = isVertical ? Math.round(w * 0.064) : Math.round(w * 0.036);
-    ctx.font = `900 ${hSize}px system-ui, -apple-system, "Inter", sans-serif`;
-    const hLines = wrapLines(ctx, scene.onScreenText || scene.label, safeW, 2);
-    const hLineH = hSize * 1.18;
+    drawLightSweep(ctx, stageX, cardY, stageW, cardH, 28 * s, (localSec - 1.1) / 1.1);
+    ctx.restore();
 
+  /* --------------------------------------------------------------------------
+     TEMPLATE 6: FLOATING LINEAR WORKFLOW CARDS + MACOS CURSOR CLICKS
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "cursor_cards") {
+    const headFont = Math.round(52 * s);
     drawMaskedHeadline(
       ctx,
-      hLines,
-      padX,
-      stageTop + hLineH * 0.5,
-      hLineH,
+      scene.onScreenText || scene.label,
+      stageX,
+      stageTop + 52 * s,
+      stageW,
+      headFont,
+      2,
       "left",
       localSec,
-      0.06,
+      0.08,
       0.09,
+      palette.text,
+      palette.accent,
       "#ffffff"
     );
 
-    const points = extractKeyPoints(scene);
-    const listTop = stageTop + hLines.length * hLineH + (isVertical ? 32 : 22);
-    const listH = stageBottom - listTop;
-    const gap = isVertical ? 18 : 14;
-    const cardH = Math.min(isVertical ? 116 : 82, (listH - gap * 2) / 3);
-    const clickTimes = [1.05, 2.05, 3.05];
+    const words = scene.narration.split(/[,.—!?]+/).map((p) => p.trim()).filter((p) => p.length > 6);
+    const cardTexts = [
+      words[0]?.slice(0, 44) || "1. AI Agent baca seluruh konteks repo",
+      words[1]?.slice(0, 44) || "2. Eksekusi terminal & edit file otomatis",
+      words[2]?.slice(0, 44) || "3. Jalankan test & verifikasi hasil",
+    ];
 
-    const cardCenters: Array<[number, number]> = [];
+    const listTop = stageTop + 215 * s;
+    const gap = 22 * s;
+    const cardH = Math.min(165 * s, (stageBottom - listTop - gap * 2 - 16 * s) / 3);
+    const clickTimes = [
+      Math.min(0.85, sceneDur * 0.24),
+      Math.min(1.65, sceneDur * 0.50),
+      Math.min(2.45, sceneDur * 0.74),
+    ];
+    const centers: Array<[number, number]> = [];
 
-    points.forEach((pt, idx) => {
-      const enter = spring((localSec - 0.16 - idx * 0.14) / 0.55);
-      const clickAt = clickTimes[idx];
-      const isChecked = localSec >= clickAt;
-      const pressPhase = clamp01((localSec - clickAt) / 0.22);
-      const pressScale =
-        pressPhase > 0 && pressPhase < 1 ? 1 - Math.sin(pressPhase * Math.PI) * 0.035 : 1;
-
+    cardTexts.forEach((pt, idx) => {
       const cy = listTop + idx * (cardH + gap);
-      cardCenters.push([padX + safeW * 0.78, cy + cardH * 0.52]);
+      centers.push([stageX + stageW * 0.82, cy + cardH * 0.52]);
+      const enter = spring((localSec - (0.12 + idx * 0.14)) / 0.45);
+      const clickAt = clickTimes[idx];
+      const clickP = clamp01((localSec - clickAt) / 0.22);
+      const isChecked = localSec >= clickAt;
+      const press = clickP > 0 && clickP < 1 ? 1 - Math.sin(clickP * Math.PI) * 0.045 : 1;
 
       ctx.save();
-      ctx.globalAlpha = clamp01(enter);
-      ctx.translate(w / 2, cy + cardH / 2 + (1 - enter) * 44);
-      ctx.scale(pressScale, pressScale);
-      ctx.translate(-w / 2, -(cy + cardH / 2));
+      ctx.translate(stageCX, cy + cardH / 2);
+      ctx.scale(lerp(0.92, 1, enter) * press, lerp(0.92, 1, enter) * press);
+      ctx.globalAlpha = clamp01(enter * 1.25);
+      ctx.translate(-stageCX, -(cy + cardH / 2));
 
-      drawRoundedRect(ctx, padX, cy, safeW, cardH, 20);
-      ctx.fillStyle = isChecked ? "rgba(16, 185, 129, 0.14)" : theme.cardBg;
+      drawRoundedRect(ctx, stageX, cy, stageW, cardH, 24 * s);
+      ctx.fillStyle = isChecked ? "rgba(16, 185, 129, 0.16)" : palette.surface;
       ctx.fill();
-      ctx.strokeStyle = isChecked ? "#10b981" : theme.cardBorder;
-      ctx.lineWidth = isChecked ? 2.2 : 1.5;
+      ctx.strokeStyle = isChecked ? "#10b981" : palette.border;
+      ctx.lineWidth = (isChecked ? 2.8 : 1.8) * s;
       ctx.stroke();
 
-      // Animated sweep bar inside checked card
-      if (isChecked) {
-        const sweepW = safeW * expoOut((localSec - clickAt) / 0.45);
-        ctx.save();
-        drawRoundedRect(ctx, padX, cy, safeW, cardH, 20);
-        ctx.clip();
-        ctx.fillStyle = "rgba(16, 185, 129, 0.08)";
-        ctx.fillRect(padX, cy, sweepW, cardH);
-        ctx.restore();
-      }
-
-      // Checkbox circle morphing into crisp spring checkmark!
-      const chkX = padX + 38;
+      // Checkbox circle
+      const chkR = 24 * s;
+      const chkX = stageX + 46 * s;
       const chkY = cy + cardH / 2;
-      const chkR = isVertical ? 20 : 17;
       ctx.beginPath();
       ctx.arc(chkX, chkY, chkR, 0, Math.PI * 2);
       if (isChecked) {
-        const pop = backOut((localSec - clickAt) / 0.36);
-        ctx.save();
-        ctx.translate(chkX, chkY);
-        ctx.scale(pop, pop);
-        ctx.beginPath();
-        ctx.arc(0, 0, chkR, 0, Math.PI * 2);
         ctx.fillStyle = "#10b981";
         ctx.fill();
-        ctx.strokeStyle = "#04130e";
-        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = "#04120d";
+        ctx.lineWidth = 4.2 * s;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.beginPath();
-        ctx.moveTo(-chkR * 0.38, 0);
-        ctx.lineTo(-chkR * 0.08, chkR * 0.32);
-        ctx.lineTo(chkR * 0.42, -chkR * 0.32);
+        ctx.moveTo(chkX - chkR * 0.36, chkY);
+        ctx.lineTo(chkX - chkR * 0.08, chkY + chkR * 0.3);
+        ctx.lineTo(chkX + chkR * 0.4, chkY - chkR * 0.3);
         ctx.stroke();
-        ctx.restore();
       } else {
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
-        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = palette.muted;
+        ctx.lineWidth = 2.6 * s;
         ctx.stroke();
       }
 
-      // Card text
-      const tFont = isVertical ? Math.round(w * 0.036) : Math.round(w * 0.02);
-      ctx.font = `800 ${tFont}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = isChecked ? "#ffffff" : "#cbd5e1";
+      ctx.font = `800 ${Math.round(28 * s)}px system-ui, sans-serif`;
+      ctx.fillStyle = palette.text;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const cLines = wrapLines(ctx, pt, safeW - 110, 2);
-      const cLH = tFont * 1.24;
-      cLines.forEach((ln, li) => {
-        ctx.fillText(ln, padX + 74, chkY + (li - (cLines.length - 1) / 2) * cLH);
+      const lines = wrapLines(ctx, pt, stageW - 118 * s, 2);
+      const lh = 35 * s;
+      lines.forEach((ln, li) => {
+        ctx.fillText(ln, stageX + 92 * s, chkY + (li - (lines.length - 1) / 2) * lh);
       });
       ctx.restore();
 
-      // Click particle burst!
       if (isChecked) {
-        drawClickBurst(
-          ctx,
-          padX + safeW * 0.78,
-          cy + cardH * 0.52,
-          (localSec - clickAt) / 0.5,
-          "#10b981",
-          theme.accent
-        );
+        drawClickBurst(ctx, centers[idx][0], centers[idx][1], (localSec - clickAt) / 0.5, s, "#10b981", palette.accent);
       }
     });
 
-    // Animated MacOS Cursor gliding smoothly from Card 1 -> Card 2 -> Card 3!
-    if (localSec > 0.45 && cardCenters.length === 3) {
-      let cx = w * 0.9;
-      let cy = stageBottom + 40;
+    if (localSec > 0.35 && centers.length === 3) {
+      let cx = stageX + stageW;
+      let cy = stageBottom;
       let press = 0;
-
-      if (localSec < clickTimes[0] + 0.25) {
-        const t = expoOut((localSec - 0.45) / (clickTimes[0] - 0.45));
-        [cx, cy] = cubicBezierPt(
-          [w * 0.88, stageBottom + 30],
-          [w * 0.9, cardCenters[0][1] + 80],
-          [cardCenters[0][0] + 45, cardCenters[0][1] + 20],
-          cardCenters[0],
-          t
-        );
-        const ct = clamp01((localSec - clickTimes[0]) / 0.2);
-        press = ct > 0 && ct < 1 ? Math.sin(ct * Math.PI) : 0;
-      } else if (localSec < clickTimes[1] + 0.25) {
-        const t = expoInOut((localSec - (clickTimes[0] + 0.25)) / (clickTimes[1] - clickTimes[0] - 0.25));
-        [cx, cy] = cubicBezierPt(
-          cardCenters[0],
-          [cardCenters[0][0] + 50, cardCenters[0][1] + 45],
-          [cardCenters[1][0] + 50, cardCenters[1][1] - 35],
-          cardCenters[1],
-          t
-        );
-        const ct = clamp01((localSec - clickTimes[1]) / 0.2);
-        press = ct > 0 && ct < 1 ? Math.sin(ct * Math.PI) : 0;
+      if (localSec < clickTimes[0] + 0.22) {
+        const t = expoOut((localSec - 0.35) / Math.max(0.2, clickTimes[0] - 0.35));
+        [cx, cy] = cubicBezierPt([stageX + stageW, stageBottom], [stageX + stageW, centers[0][1] + 90 * s], [centers[0][0] + 45 * s, centers[0][1] + 20 * s], centers[0], t);
+        const cp = clamp01((localSec - clickTimes[0]) / 0.2);
+        press = cp > 0 && cp < 1 ? Math.sin(cp * Math.PI) : 0;
+      } else if (localSec < clickTimes[1] + 0.22) {
+        const t = expoInOut((localSec - (clickTimes[0] + 0.22)) / Math.max(0.2, clickTimes[1] - clickTimes[0] - 0.22));
+        [cx, cy] = cubicBezierPt(centers[0], [centers[0][0] + 48 * s, centers[0][1] + 45 * s], [centers[1][0] + 48 * s, centers[1][1] - 35 * s], centers[1], t);
+        const cp = clamp01((localSec - clickTimes[1]) / 0.2);
+        press = cp > 0 && cp < 1 ? Math.sin(cp * Math.PI) : 0;
       } else {
-        const t = expoInOut((localSec - (clickTimes[1] + 0.25)) / (clickTimes[2] - clickTimes[1] - 0.25));
-        [cx, cy] = cubicBezierPt(
-          cardCenters[1],
-          [cardCenters[1][0] + 50, cardCenters[1][1] + 45],
-          [cardCenters[2][0] + 50, cardCenters[2][1] - 35],
-          cardCenters[2],
-          t
-        );
-        const ct = clamp01((localSec - clickTimes[2]) / 0.2);
-        press = ct > 0 && ct < 1 ? Math.sin(ct * Math.PI) : 0;
+        const t = expoInOut((localSec - (clickTimes[1] + 0.22)) / Math.max(0.2, clickTimes[2] - clickTimes[1] - 0.22));
+        [cx, cy] = cubicBezierPt(centers[1], [centers[1][0] + 48 * s, centers[1][1] + 45 * s], [centers[2][0] + 48 * s, centers[2][1] - 35 * s], centers[2], t);
+        const cp = clamp01((localSec - clickTimes[2]) / 0.2);
+        press = cp > 0 && cp < 1 ? Math.sin(cp * Math.PI) : 0;
       }
-
-      drawMacCursor(ctx, cx, cy, isVertical ? 1.2 : 1.1, press);
+      drawMacCursor(ctx, cx, cy, 1.35 * s, press);
     }
-  } else if (template === "split_contrast") {
-    /* ------------------------------------------------------------------------
-       TEMPLATE 4: DRAMATIC SPLIT-SCREEN CONTRAST (OLD SLASHED vs NEW RISING)
-       ------------------------------------------------------------------------ */
-    const splitAnim = expoOut((localSec - 0.12) / 0.65);
-    const expandNew = expoInOut((localSec - 1.55) / 0.72);
-    const gap = 16;
 
-    if (isVertical) {
-      const oldH = lerp(stageH * 0.46, stageH * 0.36, expandNew);
-      const newH = stageH - oldH - gap;
-      const oldY = stageTop;
-      const newY = oldY + oldH + gap;
+  /* --------------------------------------------------------------------------
+     TEMPLATE 7: BEFORE vs AFTER SPLIT CONTRAST (MANUAL vs AI AUTOMATION)
+     -------------------------------------------------------------------------- */
+  } else if (scene.template === "split_contrast") {
+    const enter = expoOut((localSec - 0.08) / 0.5);
+    const expandNew = expoInOut((localSec - 1.2) / 0.65);
+    const gap = 22 * s;
+    const oldH = lerp(stageH * 0.44, stageH * 0.35, expandNew);
+    const newH = stageH - oldH - gap;
+    const oldY = stageTop;
+    const newY = oldY + oldH + gap;
 
-      // TOP: OLD WAY (Muted + Animated Red Strike-Through Slash)
-      ctx.save();
-      ctx.globalAlpha = splitAnim;
-      drawRoundedRect(ctx, padX, oldY, safeW, oldH, 24);
-      ctx.fillStyle = "rgba(30, 20, 28, 0.85)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.35)";
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-
-      ctx.font = "800 15px ui-monospace, monospace";
-      ctx.fillStyle = "#fb7185";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("✕ CARA LAMA · LAMBAT", padX + 24, oldY + 22);
-
-      const oldVal = Math.round(28 * expoOut((localSec - 0.25) / 0.7));
-      ctx.font = `900 ${Math.round(w * 0.13)}px system-ui, sans-serif`;
-      ctx.fillStyle = "rgba(226, 232, 240, 0.55)";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`${oldVal}%`, padX + 24, oldY + oldH * 0.6);
-
-      // Animated Red Diagonal Strike-Through Slash across old number!
-      const slashP = expoOut((localSec - 0.95) / 0.38);
-      if (slashP > 0.01) {
-        ctx.strokeStyle = "#f43f5e";
-        ctx.lineWidth = 7;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(padX + 18, oldY + oldH * 0.78);
-        ctx.lineTo(
-          lerp(padX + 18, padX + 215, slashP),
-          lerp(oldY + oldH * 0.78, oldY + oldH * 0.4, slashP)
-        );
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // BOTTOM: NEW WAY (Glowing Vibrant Expansion + Count-Up + Rising Arrow!)
-      const newEnter = spring((localSec - 0.42) / 0.62);
-      ctx.save();
-      ctx.translate(0, (1 - newEnter) * 50);
-      drawRoundedRect(ctx, padX, newY, safeW, newH, 24);
-      const ng = ctx.createLinearGradient(padX, newY, padX + safeW, newY + newH);
-      ng.addColorStop(0, "rgba(16, 185, 129, 0.22)");
-      ng.addColorStop(1, "rgba(56, 189, 248, 0.16)");
-      ctx.fillStyle = ng;
-      ctx.fill();
-      ctx.strokeStyle = "#10b981";
-      ctx.lineWidth = 2.4;
-      ctx.stroke();
-
-      ctx.font = "900 16px ui-monospace, monospace";
-      ctx.fillStyle = "#34d399";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("✓ METODE BARU · OTOMATIS", padX + 24, newY + 24);
-
-      const newVal = Math.round(94 * expoOut((localSec - 0.85) / 1.15));
-      ctx.font = `900 ${Math.round(w * 0.165)}px system-ui, sans-serif`;
-      ctx.fillStyle = "#ffffff";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`${newVal}%`, padX + 24, newY + newH * 0.52);
-
-      // Headline caption inside New card
-      const subFont = Math.round(w * 0.04);
-      ctx.font = `800 ${subFont}px system-ui, sans-serif`;
-      ctx.fillStyle = "#e2e8f0";
-      const nLines = wrapLines(ctx, scene.onScreenText || scene.label, safeW - 48, 2);
-      nLines.forEach((ln, li) => {
-        ctx.fillText(ln, padX + 24, newY + newH - 48 + li * (subFont * 1.22));
-      });
-      ctx.restore();
-    } else {
-      // Landscape Left vs Right Split
-      const oldW = lerp(safeW * 0.46, safeW * 0.36, expandNew);
-      const newW = safeW - oldW - gap;
-      const oldX = padX;
-      const newX = oldX + oldW + gap;
-
-      drawRoundedRect(ctx, oldX, stageTop, oldW, stageH, 24);
-      ctx.fillStyle = "rgba(30, 20, 28, 0.85)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.38)";
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-
-      ctx.font = "800 14px ui-monospace, monospace";
-      ctx.fillStyle = "#fb7185";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("✕ CARA LAMA", oldX + 24, stageTop + 26);
-
-      ctx.font = "900 72px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(226, 232, 240, 0.55)";
-      ctx.textBaseline = "middle";
-      ctx.fillText("28%", oldX + 24, stageCY);
-
-      const slashP = expoOut((localSec - 0.9) / 0.38);
-      if (slashP > 0.01) {
-        ctx.strokeStyle = "#f43f5e";
-        ctx.lineWidth = 7;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(oldX + 18, stageCY + 34);
-        ctx.lineTo(lerp(oldX + 18, oldX + 190, slashP), lerp(stageCY + 34, stageCY - 38, slashP));
-        ctx.stroke();
-      }
-
-      drawRoundedRect(ctx, newX, stageTop, newW, stageH, 24);
-      const ng = ctx.createLinearGradient(newX, stageTop, newX + newW, stageBottom);
-      ng.addColorStop(0, "rgba(16, 185, 129, 0.24)");
-      ng.addColorStop(1, "rgba(56, 189, 248, 0.16)");
-      ctx.fillStyle = ng;
-      ctx.fill();
-      ctx.strokeStyle = "#10b981";
-      ctx.lineWidth = 2.4;
-      ctx.stroke();
-
-      ctx.font = "900 15px ui-monospace, monospace";
-      ctx.fillStyle = "#34d399";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillText("✓ METODE BARU · OPTIMAL", newX + 28, stageTop + 26);
-
-      const newVal = Math.round(94 * expoOut((localSec - 0.8) / 1.15));
-      ctx.font = "900 84px system-ui, sans-serif";
-      ctx.fillStyle = "#ffffff";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`${newVal}%`, newX + 28, stageCY - 10);
-
-      ctx.font = "800 22px system-ui, sans-serif";
-      ctx.fillStyle = "#e2e8f0";
-      const nLines = wrapLines(ctx, scene.onScreenText || scene.label, newW - 56, 2);
-      nLines.forEach((ln, li) => {
-        ctx.fillText(ln, newX + 28, stageBottom - 62 + li * 28);
-      });
-    }
-  } else if (template === "orbit_typography") {
-    /* ------------------------------------------------------------------------
-       TEMPLATE 5: WARM IVORY ORBITAL RADIAL GAUGE + FLOATING KINETIC CHIPS
-       ------------------------------------------------------------------------ */
-    const ringCX = w / 2;
-    const ringCY = isVertical ? stageTop + stageH * 0.34 : stageCY;
-    const ringR = isVertical ? Math.min(w * 0.25, 138) : Math.min(stageH * 0.38, 128);
-
-    // Expanding thin concentric orbital tracks
-    const orbitGrow = expoOut(localSec / 0.6);
-    [ringR * 1.32, ringR * 1.62].forEach((r, ri) => {
-      ctx.beginPath();
-      ctx.arc(ringCX, ringCY, r * orbitGrow, 0, Math.PI * 2);
-      ctx.strokeStyle = ri === 0 ? "rgba(217, 119, 87, 0.24)" : "rgba(37, 99, 235, 0.16)";
-      ctx.lineWidth = 1.6;
-      ctx.setLineDash([6, 8]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Orbiting bright satellite dot
-      const ang = elapsedSec * (ri === 0 ? 1.1 : -0.75) + ri * 2.1;
-      ctx.beginPath();
-      ctx.arc(
-        ringCX + Math.cos(ang) * r * orbitGrow,
-        ringCY + Math.sin(ang) * r * orbitGrow,
-        6,
-        0,
-        Math.PI * 2
-      );
-      ctx.fillStyle = ri === 0 ? theme.accent : theme.accent2;
-      ctx.fill();
-    });
-
-    // Main Sweeping Radial Progress Ring (0 -> 96%)
-    const sweep = expoOut((localSec - 0.25) / 1.35);
-    const pct = Math.round(96 * sweep);
-    ctx.beginPath();
-    ctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(17, 19, 24, 0.09)";
-    ctx.lineWidth = isVertical ? 18 : 16;
+    // TOP: BEFORE (Manual Slow + Animated Red Slash)
+    ctx.save();
+    ctx.globalAlpha = enter;
+    drawRoundedRect(ctx, stageX, oldY, stageW, oldH, 28 * s);
+    ctx.fillStyle = "rgba(32, 18, 26, 0.90)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(244, 63, 94, 0.45)";
+    ctx.lineWidth = 2.2 * s;
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(ringCX, ringCY, ringR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.96 * sweep);
-    ctx.strokeStyle = theme.accent;
-    ctx.lineWidth = isVertical ? 18 : 16;
-    ctx.lineCap = "round";
-    ctx.stroke();
+    ctx.font = `900 ${Math.round(24 * s)}px ui-monospace, monospace`;
+    ctx.fillStyle = "#fb7185";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("✕ MANUAL WORKFLOW · LAMBAT", stageX + 32 * s, oldY + 28 * s);
 
-    // Rolling center number + sparkle
-    drawClaudeSparkle(ctx, ringCX, ringCY - ringR * 0.42, 13, elapsedSec * 1.4, theme.accent);
-    ctx.font = `900 ${isVertical ? Math.round(w * 0.11) : 58}px system-ui, sans-serif`;
-    ctx.fillStyle = theme.ink;
-    ctx.textAlign = "center";
+    const oldVal = Math.round(24 * expoOut((localSec - 0.15) / 0.6));
+    ctx.font = `900 ${Math.round(126 * s)}px system-ui, sans-serif`;
+    ctx.fillStyle = "rgba(226, 232, 240, 0.52)";
     ctx.textBaseline = "middle";
-    ctx.fillText(`${pct}%`, ringCX, ringCY + 10);
+    ctx.fillText(`${oldVal}%`, stageX + 32 * s, oldY + oldH * 0.62);
 
-    // Big Masked Kinetic Takeaway below (vertical) or right
-    const hSize = isVertical ? Math.round(w * 0.068) : Math.round(w * 0.036);
-    ctx.font = `900 ${hSize}px system-ui, -apple-system, sans-serif`;
-    const tLines = wrapLines(ctx, scene.onScreenText || scene.label, safeW, 3);
-    const tLH = hSize * 1.22;
-    const textY = isVertical
-      ? ringCY + ringR * 1.38 + 26
-      : stageBottom - tLines.length * tLH + 16;
+    const slashP = expoOut((localSec - 0.78) / 0.35);
+    if (slashP > 0.01) {
+      ctx.strokeStyle = "#f43f5e";
+      ctx.lineWidth = 10 * s;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(stageX + 24 * s, oldY + oldH * 0.80);
+      ctx.lineTo(
+        lerp(stageX + 24 * s, stageX + 310 * s, slashP),
+        lerp(oldY + oldH * 0.80, oldY + oldH * 0.42, slashP)
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
 
+    // BOTTOM: AFTER (AI Agent Automation Expanding + Count-Up!)
+    const newEnter = spring((localSec - 0.32) / 0.55);
+    ctx.save();
+    ctx.translate(0, (1 - newEnter) * 52 * s);
+    drawRoundedRect(ctx, stageX, newY, stageW, newH, 28 * s);
+    const ng = ctx.createLinearGradient(stageX, newY, stageX + stageW, newY + newH);
+    ng.addColorStop(0, "rgba(16, 185, 129, 0.26)");
+    ng.addColorStop(1, "rgba(56, 189, 248, 0.20)");
+    ctx.fillStyle = ng;
+    ctx.fill();
+    ctx.strokeStyle = "#10b981";
+    ctx.lineWidth = 3 * s;
+    ctx.stroke();
+
+    ctx.font = `900 ${Math.round(25 * s)}px ui-monospace, monospace`;
+    ctx.fillStyle = "#34d399";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("✓ AI AGENT AUTOMATION · 10X", stageX + 32 * s, newY + 30 * s);
+
+    const newVal = Math.round(96 * expoOut((localSec - 0.65) / 1.05));
+    ctx.font = `900 ${Math.round(156 * s)}px system-ui, sans-serif`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${newVal}%`, stageX + 32 * s, newY + newH * 0.48);
+
+    ctx.font = `800 ${Math.round(34 * s)}px system-ui, sans-serif`;
+    ctx.fillStyle = "#e2e8f0";
+    const lines = wrapLines(ctx, scene.onScreenText || scene.label, stageW - 64 * s, 2);
+    lines.forEach((ln, li) => {
+      ctx.fillText(ln, stageX + 32 * s, newY + newH - 86 * s + li * 42 * s);
+    });
+    drawLightSweep(ctx, stageX, newY, stageW, newH, 28 * s, (localSec - 1.1) / 1.0);
+    ctx.restore();
+
+  /* --------------------------------------------------------------------------
+     TEMPLATE 8: HIGH-RETENTION PAYOFF & NATURAL TIKTOK CTA FINALE
+     -------------------------------------------------------------------------- */
+  } else {
+    const headFont = Math.round(62 * s);
     drawMaskedHeadline(
       ctx,
-      tLines,
-      w / 2,
-      textY,
-      tLH,
+      scene.onScreenText || "Mau part 2 eksperimen AI Agent?",
+      stageCX,
+      stageTop + stageH * 0.24,
+      stageW,
+      headFont,
+      3,
       "center",
       localSec,
-      0.55,
-      0.11,
-      theme.ink,
-      theme.ink,
+      0.08,
+      0.09,
+      palette.text,
+      palette.accent,
       "#ffffff"
     );
-  } else {
-    /* ------------------------------------------------------------------------
-       TEMPLATE 6: CLAUDE CODE CTA FINALE + CURSOR SWOOP CLICK + SPARK BURST!
-       ------------------------------------------------------------------------ */
-    const sparkY = stageTop + (isVertical ? 54 : 36);
-    drawClaudeSparkle(
-      ctx,
-      w / 2,
-      sparkY,
-      (isVertical ? 28 : 22) * backOut(localSec / 0.55),
-      elapsedSec * 1.3,
-      theme.accent2
-    );
 
-    const hSize = isVertical ? Math.round(w * 0.076) : Math.round(w * 0.044);
-    ctx.font = `900 ${hSize}px system-ui, -apple-system, sans-serif`;
-    const ctaText = scene.onScreenText || episode.moralLesson || episode.title;
-    const lines = wrapLines(ctx, ctaText, safeW - 12, 3);
-    const lineH = hSize * 1.22;
-
-    drawMaskedHeadline(
-      ctx,
-      lines,
-      w / 2,
-      sparkY + (isVertical ? 94 : 68),
-      lineH,
-      "center",
-      localSec,
-      0.14,
-      0.11,
-      "#ffffff",
-      theme.accent,
-      "#04120d"
-    );
-
-    // Glowing CTA Pill Button + Animated MacOS Cursor Click + Confetti Burst
-    const btnW = Math.min(safeW - 36, isVertical ? 410 : 370);
-    const btnH = isVertical ? 68 : 58;
-    const btnX = (w - btnW) / 2;
-    const btnY = stageBottom - btnH - (isVertical ? 26 : 14);
-    const btnEnter = backOut((localSec - 0.55) / 0.5);
-    const clickAt = 1.45;
-    const clickP = clamp01((localSec - clickAt) / 0.25);
-    const pressScale = clickP > 0 && clickP < 1 ? 1 - Math.sin(clickP * Math.PI) * 0.09 : 1;
+    const btnW = Math.min(stageW - 24 * s, 680 * s);
+    const btnH = 104 * s;
+    const btnX = stageCX - btnW / 2;
+    const btnY = stageBottom - btnH - 42 * s;
+    const btnEnter = backOut((localSec - 0.35) / 0.45);
+    const clickAt = Math.min(sceneDur * 0.52, 1.45);
+    const clickP = clamp01((localSec - clickAt) / 0.24);
+    const pressScale = clickP > 0 && clickP < 1 ? 1 - Math.sin(clickP * Math.PI) * 0.08 : 1;
 
     ctx.save();
-    ctx.translate(w / 2, btnY + btnH / 2);
+    ctx.translate(stageCX, btnY + btnH / 2);
     ctx.scale(clamp01(btnEnter) * pressScale, clamp01(btnEnter) * pressScale);
-    ctx.shadowColor = "rgba(16, 185, 129, 0.45)";
-    ctx.shadowBlur = 28;
+    ctx.shadowColor = palette.glow;
+    ctx.shadowBlur = 36 * s;
     drawRoundedRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, btnH / 2);
     const btng = ctx.createLinearGradient(-btnW / 2, 0, btnW / 2, 0);
-    btng.addColorStop(0, theme.accent);
-    btng.addColorStop(1, "#38bdf8");
+    btng.addColorStop(0, palette.accent);
+    btng.addColorStop(1, palette.accent2);
     ctx.fillStyle = btng;
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    ctx.font = `900 ${isVertical ? 22 : 19}px system-ui, sans-serif`;
-    ctx.fillStyle = "#04120d";
+    ctx.font = `900 ${Math.round(32 * s)}px system-ui, sans-serif`;
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(
-      localSec >= clickAt ? "✓ TERSIMPAN · FOLLOW PART 2" : "SIMPAN & FOLLOW PART 2 →",
+      localSec >= clickAt ? "✓ FOLLOW & KOMEN TOPIK AI!" : "FOLLOW + KOMEN PART 2 →",
       0,
-      1
+      2 * s
     );
     ctx.restore();
 
-    if (localSec > 0.75) {
-      const moveT = expoOut((localSec - 0.75) / (clickAt - 0.75));
+    if (localSec > 0.55) {
+      const moveT = expoOut((localSec - 0.55) / Math.max(0.25, clickAt - 0.55));
       const [cx, cy] = cubicBezierPt(
-        [w * 0.88, h * 0.88],
-        [w * 0.85, btnY + 85],
-        [btnX + btnW * 0.85, btnY + 48],
-        [btnX + btnW * 0.72, btnY + btnH * 0.56],
+        [stageX + stageW, stageBottom + 40 * s],
+        [stageX + stageW * 0.92, btnY + 95 * s],
+        [btnX + btnW * 0.84, btnY + 56 * s],
+        [btnX + btnW * 0.72, btnY + btnH * 0.55],
         moveT
       );
-      drawMacCursor(ctx, cx, cy, isVertical ? 1.3 : 1.15, clickP > 0 && clickP < 1 ? Math.sin(clickP * Math.PI) : 0);
+      drawMacCursor(ctx, cx, cy, 1.45 * s, clickP > 0 && clickP < 1 ? Math.sin(clickP * Math.PI) : 0);
     }
-
     if (localSec >= clickAt) {
-      drawClickBurst(
-        ctx,
-        btnX + btnW * 0.72,
-        btnY + btnH * 0.52,
-        (localSec - clickAt) / 0.7,
-        "#34d399",
-        "#d97757"
-      );
+      drawClickBurst(ctx, btnX + btnW * 0.72, btnY + btnH * 0.52, (localSec - clickAt) / 0.65, s, palette.accent, palette.accent2);
     }
   }
 
@@ -1368,10 +1684,10 @@ function renderSingleScene(
 }
 
 /* ============================================================================
-   5. MASTER COMPOSITOR WITH TRUE DUAL-SCENE CROSS-TRANSITIONS & FLOATING CAPTIONS
+   5. MASTER COMPOSITOR — 5 DUAL-SCENE TRANSITIONS + SYNCED TIKTOK SUBTITLES
    ============================================================================ */
 
-const TRANSITION_SEC = 0.48;
+const TRANSITION_SEC = 0.42;
 
 export function renderEditorialFrame(
   ctx: CanvasRenderingContext2D,
@@ -1379,21 +1695,19 @@ export function renderEditorialFrame(
   height: number,
   episode: EditorialEpisode,
   elapsedSec: number,
-  // Kept optional for call-site compatibility
   _brollImages?: Array<HTMLImageElement | null>
 ): void {
   void _brollImages;
-  const isVertical = height > width;
-  const padX = isVertical ? Math.round(width * 0.08) : Math.round(width * 0.08);
-  const safeW = width - padX * 2;
+  const s = width / 1080;
+  const safe = getTikTokSafeZone(width, height);
 
-  // Locate active scene, start time & local clock
+  // Locate active scene & exact local clock
   let cursor = 0;
   let activeIndex = 0;
   let localSec = 0;
   for (let i = 0; i < episode.scenes.length; i++) {
     const sc = episode.scenes[i];
-    if (elapsedSec <= cursor + sc.durationSec || i === episode.scenes.length - 1) {
+    if (elapsedSec < cursor + sc.durationSec || i === episode.scenes.length - 1) {
       activeIndex = i;
       localSec = Math.max(0, elapsedSec - cursor);
       break;
@@ -1402,46 +1716,41 @@ export function renderEditorialFrame(
   }
 
   const activeScene = episode.scenes[activeIndex] ?? episode.scenes[0];
-  const { theme } = getSceneTemplate(activeIndex, episode.scenes.length);
+  const palette = getScenePalette(episode.visualStyle, activeIndex, activeScene.template);
   const sceneDur = Math.max(1, activeScene.durationSec);
   const sceneProg = clamp01(localSec / sceneDur);
 
-  // TRUE DUAL-SCENE CROSS-TRANSITION (Scene N-1 animates OUT while Scene N animates IN!)
+  // TRUE DUAL-SCENE CROSS-TRANSITIONS (5 cinema styles + directional motion-blur streaks!)
   const inTransition = activeIndex > 0 && localSec < TRANSITION_SEC;
   if (inTransition) {
     const prevIndex = activeIndex - 1;
     const prevScene = episode.scenes[prevIndex];
     const p = expoInOut(localSec / TRANSITION_SEC);
-    const transType = activeIndex % 4; // 0: whip-up, 1: iris-circle, 2: zoom-through, 3: whip-left
+    const trans = activeScene.transitionIn;
 
-    if (transType === 1) {
-      // IRIS CIRCLE WIPE: Outgoing stays live beneath while incoming expands from a glowing circle!
+    if (trans === "iris-circle") {
       renderSingleScene(ctx, width, height, episode, prevIndex, prevScene.durationSec, elapsedSec);
-
-      const maxR = Math.hypot(width, height) * 0.65;
-      const curR = Math.max(1, maxR * p);
+      const maxR = Math.hypot(width, height) * 0.66;
+      const curR = Math.max(2, maxR * p);
       ctx.save();
       ctx.beginPath();
-      ctx.arc(width / 2, height * 0.45, curR, 0, Math.PI * 2);
+      ctx.arc(safe.centerX, height * 0.44, curR, 0, Math.PI * 2);
       ctx.clip();
       renderSingleScene(ctx, width, height, episode, activeIndex, localSec, elapsedSec);
       ctx.restore();
 
-      // Subtle glowing iris rim ring
       ctx.save();
       ctx.beginPath();
-      ctx.arc(width / 2, height * 0.45, curR, 0, Math.PI * 2);
-      ctx.strokeStyle = theme.accent;
-      ctx.globalAlpha = (1 - p) * 0.7;
-      ctx.lineWidth = 5;
+      ctx.arc(safe.centerX, height * 0.44, curR, 0, Math.PI * 2);
+      ctx.strokeStyle = palette.accent;
+      ctx.globalAlpha = (1 - p) * 0.78;
+      ctx.lineWidth = 7 * s;
       ctx.stroke();
       ctx.restore();
-    } else if (transType === 2) {
-      // 3D ZOOM-THROUGH: Outgoing flies past camera while incoming zooms cleanly into focus!
+    } else if (trans === "zoom-through") {
       ctx.save();
       ctx.translate(width / 2, height / 2);
-      const outS = 1 + p * 0.36;
-      ctx.scale(outS, outS);
+      ctx.scale(1 + p * 0.34, 1 + p * 0.34);
       ctx.globalAlpha = 1 - p;
       ctx.translate(-width / 2, -height / 2);
       renderSingleScene(ctx, width, height, episode, prevIndex, prevScene.durationSec, elapsedSec);
@@ -1449,14 +1758,13 @@ export function renderEditorialFrame(
 
       ctx.save();
       ctx.translate(width / 2, height / 2);
-      const inS = lerp(0.8, 1.0, p);
+      const inS = lerp(0.82, 1.0, p);
       ctx.scale(inS, inS);
       ctx.globalAlpha = clamp01(p * 1.25);
       ctx.translate(-width / 2, -height / 2);
       renderSingleScene(ctx, width, height, episode, activeIndex, localSec, elapsedSec);
       ctx.restore();
-    } else if (transType === 3) {
-      // WHIP-PAN LEFT: Outgoing whips left while incoming springs in from right!
+    } else if (trans === "whip-left") {
       ctx.save();
       ctx.translate(-width * p, 0);
       renderSingleScene(ctx, width, height, episode, prevIndex, prevScene.durationSec, elapsedSec);
@@ -1466,13 +1774,43 @@ export function renderEditorialFrame(
       ctx.translate(width * (1 - p), 0);
       renderSingleScene(ctx, width, height, episode, activeIndex, localSec, elapsedSec);
       ctx.restore();
-    } else {
-      // WHIP-PAN UP: Outgoing scales & lifts away while incoming slides smoothly up from bottom!
+
+      // Directional horizontal whip motion-blur streaks at peak velocity!
+      const streakAlpha = Math.sin(p * Math.PI) * 0.22;
+      if (streakAlpha > 0.02) {
+        ctx.save();
+        ctx.fillStyle = palette.accent;
+        ctx.globalAlpha = streakAlpha;
+        for (let k = 0; k < 6; k++) {
+          ctx.fillRect(0, height * (0.14 + k * 0.13), width, (6 + (k % 3) * 5) * s);
+        }
+        ctx.restore();
+      }
+    } else if (trans === "push-pull") {
       ctx.save();
-      ctx.translate(width / 2, height / 2 - height * p * 0.25);
+      ctx.translate(width / 2, height / 2);
+      const outS = lerp(1, 0.84, p);
+      ctx.scale(outS, outS);
+      ctx.globalAlpha = 1 - p;
+      ctx.translate(-width / 2, -height / 2);
+      renderSingleScene(ctx, width, height, episode, prevIndex, prevScene.durationSec, elapsedSec);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      const inS = lerp(1.18, 1.0, p);
+      ctx.scale(inS, inS);
+      ctx.globalAlpha = clamp01(p * 1.25);
+      ctx.translate(-width / 2, -height / 2);
+      renderSingleScene(ctx, width, height, episode, activeIndex, localSec, elapsedSec);
+      ctx.restore();
+    } else {
+      // whip-up
+      ctx.save();
+      ctx.translate(width / 2, height / 2 - height * p * 0.24);
       const outS = lerp(1, 0.9, p);
       ctx.scale(outS, outS);
-      ctx.globalAlpha = 1 - p * 0.6;
+      ctx.globalAlpha = 1 - p * 0.58;
       ctx.translate(-width / 2, -height / 2);
       renderSingleScene(ctx, width, height, episode, prevIndex, prevScene.durationSec, elapsedSec);
       ctx.restore();
@@ -1487,266 +1825,208 @@ export function renderEditorialFrame(
   }
 
   /* --------------------------------------------------------------------------
-     TOP MINIMALIST SEGMENTED CHAPTER PROGRESS BAR & HEADER
+     TOP MINIMALIST CHAPTER BAR INSIDE SAFE ZONE (ZERO WATERMARK!)
      -------------------------------------------------------------------------- */
   const segCount = episode.scenes.length;
-  const segGap = 8;
-  const segY = isVertical ? Math.round(height * 0.036) : Math.round(height * 0.044);
-  const segH = isVertical ? 5 : 4.5;
-  const segW = (safeW - segGap * (segCount - 1)) / Math.max(1, segCount);
+  const segGap = 10 * s;
+  const segH = 6.5 * s;
+  const segW = (safe.width - segGap * (segCount - 1)) / Math.max(1, segCount);
 
   for (let i = 0; i < segCount; i++) {
-    const sx = padX + i * (segW + segGap);
-    drawRoundedRect(ctx, sx, segY, segW, segH, segH / 2);
-    ctx.fillStyle = theme.isLight ? "rgba(17,19,24,0.12)" : "rgba(255,255,255,0.15)";
+    const sx = safe.left + i * (segW + segGap);
+    drawRoundedRect(ctx, sx, safe.headerY, segW, segH, segH / 2);
+    ctx.fillStyle = palette.isLight ? "rgba(17,19,24,0.12)" : "rgba(255,255,255,0.16)";
     ctx.fill();
 
     const fill = i < activeIndex ? 1 : i === activeIndex ? sceneProg : 0;
     if (fill > 0) {
-      drawRoundedRect(ctx, sx, segY, Math.max(segH, segW * fill), segH, segH / 2);
-      ctx.fillStyle = theme.accent;
+      drawRoundedRect(ctx, sx, safe.headerY, Math.max(segH, segW * fill), segH, segH / 2);
+      ctx.fillStyle = palette.accent;
       ctx.fill();
     }
   }
 
-  const badgeY = segY + (isVertical ? 18 : 14);
-  ctx.font = `800 ${isVertical ? 16 : 14}px ui-monospace, SFMono-Regular, monospace`;
-  ctx.fillStyle = theme.muted;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(
-    `0${activeIndex + 1} / ${activeScene.label.toUpperCase().slice(0, 22)}`,
-    padX,
-    badgeY
-  );
-  ctx.textAlign = "right";
-  ctx.fillText(`FAJREZZZ · EP #${episode.episodeNumber}`, width - padX, badgeY);
-
-  /* --------------------------------------------------------------------------
-     FLOATING BORDERLESS CLAUDE-CODE / CAPCUT KINETIC CAPTIONS (ZERO CLUNKY BOX!)
-     -------------------------------------------------------------------------- */
-  const allWords = activeScene.narration.trim().split(/\s+/).filter(Boolean);
-  const wordsPerChunk = isVertical ? 4 : 7;
-  const totalWords = Math.max(1, allWords.length);
-  const wordFloat = sceneProg * totalWords;
-  const activeWordGlobal = Math.min(totalWords - 1, Math.floor(wordFloat));
-  const wordLocalT = wordFloat - Math.floor(wordFloat);
-  const activePop = 1 + Math.sin(clamp01(wordLocalT / 0.3) * Math.PI) * 0.12;
-  const chunkIdx = Math.floor(activeWordGlobal / wordsPerChunk);
-  const chunkStart = chunkIdx * wordsPerChunk;
-  const chunkWords = allWords.slice(chunkStart, chunkStart + wordsPerChunk);
-  const activeLocal = activeWordGlobal - chunkStart;
-
-  const capFont = isVertical ? Math.round(width * 0.056) : Math.round(width * 0.03);
-  ctx.font = `900 ${capFont}px system-ui, -apple-system, "Inter", sans-serif`;
-
-  const maxCapW = safeW;
-  const wordGap = Math.round(capFont * 0.34);
-  const capLines: Array<Array<{ word: string; idx: number; w: number }>> = [[]];
-  let curLineW = 0;
-
-  chunkWords.forEach((w, wi) => {
-    const mw = ctx.measureText(w).width;
-    if (curLineW > 0 && curLineW + wordGap + mw > maxCapW) {
-      capLines.push([{ word: w, idx: wi, w: mw }]);
-      curLineW = mw;
-    } else {
-      capLines[capLines.length - 1].push({ word: w, idx: wi, w: mw });
-      curLineW += (curLineW > 0 ? wordGap : 0) + mw;
-    }
-  });
-
-  const capLineH = capFont * 1.44;
-  const capCenterY = isVertical ? height * 0.855 : height * 0.85;
-  const capStartY = capCenterY - ((capLines.length - 1) * capLineH) / 2;
-
-  // Minimal live voice equalizer strip right above captions
-  const waveBars = 9;
-  const waveW = 76;
-  const waveX = (width - waveW) / 2;
-  const waveY = capStartY - capFont * 1.1;
-  for (let b = 0; b < waveBars; b++) {
-    const amp = 4 + Math.abs(Math.sin(elapsedSec * 9.5 + b * 0.8)) * 12;
-    drawRoundedRect(ctx, waveX + b * (waveW / waveBars), waveY - amp / 2, 4.5, amp, 2.5);
-    ctx.fillStyle = b % 2 === 0 ? theme.accent : theme.accent2;
-    ctx.fill();
+  // Optional factual source attribution tag (only when verified — full date never truncated!)
+  if (episode.sourceLabel) {
+    ctx.font = `700 ${Math.round(18 * s)}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.fillStyle = palette.muted;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(`SOURCE: ${episode.sourceLabel.slice(0, 62)}`, safe.left, safe.headerY + 14 * s);
   }
 
-  capLines.forEach((row, ri) => {
-    const rowW =
-      row.reduce((sum, item) => sum + item.w, 0) + wordGap * Math.max(0, row.length - 1);
-    let rx = (width - rowW) / 2;
-    const ry = capStartY + ri * capLineH;
-
-    row.forEach((item) => {
-      const isActive = item.idx === activeLocal;
-      if (isActive) {
-        ctx.save();
-        const cx = rx + item.w / 2;
-        const tilt = (activeWordGlobal % 2 === 0 ? -1 : 1) * 0.032;
-        ctx.translate(cx, ry);
-        ctx.rotate(tilt);
-        ctx.scale(activePop, activePop);
-
-        drawRoundedRect(
-          ctx,
-          -item.w / 2 - 14,
-          -capFont * 0.64,
-          item.w + 28,
-          capFont * 1.28,
-          14
+  /* --------------------------------------------------------------------------
+     0ms-DRIFT WORD-SYNCED TIKTOK KINETIC SUBTITLES (STRICTLY INSIDE SAFE ZONE)
+     -------------------------------------------------------------------------- */
+  const timings =
+    activeScene.wordTimings.length > 0
+      ? activeScene.wordTimings
+      : computeWordTimings(
+          activeScene.narration,
+          activeScene.speechOffsetSec ?? SPEECH_START_OFFSET_SEC,
+          activeScene.speechDurationSec ?? Math.max(2, activeScene.durationSec - 0.36)
         );
-        ctx.shadowColor = theme.glow;
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = theme.accent;
-        ctx.fill();
-        ctx.shadowBlur = 0;
 
-        ctx.fillStyle = "#ffffff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(item.word, 0, 1);
-        ctx.restore();
+  if (timings.length > 0) {
+    const activeWordGlobal = findActiveWordIndex(timings, localSec);
+    const activeCue = timings[activeWordGlobal];
+    const wordDur = Math.max(0.06, activeCue.endSec - activeCue.startSec);
+    const wordLocalT = clamp01((localSec - activeCue.startSec) / wordDur);
+    const activePop = 1 + Math.sin(clamp01(wordLocalT / 0.28) * Math.PI) * 0.13;
+
+    const wordsPerChunk = 4;
+    const chunkIdx = Math.floor(activeWordGlobal / wordsPerChunk);
+    const chunkStart = chunkIdx * wordsPerChunk;
+    const chunkCues = timings.slice(chunkStart, chunkStart + wordsPerChunk);
+    const activeLocal = activeWordGlobal - chunkStart;
+
+    const capFont = Math.round(52 * s);
+    ctx.font = `900 ${capFont}px system-ui, -apple-system, "Inter", sans-serif`;
+
+    const maxCapW = safe.width - 20 * s;
+    const wordGap = Math.round(capFont * 0.52);
+    const capLines: Array<Array<{ cue: WordTimingCue; idx: number; w: number }>> = [[]];
+    let curLineW = 0;
+
+    chunkCues.forEach((cue, wi) => {
+      const mw = ctx.measureText(cue.word).width;
+      if (curLineW > 0 && curLineW + wordGap + mw > maxCapW) {
+        capLines.push([{ cue, idx: wi, w: mw }]);
+        curLineW = mw;
       } else {
-        ctx.save();
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        if (!theme.isLight) {
-          ctx.lineJoin = "round";
-          ctx.lineWidth = Math.max(4, Math.round(capFont * 0.14));
-          ctx.strokeStyle = "rgba(4, 6, 14, 0.85)";
-          ctx.strokeText(item.word, rx, ry);
-        }
-        ctx.fillStyle = theme.isLight
-          ? item.idx < activeLocal
-            ? "#111318"
-            : "rgba(17, 19, 24, 0.46)"
-          : item.idx < activeLocal
-          ? "#ffffff"
-          : "rgba(226, 232, 240, 0.58)";
-        ctx.fillText(item.word, rx, ry);
-        ctx.restore();
+        capLines[capLines.length - 1].push({ cue, idx: wi, w: mw });
+        curLineW += (curLineW > 0 ? wordGap : 0) + mw;
       }
-      rx += item.w + wordGap;
     });
-  });
+
+    const capLineH = capFont * 1.38;
+    const capStartY = safe.subtitleY - ((capLines.length - 1) * capLineH) / 2;
+
+    capLines.forEach((row, ri) => {
+      const rowW =
+        row.reduce((sum, item) => sum + item.w, 0) + wordGap * Math.max(0, row.length - 1);
+      let rx = safe.centerX - rowW / 2;
+      const ry = capStartY + ri * capLineH;
+
+      row.forEach((item) => {
+        const isActive = item.idx === activeLocal;
+        const isKeyword = item.cue.highlight;
+
+        if (isActive) {
+          ctx.save();
+          const cx = rx + item.w / 2;
+          const tilt = (activeWordGlobal % 2 === 0 ? -1 : 1) * 0.028;
+          ctx.translate(cx, ry);
+          ctx.rotate(tilt);
+          ctx.scale(activePop, activePop);
+
+          drawRoundedRect(
+            ctx,
+            -item.w / 2 - 16 * s,
+            -capFont * 0.64,
+            item.w + 32 * s,
+            capFont * 1.28,
+            16 * s
+          );
+          const pillFill = isKeyword ? palette.accent : palette.accent2;
+          ctx.shadowColor = palette.glow;
+          ctx.shadowBlur = 22 * s;
+          ctx.fillStyle = pillFill;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          ctx.fillStyle = getContrastTextColor(pillFill);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(item.cue.word, 0, 1 * s);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          if (!palette.isLight) {
+            ctx.lineJoin = "round";
+            ctx.lineWidth = Math.max(5 * s, Math.round(capFont * 0.16));
+            ctx.strokeStyle = "rgba(4, 6, 14, 0.92)";
+            ctx.strokeText(item.cue.word, rx, ry);
+          }
+          ctx.fillStyle = palette.isLight
+            ? item.idx < activeLocal
+              ? "#111318"
+              : "rgba(17, 19, 24, 0.48)"
+            : isKeyword && item.idx < activeLocal
+            ? palette.accent2
+            : item.idx < activeLocal
+            ? "#ffffff"
+            : "rgba(226, 232, 240, 0.62)";
+          ctx.fillText(item.cue.word, rx, ry);
+          ctx.restore();
+        }
+        rx += item.w + wordGap;
+      });
+    });
+  }
 }
 
 /* ============================================================================
-   6. CRISP 1280x720 CLAUDE-CODE EDITORIAL HD THUMBNAIL RENDERER
+   6. TIKTOK 9:16 VERTICAL COVER THUMBNAIL RENDERER (1080x1920)
    ============================================================================ */
 
 export function renderEditorialThumbnail(episode: EditorialEpisode): string {
-  const w = 1280;
-  const h = 720;
+  const w = 1080;
+  const h = 1920;
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  drawSceneBackdrop(ctx, w, h, DARK_CLAUDE_THEME, 1.5, 0);
-
-  // Left Editorial Badge + Giant Headline
-  drawClaudeSparkle(ctx, 94, 96, 26, 0.3, DARK_CLAUDE_THEME.accent);
-  ctx.font = "800 22px ui-monospace, monospace";
-  ctx.fillStyle = DARK_CLAUDE_THEME.accent;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(`FAJREZZZ AI · EP #${episode.episodeNumber}`, 138, 97);
-
-  ctx.font = '900 72px system-ui, -apple-system, "Inter", sans-serif';
-  const lines = wrapLines(ctx, episode.title, 730, 4);
-  lines.forEach((ln, idx) => {
-    const y = 210 + idx * 88;
-    if (idx === lines.length - 1) {
-      const tw = ctx.measureText(ln).width;
-      drawRoundedRect(ctx, 56, y - 42, tw + 36, 84, 16);
-      ctx.fillStyle = DARK_CLAUDE_THEME.accent;
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-    } else {
-      ctx.fillStyle = "#ffffff";
-    }
-    ctx.fillText(ln, 74, y);
-  });
-
-  // Right Sleek Floating Terminal Preview Card
-  drawRoundedRect(ctx, 842, 118, 376, 484, 28);
-  ctx.fillStyle = "#111521";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(217, 119, 87, 0.55)";
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  ["#ff5f56", "#ffbd2e", "#27c93f"].forEach((col, di) => {
-    ctx.beginPath();
-    ctx.arc(878 + di * 22, 154, 7, 0, Math.PI * 2);
-    ctx.fillStyle = col;
-    ctx.fill();
-  });
-
-  // Rising Smooth Curve Graphic inside right preview card
-  ctx.beginPath();
-  ctx.moveTo(880, 510);
-  ctx.bezierCurveTo(960, 495, 1020, 320, 1175, 225);
-  ctx.strokeStyle = "#38bdf8";
-  ctx.lineWidth = 7;
-  ctx.lineCap = "round";
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(1175, 225, 11, 0, Math.PI * 2);
-  ctx.fillStyle = DARK_CLAUDE_THEME.accent;
-  ctx.fill();
-
-  drawMacCursor(ctx, 1120, 380, 1.8, 0);
-
+  renderEditorialFrame(ctx, w, h, episode, 1.45);
   return canvas.toDataURL("image/png");
 }
 
 /* ============================================================================
-   7. PROCEDURAL CLAUDE-CODE AUDIO BED + TYPING / CLICK / WHOOSH SFX ENGINE
+   7. LIVE PREVIEW AUDIO HELPERS (KEPT COMPATIBLE + MASTER-CLOCK SYNCED!)
    ============================================================================ */
 
 export function startAmbientSynthBed(
   connectToSpeakers = true,
-  bedVolume = 0.05
+  bedVolume = 0.045
 ): {
   audioStream: MediaStream | null;
   audioCtx: AudioContext | null;
   voiceBus: GainNode | null;
+  bgmGain: GainNode | null;
   stop: () => void;
 } {
   if (typeof window === "undefined") {
-    return { audioStream: null, audioCtx: null, voiceBus: null, stop: () => {} };
+    return { audioStream: null, audioCtx: null, voiceBus: null, bgmGain: null, stop: () => {} };
   }
 
   const AudioCtx =
     window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext })
-      .webkitAudioContext;
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!AudioCtx) {
-    return { audioStream: null, audioCtx: null, voiceBus: null, stop: () => {} };
+    return { audioStream: null, audioCtx: null, voiceBus: null, bgmGain: null, stop: () => {} };
   }
 
   const ctx = new AudioCtx();
   const dest = ctx.createMediaStreamDestination();
-  const master = ctx.createGain();
-  master.gain.value = bedVolume;
-  master.connect(dest);
-  if (connectToSpeakers) master.connect(ctx.destination);
+  const bgmGain = ctx.createGain();
+  bgmGain.gain.value = bedVolume;
+  bgmGain.connect(dest);
+  if (connectToSpeakers) bgmGain.connect(ctx.destination);
 
   const voiceBus = ctx.createGain();
-  voiceBus.gain.value = 1.05;
+  voiceBus.gain.value = 1.1;
   voiceBus.connect(dest);
   if (connectToSpeakers) voiceBus.connect(ctx.destination);
 
   const chords = [
-    [220.0, 261.63, 329.63, 392.0],
-    [174.61, 220.0, 261.63, 329.63],
     [130.81, 196.0, 246.94, 329.63],
-    [196.0, 246.94, 293.66, 329.63],
+    [110.0, 164.81, 220.0, 261.63],
+    [87.31, 130.81, 174.61, 220.0],
+    [98.0, 146.83, 196.0, 246.94],
   ];
   let step = 0;
 
@@ -1756,42 +2036,29 @@ export function startAmbientSynthBed(
     const notes = chords[step % chords.length];
     step += 1;
 
-    [0, 0.9].forEach((offset) => {
-      const sub = ctx.createOscillator();
-      const subGain = ctx.createGain();
-      sub.type = "triangle";
-      sub.frequency.setValueAtTime(notes[0] * 0.5, now + offset);
-      subGain.gain.setValueAtTime(0.001, now + offset);
-      subGain.gain.linearRampToValueAtTime(0.24, now + offset + 0.04);
-      subGain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.5);
-      sub.connect(subGain);
-      subGain.connect(master);
-      sub.start(now + offset);
-      sub.stop(now + offset + 0.52);
-    });
-
     notes.forEach((freq) => {
       const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const g = ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now);
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.18, now + 0.25);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
-      osc.connect(gain);
-      gain.connect(master);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(0.18, now + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+      osc.connect(g);
+      g.connect(bgmGain);
       osc.start(now);
-      osc.stop(now + 1.85);
+      osc.stop(now + 2.25);
     });
   };
 
   playChord();
-  const intervalId = window.setInterval(playChord, 1800);
+  const intervalId = window.setInterval(playChord, 2200);
 
   return {
     audioStream: dest.stream,
     audioCtx: ctx,
     voiceBus,
+    bgmGain,
     stop: () => {
       window.clearInterval(intervalId);
       ctx.close().catch(() => {});
@@ -1799,103 +2066,72 @@ export function startAmbientSynthBed(
   };
 }
 
-/**
- * Schedule precision Claude Code / Remotion SFX synchronized to animations:
- * - Mechanical keyboard taps during Scene 1 live prompt typing
- * - Crisp Mouse Clicks timed to cursor clicks (Run button, Cards 1-3, CTA button)
- * - Deep Sub-Bass Drop on Hook reveal
- * - Silky Filtered Whoosh at every 0.48s dual-scene cross-transition
- */
 export function scheduleSceneTransitionsSfx(
   audioCtx: AudioContext,
   targetBus: AudioNode,
   baseAudioTime: number,
   sceneDurations: number[]
 ): void {
-  const noiseDur = 0.44;
+  const noiseDur = 0.4;
   const noiseBuf = audioCtx.createBuffer(
     1,
     Math.floor(audioCtx.sampleRate * noiseDur),
     audioCtx.sampleRate
   );
   const data = noiseBuf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    data[i] = (Math.random() * 2 - 1) * 0.7;
-  }
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.65;
 
-  const playClick = (t: number, freq = 960, vol = 0.11) => {
+  const playClick = (t: number, freq = 1040, vol = 0.11) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = "triangle";
     osc.frequency.setValueAtTime(freq, t);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.45, t + 0.032);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.45, t + 0.03);
     gain.gain.setValueAtTime(0.001, t);
     gain.gain.linearRampToValueAtTime(vol, t + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.038);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
     osc.connect(gain);
     gain.connect(targetBus);
     osc.start(t);
-    osc.stop(t + 0.042);
+    osc.stop(t + 0.04);
   };
 
   let offsetSec = 0;
   sceneDurations.forEach((dur, idx) => {
     const t = baseAudioTime + offsetSec;
-
     if (idx === 0) {
-      // Soft crisp mechanical keyboard clicks during live prompt typing (0.2s - 1.3s)
-      for (let k = 0; k < 10; k++) {
-        playClick(t + 0.22 + k * 0.105, 760 + (k % 3) * 140, 0.045);
-      }
-      // Mouse click on RUN button (1.66s) + Sub-Bass Hook Impact (2.05s)
-      playClick(t + 1.66, 1250, 0.14);
-
-      const bassT = t + 2.02;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(84, bassT);
-      osc.frequency.exponentialRampToValueAtTime(28, bassT + 0.5);
-      gain.gain.setValueAtTime(0.001, bassT);
-      gain.gain.linearRampToValueAtTime(0.28, bassT + 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.001, bassT + 0.55);
-      osc.connect(gain);
-      gain.connect(targetBus);
-      osc.start(bassT);
-      osc.stop(bassT + 0.58);
+      const bass = audioCtx.createOscillator();
+      const bg = audioCtx.createGain();
+      bass.type = "sine";
+      bass.frequency.setValueAtTime(92, t + 0.06);
+      bass.frequency.exponentialRampToValueAtTime(30, t + 0.48);
+      bg.gain.setValueAtTime(0.001, t + 0.06);
+      bg.gain.linearRampToValueAtTime(0.28, t + 0.085);
+      bg.gain.exponentialRampToValueAtTime(0.001, t + 0.52);
+      bass.connect(bg);
+      bg.connect(targetBus);
+      bass.start(t + 0.06);
+      bass.stop(t + 0.55);
+      playClick(t + Math.min(1.38, dur * 0.42), 1260, 0.13);
     } else {
-      // Silky Filtered Air Whoosh at every cross-scene transition
       const src = audioCtx.createBufferSource();
       src.buffer = noiseBuf;
       const filter = audioCtx.createBiquadFilter();
       filter.type = "bandpass";
-      filter.Q.value = 2.4;
-      filter.frequency.setValueAtTime(260, t);
-      filter.frequency.exponentialRampToValueAtTime(2600, t + 0.18);
-      filter.frequency.exponentialRampToValueAtTime(380, t + 0.42);
-
+      filter.Q.value = 2.3;
+      filter.frequency.setValueAtTime(280, t);
+      filter.frequency.exponentialRampToValueAtTime(2600, t + 0.16);
+      filter.frequency.exponentialRampToValueAtTime(360, t + 0.38);
       const gain = audioCtx.createGain();
       gain.gain.setValueAtTime(0.001, t);
-      gain.gain.linearRampToValueAtTime(0.15, t + 0.14);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.44);
-
+      gain.gain.linearRampToValueAtTime(0.15, t + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
       src.connect(filter);
       filter.connect(gain);
       gain.connect(targetBus);
       src.start(t);
-      src.stop(t + 0.44);
-
-      // Cursor click SFX synced to Card Stack (idx=2) & CTA Finale (last scene)
-      const { template } = getSceneTemplate(idx, sceneDurations.length);
-      if (template === "cursor_cards") {
-        playClick(t + 1.05, 1180, 0.12);
-        playClick(t + 2.05, 1280, 0.12);
-        playClick(t + 3.05, 1420, 0.13);
-      } else if (template === "cta_finale") {
-        playClick(t + 1.45, 1340, 0.15);
-      }
+      src.stop(t + 0.4);
     }
-
     offsetSec += dur;
   });
 }
