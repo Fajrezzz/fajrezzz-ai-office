@@ -20,6 +20,7 @@ import {
   renderTikTokVideoV3,
   type SceneAudioScheduleItem,
 } from "@/lib/pipeline/video-engine-v3";
+import { trimAudioBufferDeadAir } from "@/lib/pipeline/auto-editor-pacing";
 import type {
   EditingOutput,
   ExportQualityPreset,
@@ -286,7 +287,12 @@ export async function startSyncedLivePreview(options: {
         if (!clip) return null;
         try {
           const arr = await clip.blob.arrayBuffer();
-          return await audioCtx.decodeAudioData(arr.slice(0));
+          const rawBuf = await audioCtx.decodeAudioData(arr.slice(0));
+          // Auto-Editor inspired PCM silence trimmer: removes leading/trailing dead air for punchy TikTok pacing!
+          return trimAudioBufferDeadAir(audioCtx, rawBuf, {
+            thresholdDb: -40,
+            marginSec: 0.06,
+          }).buffer;
         } catch {
           return null;
         }
@@ -487,7 +493,14 @@ export async function runEditingDivisionBrowser(
         }
         try {
           const arr = await clip.blob.arrayBuffer();
-          decodedBuffers.push(await decodeCtx.decodeAudioData(arr.slice(0)));
+          const rawBuf = await decodeCtx.decodeAudioData(arr.slice(0));
+          // Smart PCM dead-air silence trimming before timeline lock (auto-editor pacing!)
+          decodedBuffers.push(
+            trimAudioBufferDeadAir(decodeCtx, rawBuf, {
+              thresholdDb: -40,
+              marginSec: 0.06,
+            }).buffer
+          );
         } catch {
           decodedBuffers.push(null);
         }
