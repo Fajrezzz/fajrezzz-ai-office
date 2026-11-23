@@ -8,11 +8,15 @@ import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { BossPlayer } from "@/components/office3d/BossPlayer";
 import { CyberOutdoorCampus } from "@/components/office3d/CyberOutdoorCampus";
+import { DrivableVehicles } from "@/components/office3d/DrivableVehicles";
+import { InteriorActivityRooms } from "@/components/office3d/InteriorActivityRooms";
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { OfficeExtrasStaff } from "@/components/office3d/OfficeExtrasStaff";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
+import { WeatherEffects } from "@/components/office3d/WeatherEffects";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
+import { useSimulator } from "@/store/SimulatorContext";
 import type { CameraPreset, Vector3Tuple } from "@/types/office";
 
 const CAMERA_PRESETS: Record<
@@ -40,8 +44,17 @@ function FreeRoamCameraRig() {
     bossPositionRef,
     bossTeleportCommand,
   } = useOffice();
+  const {
+    activeVehicleId,
+    simCameraMode,
+    viewPerspective,
+    setCompassDeg,
+    setZoomPct,
+    setCurrentLocationName,
+  } = useSimulator();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const { camera } = useThree();
+  const hudReportAccumRef = useRef(0);
 
   const desiredPosRef = useRef(new THREE.Vector3(...CAMERA_PRESETS.front.pos));
   const desiredTargetRef = useRef(
@@ -152,16 +165,71 @@ function FreeRoamCameraRig() {
     };
   }, [isBossMode]);
 
+  // React to Simulator Camera Mode changes (O: Orbit / Drone / Top-Down)
+  useEffect(() => {
+    if (simCameraMode === "drone") {
+      desiredPosRef.current.set(-30, 26, 28);
+      desiredTargetRef.current.set(0, 4.5, 2.5);
+      isTransitioningRef.current = true;
+    } else if (simCameraMode === "topdown") {
+      desiredPosRef.current.set(0, 52, 6);
+      desiredTargetRef.current.set(0, 1.5, 4);
+      isTransitioningRef.current = true;
+    }
+  }, [simCameraMode]);
+
   useFrame((_, delta) => {
     const ctrl = controlsRef.current;
     if (!ctrl) return;
 
     const dt = Math.min(delta, 0.05);
 
-    // 1) Third-person Game Follow Camera when playing as BOS FAJREZ
+    // Report live Compass + Zoom % + Zone Name smoothly to HUD
+    hudReportAccumRef.current += dt;
+    if (hudReportAccumRef.current > 0.25) {
+      hudReportAccumRef.current = 0;
+      camera.getWorldDirection(forwardVec);
+      const deg = ((Math.atan2(forwardVec.x, -forwardVec.z) * 180) / Math.PI + 360) % 360;
+      setCompassDeg(deg);
+      const dist = camera.position.distanceTo(ctrl.target);
+      setZoomPct(Math.round(THREE.MathUtils.clamp((32 / Math.max(4, dist)) * 100, 30, 260)));
+
+      const [bx, by, bz] = bossPositionRef.current;
+      if (activeVehicleId) {
+        setCurrentLocationName("Mengemudi · Cyber Avenue");
+      } else if (by > 10.5) {
+        setCurrentLocationName("Rooftop · Helipad & Padel RGB");
+      } else if (by > 6.5) {
+        setCurrentLocationName("Lantai 3 · CEO Suite & Biliar");
+      } else if (by > 2.8) {
+        setCurrentLocationName("Lantai 2 · AI Production Floor");
+      } else if (bz > 6.5 && bx > -12 && bx < 4) {
+        setCurrentLocationName("Kolam Renang & Sun Deck");
+      } else if (bz > 6.5) {
+        setCurrentLocationName("Halaman Depan & Parkir VIP");
+      } else if (bx < -5) {
+        setCurrentLocationName("Lantai 1 · Ruang Kontrol MT5");
+      } else if (bx > 5) {
+        setCurrentLocationName("Lantai 1 · Gym & Arcade");
+      } else {
+        setCurrentLocationName("Lantai 1 · Lobi Utama");
+      }
+    }
+
+    // While driving any of the 9 vehicles, DrivableVehicles owns the camera
+    if (activeVehicleId) return;
+
+    // 1) First-person or Third-person Game Follow Camera when playing as BOS FAJREZ
     if (isBossMode && bossFollowCamera) {
       const [bx, by, bz] = bossPositionRef.current;
       bossTargetVec.set(bx, by + 1.35, bz);
+
+      if (viewPerspective === "first") {
+        camera.position.lerp(new THREE.Vector3(bx, by + 1.62, bz + 0.15), Math.min(1, dt * 12));
+        ctrl.target.lerp(new THREE.Vector3(bx, by + 1.56, bz - 3.5), Math.min(1, dt * 12));
+        ctrl.update();
+        return;
+      }
 
       if (isTransitioningRef.current) {
         const lerpFactor = Math.min(1, dt * 6.5);
@@ -397,7 +465,7 @@ export function OfficeScene() {
       <Environment resolution={isEco ? 64 : 128} frames={1}>
         <Lightformer
           form="ring"
-          intensity={isNight ? 0.72 : isSunset ? 1.9 : 2.3}
+          intensity={isNight ? 0.28 : isSunset ? 1.1 : 1.35}
           color={isNight ? "#38bdf8" : isSunset ? "#ff8fb1" : "#ffffff"}
           scale={18}
           position={[0, 18, 0]}
@@ -405,7 +473,7 @@ export function OfficeScene() {
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.55 : isSunset ? 2.4 : 1.7}
+          intensity={isNight ? 0.22 : isSunset ? 1.25 : 0.95}
           color={isNight ? "#e879f9" : isSunset ? "#ff8c42" : "#e0f2fe"}
           scale={[24, 10, 1]}
           position={[18, 8, 16]}
@@ -413,7 +481,7 @@ export function OfficeScene() {
         />
         <Lightformer
           form="rect"
-          intensity={isNight ? 0.45 : isSunset ? 1.3 : 0.9}
+          intensity={isNight ? 0.18 : isSunset ? 0.75 : 0.6}
           color={isNight ? "#22d3ee" : isSunset ? "#c084fc" : "#cbd5e1"}
           scale={[24, 10, 1]}
           position={[-18, 7, -14]}
@@ -456,6 +524,12 @@ export function OfficeScene() {
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
+      {/* 9 Drivable Vehicles Fleet + West/East Paved Parking Lots */}
+      <DrivableVehicles isNight={isNight} />
+
+      {/* Dynamic Weather System (Rain, Storm Lightning, Atmospheric Fog) */}
+      <WeatherEffects isHigh={isHigh} />
+
       {/* Grand 28m 3-Story Luxury Architectural HQ + Rooftop Helicopter & Badminton Court */}
       <OfficeArchitecture
         activeFloor={activeFloor}
@@ -463,6 +537,14 @@ export function OfficeScene() {
         lightingPreset={lightingPreset}
         isSimulationRunning={isSimulationRunning}
         onFocusPoint={(pt) => focusCameraOn(pt)}
+      />
+
+      {/* Stage 2 Interior Activity Rooms (MT5 Control Room, Gym/Arcade/Sim, L3 Billiards/Cinema, Pergola, Neon H & Hologram HQ) */}
+      <InteriorActivityRooms
+        showL1={true}
+        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof"}
+        showRoof={activeFloor === "all" || activeFloor === "roof"}
+        isNight={isNight}
       />
 
       {/* L3 VIP Executives (CEO, Manajer Senior, Sekretaris, CFO) + L1 Reception & Lounge Staff */}
@@ -507,24 +589,24 @@ export function OfficeScene() {
       {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
 
-      {/* Selective Emissive Bloom — OFF in Eco, Light in Bal, Full in High */}
+      {/* Selective Anti-Glare Emissive Bloom — Subtle & Crisp Without Blinding Reflection Glare */}
       {!isEco && (
         <EffectComposer multisampling={0}>
           <Bloom
             mipmapBlur
-            luminanceThreshold={isHigh ? 1.08 : 1.15}
-            luminanceSmoothing={0.22}
-            levels={isHigh ? 6 : 4}
+            luminanceThreshold={isHigh ? 1.42 : 1.48}
+            luminanceSmoothing={0.38}
+            levels={isHigh ? 5 : 4}
             intensity={
               isNight
                 ? isHigh
-                  ? 1.15
-                  : 0.65
+                  ? 0.34
+                  : 0.22
                 : isSunset
                 ? isHigh
-                  ? 0.48
-                  : 0.3
-                : 0.14
+                  ? 0.24
+                  : 0.16
+                : 0.08
             }
           />
         </EffectComposer>
