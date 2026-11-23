@@ -19,7 +19,12 @@ export type SkillDomain =
   | "coding-best-practices"
   | "research-fact-checking"
   | "long-term-memory"
-  | "quality-assurance";
+  | "quality-assurance"
+  | "agent-harness"
+  | "web-automation"
+  | "cybersecurity"
+  | "editorial-diagram"
+  | "scientific-research";
 
 export type SkillIntegrationType =
   | "npm-dependency"
@@ -326,6 +331,163 @@ export const MODULAR_AGENT_SKILLS: ModularAgentSkillSpec[] = [
     ],
     inactiveCapabilities: [],
     assignedDivisions: ["QC", "Editing"],
+  },
+  // ================= v9 SKILL PACKS (7 repo yang dikirim Bos) =================
+  {
+    id: "agentmemory-recall",
+    name: "AgentMemory — Persistent Recall & Consolidation",
+    domain: "long-term-memory",
+    sourceRepo: "rohitg00/agentmemory",
+    sourceUrl: "https://github.com/rohitg00/agentmemory",
+    license: "MIT",
+    version: "0.9.33",
+    integrationType: "methodology-skill",
+    defaultInstallStatus: "adapter-active",
+    compatibility: "compatible-nextjs-browser",
+    testStatus: "tested",
+    hardwareRequirement: "Tidak ada — berjalan di localStorage browser (tanpa server/DB eksternal).",
+    securityNote: "Semua memori tetap di browser Bos; tidak ada data yang dikirim ke pihak ketiga.",
+    activeCapabilities: [
+      "Recall berbobot (overlap kata kunci + kebaruan + jenis memori) sebelum agen menulis naskah — `buildMemoryRecall()`",
+      "Konteks memori terkompresi (`buildCompressedMemoryContext`) disuntik ke prompt agen",
+      "Pencatatan episode & pelajaran QC agar topik tidak diulang",
+    ],
+    inactiveCapabilities: [
+      "Server daemon + MCP bridge bawaan repo aslinya (butuh proses Node terpisah, tidak cocok untuk Vercel Serverless)",
+    ],
+    assignedDivisions: ["Riset", "SEO", "Naskah", "QC"],
+  },
+  {
+    id: "openviking-context-db",
+    name: "OpenViking — Self-Evolving Context Database",
+    domain: "long-term-memory",
+    sourceRepo: "volcengine/OpenViking",
+    sourceUrl: "https://github.com/volcengine/OpenViking",
+    license: "Apache-2.0",
+    version: "main (≈3.5k commits)",
+    integrationType: "service-adapter",
+    defaultInstallStatus: "worker-required",
+    compatibility: "external-service-required",
+    testStatus: "not-tested-missing-binary",
+    hardwareRequirement: "Server Python/Go + PostgreSQL/QueueFS; minimal 2 vCPU & 2 GB RAM di luar Vercel.",
+    securityNote: "Butuh kredensial DB sendiri; tidak diaktifkan otomatis untuk menghindari secret tambahan.",
+    activeCapabilities: [],
+    inactiveCapabilities: [
+      "Knowledge RAG + skill unification (menunggu worker khusus; adapter belum dipasang)",
+    ],
+    assignedDivisions: ["Riset"],
+  },
+  {
+    id: "browser-use-agent",
+    name: "Browser Use — Autonomous Web Agent",
+    domain: "web-automation",
+    sourceRepo: "browser-use/browser-use",
+    sourceUrl: "https://github.com/browser-use/browser-use",
+    license: "MIT",
+    version: "1.0.8",
+    integrationType: "service-adapter",
+    defaultInstallStatus: "worker-required",
+    compatibility: "external-service-required",
+    testStatus: "not-tested-missing-binary",
+    hardwareRequirement: "Python 3.11+ + Chromium headless (~400 MB) — tidak bisa di Vercel Serverless.",
+    securityNote: "Hanya boleh dipakai untuk halaman publik/berlisensi terbuka; guardrail yt-dlp tetap berlaku.",
+    activeCapabilities: [],
+    inactiveCapabilities: [
+      "Otomasi browser untuk riset tren (menunggu Render Worker; riset saat ini pakai GitHub API resmi)",
+    ],
+    assignedDivisions: ["Riset"],
+  },
+  {
+    id: "awesome-harness-engineering",
+    name: "Awesome Harness Engineering — Agent Reliability Patterns",
+    domain: "agent-harness",
+    sourceRepo: "ai-boost/awesome-harness-engineering",
+    sourceUrl: "https://github.com/ai-boost/awesome-harness-engineering",
+    license: "CC0-1.0",
+    version: "main (Nov 2026)",
+    integrationType: "methodology-skill",
+    defaultInstallStatus: "adapter-active",
+    compatibility: "selective-prompt-only",
+    testStatus: "tested",
+    hardwareRequirement: "Tidak ada — pola dokumen & checklist.",
+    securityNote: "Hanya mengadopsi pola (context, tools, planning, permissions, verification), bukan memasang harness pihak ketiga.",
+    activeCapabilities: [
+      "Checklist harness 6 primitif di `docs/HARNESS.md` + guardrail `AGENTS.md`",
+      "Gate verifikasi sebelum commit: lint → typecheck → test → build",
+    ],
+    inactiveCapabilities: [
+      "Orkestrasi harness eksternal (tidak dipasang agar tidak bentrok dengan Next.js)",
+    ],
+    assignedDivisions: ["CEO Auto-Pilot", "QC"],
+  },
+  {
+    id: "anthropic-cybersecurity-skills",
+    name: "Anthropic Cybersecurity Skills — Secret Hygiene & Threat Checks",
+    domain: "cybersecurity",
+    sourceRepo: "mukul975/Anthropic-Cybersecurity-Skills",
+    sourceUrl: "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
+    license: "Apache-2.0",
+    version: "817 skills (build Aug 2026)",
+    integrationType: "methodology-skill",
+    defaultInstallStatus: "adapter-active",
+    compatibility: "selective-prompt-only",
+    testStatus: "tested",
+    hardwareRequirement: "Tidak ada — pola review & pemindaian statis.",
+    securityNote: "Tidak ada eksekusi tools ofensif; hanya hygiene: scan secret, redaksi log, prinsip least-privilege.",
+    activeCapabilities: [
+      "Pemindai secret hardcoded (`src/lib/security/secret-scan.ts`) dijalankan otomatis sebagai unit test",
+      "Redaksi key pada semua pesan error provider AI (`sanitizeErrorMessage`)",
+    ],
+    inactiveCapabilities: [
+      "Seluruh 817 skill ofensif/DFIR tidak diimpor (di luar kebutuhan aplikasi)",
+    ],
+    assignedDivisions: ["QC", "CEO Auto-Pilot"],
+  },
+  {
+    id: "diagram-design-editorial",
+    name: "Diagram Design — Editorial Diagram Grammar",
+    domain: "editorial-diagram",
+    sourceRepo: "cathrynlavery/diagram-design",
+    sourceUrl: "https://github.com/cathrynlavery/diagram-design",
+    license: "MIT",
+    version: "2.6.174",
+    integrationType: "methodology-skill",
+    defaultInstallStatus: "adapter-active",
+    compatibility: "selective-prompt-only",
+    testStatus: "tested",
+    hardwareRequirement: "Tidak ada — aturan desain dipakai di renderer canvas kita sendiri.",
+    securityNote: "Tidak memasang plugin/HTML generator eksternal; hanya prinsip desain.",
+    activeCapabilities: [
+      "Prinsip 'no shadows, no Mermaid slop': palet editorial, garis tegas, hierarki tipografi di renderer `zine_glitch`",
+      "Slab teks presisi + grid band anti-tumpang-tindih untuk diagram alur di video",
+    ],
+    inactiveCapabilities: [
+      "52 tipe diagram + ekspor .drawio/.excalidraw (belum dipakai; format video hanya butuh SVG/canvas)",
+    ],
+    assignedDivisions: ["Motion", "Editing"],
+  },
+  {
+    id: "scientific-agent-skills",
+    name: "Scientific Agent Skills — Research Rigor Guard",
+    domain: "scientific-research",
+    sourceRepo: "K-Dense-Al/scientific-agent-skills",
+    sourceUrl: "https://github.com/K-Dense-Al/scientific-agent-skills",
+    license: "Lihat repo (MIT-style)",
+    version: "main",
+    integrationType: "methodology-skill",
+    defaultInstallStatus: "adapter-active",
+    compatibility: "selective-prompt-only",
+    testStatus: "tested",
+    hardwareRequirement: "Tidak ada — aturan prompt + audit teks.",
+    securityNote: "Tidak ada tool biologi/kimia yang dijalankan; hanya disiplin epistemik.",
+    activeCapabilities: [
+      "`buildResearchRigorPrompt()` disuntik ke system prompt Divisi Riset",
+      "`auditResearchClaim()` menandai angka tanpa sumber & klaim absolut sebelum QC",
+    ],
+    inactiveCapabilities: [
+      "Tool komputasi ilmiah & dataset khusus domain (tidak relevan untuk konten AI)",
+    ],
+    assignedDivisions: ["Riset", "QC"],
   },
 ];
 

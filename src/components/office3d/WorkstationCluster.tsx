@@ -278,6 +278,89 @@ export function WorkstationCluster({
               />
             </mesh>
 
+            {/* ==== ISI MEJA: pulpen, pot tanaman, buku catatan, HP, sticky notes ==== */}
+            {/* Pulpen dalam gelas keramik */}
+            <group position={[-0.74, 0.775, -0.26]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.055, 0.048, 0.12, 14]} />
+                <meshStandardMaterial color="#e2e8f0" roughness={0.35} metalness={0.15} />
+              </mesh>
+              {[
+                [-0.018, 0.11, 0.01, 0.1],
+                [0.012, 0.12, -0.014, -0.16],
+                [0.002, 0.105, 0.02, 0.28],
+              ].map(([px, py, pz, tilt], pi) => (
+                <mesh
+                  key={`pen-${pi}`}
+                  position={[px, py, pz]}
+                  rotation={[tilt, 0, tilt * 0.6]}
+                  castShadow
+                >
+                  <cylinderGeometry args={[0.008, 0.006, 0.2, 8]} />
+                  <meshStandardMaterial
+                    color={pi === 0 ? "#f59e0b" : pi === 1 ? "#0ea5e9" : "#e11d48"}
+                    roughness={0.4}
+                  />
+                </mesh>
+              ))}
+            </group>
+
+            {/* Pot tanaman sukulen kecil */}
+            <group position={[0.98, 0.775, 0.24]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.075, 0.06, 0.12, 16]} />
+                <meshStandardMaterial color="#b45309" roughness={0.6} />
+              </mesh>
+              <mesh position={[0, 0.085, 0]} castShadow>
+                <sphereGeometry args={[0.075, 14, 12]} />
+                <meshStandardMaterial color="#15803d" roughness={0.82} />
+              </mesh>
+              {[
+                [0.05, 0.12, 0.02],
+                [-0.05, 0.11, -0.03],
+                [0.01, 0.14, -0.05],
+              ].map(([lx, ly, lz], li) => (
+                <mesh key={`leaf-${li}`} position={[lx, ly, lz]} rotation={[0.5, li, 0.3]}>
+                  <sphereGeometry args={[0.045, 10, 8]} />
+                  <meshStandardMaterial color="#22c55e" roughness={0.8} />
+                </mesh>
+              ))}
+            </group>
+
+            {/* Buku catatan spiral + pulpen tergeletak */}
+            <group position={[-0.3, 0.78, 0.34]} rotation={[0, 0.22, 0]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.3, 0.016, 0.22]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+              </mesh>
+              <mesh position={[0, 0.014, 0]}>
+                <boxGeometry args={[0.26, 0.006, 0.18]} />
+                <meshStandardMaterial color="#dbeafe" roughness={0.75} />
+              </mesh>
+              <mesh position={[0.16, 0.016, 0.02]} rotation={[0, 0.5, Math.PI / 2]}>
+                <cylinderGeometry args={[0.007, 0.007, 0.18, 8]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.4} />
+              </mesh>
+            </group>
+
+            {/* Smartphone */}
+            <mesh position={[0.62, 0.785, -0.3]} rotation={[0, -0.3, 0]} castShadow>
+              <boxGeometry args={[0.09, 0.012, 0.19]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.4} roughness={0.28} />
+            </mesh>
+
+            {/* Sticky notes kuning */}
+            <group position={[-0.52, 0.782, 0.12]} rotation={[0, -0.18, 0]}>
+              <mesh>
+                <boxGeometry args={[0.12, 0.014, 0.12]} />
+                <meshStandardMaterial color="#fde047" roughness={0.85} />
+              </mesh>
+              <mesh position={[0.012, 0.012, -0.008]} rotation={[0, 0.2, 0]}>
+                <boxGeometry args={[0.12, 0.008, 0.12]} />
+                <meshStandardMaterial color="#fef08a" roughness={0.85} />
+              </mesh>
+            </group>
+
             {/* Ergonomic Office Swivel Chair (positioned behind desk at Z = +0.86) */}
             <group position={[0, 0, 0.86]}>
               {/* Base star & hydraulic column */}

@@ -3,6 +3,7 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { computeRally } from "@/lib/office3d/badminton-rally";
 
 interface RooftopAttractionsProps {
   isNight: boolean;
@@ -323,27 +324,28 @@ function BadmintonPlayer({
   useFrame((state) => {
     if (!isSimulationRunning) return;
     const t = state.clock.elapsedTime;
-    // Rally cycle: 2.2s per full back-and-forth
-    const phase = (t * 2.6) % (Math.PI * 2);
-    // Lateral court movement + energetic athletic bounce
+    // RALLY NYATA: posisi kok & ayunan raket dihitung dari fase yang SAMA,
+    // jadi raket selalu tepat mengenai kok saat kontak.
+    const rally = computeRally(t);
+    const me = side === -1 ? rally.left : rally.right;
+
     if (playerRef.current) {
-      playerRef.current.position.z = Math.sin(t * 1.45 + side * 1.2) * 1.25;
-      playerRef.current.position.x =
-        side * (2.65 + Math.cos(t * 1.9 + side) * 0.45);
-      playerRef.current.position.y = Math.abs(Math.sin(t * 5.2 + side)) * 0.08;
+      playerRef.current.position.x = side * 2.65 + me.stepX;
+      playerRef.current.position.z = me.stepZ;
+      playerRef.current.position.y = Math.abs(Math.sin(me.legPhase)) * 0.05;
+      // condong sedikit ke arah net saat memukul
+      playerRef.current.rotation.x = -me.lean * 0.35;
     }
 
-    // Swing racket right as the shuttlecock reaches this player's side!
     if (racketArmRef.current) {
-      const hitWave = side === -1 ? Math.sin(phase) : -Math.sin(phase);
-      const swing = hitWave > 0.35 ? -1.45 * ((hitWave - 0.35) / 0.65) : 0.25;
-      racketArmRef.current.rotation.x = -0.75 + swing * 0.85;
-      racketArmRef.current.rotation.z = side * -0.25;
+      racketArmRef.current.rotation.x = me.racketAngle;
+      racketArmRef.current.rotation.z = side * -0.25 + me.lean * 0.6;
     }
 
     if (leftLegRef.current && rightLegRef.current) {
-      leftLegRef.current.rotation.x = Math.sin(t * 5.2 + side) * 0.28;
-      rightLegRef.current.rotation.x = -Math.sin(t * 5.2 + side) * 0.28;
+      const stride = 0.18 + me.swing * 0.22;
+      leftLegRef.current.rotation.x = Math.sin(me.legPhase) * stride;
+      rightLegRef.current.rotation.x = -Math.sin(me.legPhase) * stride;
     }
   });
 
@@ -444,6 +446,7 @@ function RooftopBadmintonCourt({
   const shuttleRef = useRef<THREE.Group>(null);
   const rgbMatRefs = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
   const rgbColorTmp = useMemo(() => new THREE.Color(), []);
+  const impactRef = useRef<THREE.Mesh>(null);
 
   // 32-segment continuous RGB Neon LED perimeter border around all 4 edges of the badminton court
   const rgbPerimeterSegments = useMemo(() => {
@@ -509,15 +512,28 @@ function RooftopBadmintonCourt({
       mat.emissive.copy(rgbColorTmp);
     }
 
-    if (!shuttleRef.current || !isSimulationRunning) return;
-    const phase = (t * 2.6) % (Math.PI * 2);
-    // Smooth rally flight between X = -2.5 and X = +2.5 clearing the net (y=1.55m)
-    const x = Math.cos(phase) * 2.55;
-    const arc = Math.sin(phase) ** 2;
-    const y = 1.65 + (1 - (x / 2.65) ** 2) * 1.85 + arc * 0.25;
-    const z = Math.sin(t * 1.45) * 0.85;
-    shuttleRef.current.position.set(x, y, z);
-    shuttleRef.current.rotation.z = Math.sin(phase) > 0 ? -0.9 : 0.9;
+    if (!isSimulationRunning) return;
+    const rally = computeRally(t);
+    if (shuttleRef.current) {
+      shuttleRef.current.position.set(
+        rally.shuttle.x,
+        rally.shuttle.y,
+        rally.shuttle.z
+      );
+      shuttleRef.current.rotation.z = rally.shuttle.roll;
+      shuttleRef.current.rotation.x = rally.shuttle.pitch;
+    }
+    // Kilatan impact tepat saat raket menyentuh kok
+    if (impactRef.current) {
+      const scale = 0.12 + rally.impact * 0.5;
+      impactRef.current.scale.setScalar(scale);
+      impactRef.current.position.set(
+        rally.direction === 1 ? -1.95 : 1.95,
+        2.06,
+        rally.shuttle.z * 0.9
+      );
+      impactRef.current.visible = rally.impact > 0.05;
+    }
   });
 
   const floodlightEmissive = isNight ? 2.6 : isSunset ? 1.8 : 0.75;
@@ -722,6 +738,12 @@ function RooftopBadmintonCourt({
         hairColor="#291d16"
         isSimulationRunning={isSimulationRunning}
       />
+
+      {/* KILATAN IMPACT di kepala raket (muncul hanya saat kontak) */}
+      <mesh ref={impactRef} visible={false}>
+        <sphereGeometry args={[0.5, 12, 10]} />
+        <meshBasicMaterial color="#fef9c3" transparent opacity={0.55} toneMapped={false} />
+      </mesh>
 
       {/* FLYING WHITE SHUTTLECOCK (KOK BULU TANGKIS) */}
       <group ref={shuttleRef} position={[0, 2.6, 0]}>

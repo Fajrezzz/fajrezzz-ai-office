@@ -5,6 +5,10 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
+import {
+  FloorThreeFill,
+  FloorTwoFill,
+} from "@/components/office3d/InteriorFurnishing";
 import { useOffice } from "@/store/OfficeContext";
 import {
   FLOOR_1_Y,
@@ -2040,6 +2044,9 @@ export function OfficeArchitecture({
         </group>
       )}
 
+      {/* Pengisi area kosong L2 (promenade kiri/kanan) — keluhan Bos: masih kosong */}
+      {showL2 && <FloorTwoFill />}
+
       {/* ============================================================
           L3 STRUCTURAL ROOF SLAB — dasar Crown Sky Deck (Y ≈ 11.8)
           Kantor kini 3 lantai: L4 & L5 sudah dihapus.
@@ -2102,6 +2109,9 @@ export function OfficeArchitecture({
               />
             </mesh>
           ))}
+
+          {/* Pengisi area kosong L3 (pod staff kiri, lounge meeting kanan) */}
+          <FloorThreeFill />
         </group>
       )}
     </group>

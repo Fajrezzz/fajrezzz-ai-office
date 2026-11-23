@@ -48,8 +48,10 @@ async function main() {
     hindsightConfigured: false,
   };
 
-  await runTest("Phase 1/2: All 11 audited reference repositories & 11 skill domains are registered", () => {
-    assert.equal(MODULAR_AGENT_SKILLS.length, 11);
+  await runTest("Phase 1/2: 11 audited repos + 7 skill pack v9 tetap terdaftar", () => {
+    // v9 menambah 7 skill pack (agentmemory, OpenViking, browser-use, harness,
+    // cybersecurity, diagram-design, scientific) → total 18.
+    assert.equal(MODULAR_AGENT_SKILLS.length, 18);
     const allRepoText = MODULAR_AGENT_SKILLS.map((s) => s.sourceRepo).join(" | ");
     for (const repo of [
       "remotion-dev/remotion",

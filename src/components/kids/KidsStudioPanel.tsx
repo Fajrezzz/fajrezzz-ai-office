@@ -114,6 +114,17 @@ interface AiServerStatus {
   pricingNotice: string;
 }
 
+/** Label durasi yang tidak menyesatkan ("44.5d" dulu terbaca 44,5 hari, padahal detik). */
+function formatLatency(durationMs: number): string {
+  if (!durationMs || durationMs <= 0) return "—";
+  if (durationMs < 1000) return `${Math.round(durationMs)} ms`;
+  if (durationMs < 60_000) return `${(durationMs / 1000).toFixed(1)} dtk`;
+  const totalSec = Math.round(durationMs / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}m ${String(sec).padStart(2, "0")}s`;
+}
+
 export function KidsStudioPanel() {
   const { setActiveSection, setActiveFloor, setCameraPreset } = useOffice();
   const {
@@ -925,9 +936,7 @@ export function KidsStudioPanel() {
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <Clock className="h-3 w-3" />
                         <span>
-                          {rec.durationMs > 0
-                            ? `${(rec.durationMs / 1000).toFixed(1)}d`
-                            : "—"}
+                          {formatLatency(rec.durationMs)}
                         </span>
                         {rec.provider && (
                           <span className="truncate rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[9px] text-cyan-300">
@@ -942,6 +951,14 @@ export function KidsStudioPanel() {
                           {rec.hint && (
                             <div className="mt-1 text-rose-100/80">{rec.hint}</div>
                           )}
+                          <a
+                            href="/api/ai/test-providers"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 rounded-md bg-rose-500/20 px-2 py-1 font-bold text-rose-100 underline-offset-2 hover:underline"
+                          >
+                            Tes live API key provider →
+                          </a>
                         </div>
                       )}
                     </div>
