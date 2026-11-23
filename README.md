@@ -67,9 +67,27 @@ src/
 
 ### Keamanan API Key
 
-- **Tidak ada API key di frontend.**
-- Salin `.env.example` menjadi `.env.local` saat mulai mengintegrasikan Supabase atau AI API di Tahap 2.
-- Variabel sensitif (`SUPABASE_SERVICE_ROLE_KEY`, `AI_PROVIDER_API_KEY`) **tidak boleh** memakai prefix `NEXT_PUBLIC_` dan hanya dibaca pada sisi server (`src/lib/config/env.ts` & Route Handlers).
+- **Tidak ada API key di frontend.** Key hanya dibaca di server (Route Handlers) dan tidak pernah dikirim ke browser.
+- Variabel sensitif (`GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) **tidak boleh** memakai prefix `NEXT_PUBLIC_`.
+- Error/log otomatis di-redaksi (`sanitizeErrorMessage`) supaya key tidak bocor ke telemetri.
+
+### Cara Memasang API Key Central AI Router (Gemini + Groq + OpenRouter)
+
+Ringkasnya (tutorial lengkap: **[`docs/API-KEY-ROUTER.md`](docs/API-KEY-ROUTER.md)**):
+
+1. Ambil key gratis: <https://aistudio.google.com/apikey> · <https://console.groq.com/keys> · <https://openrouter.ai/keys>
+2. Vercel → Project → **Settings → Environment Variables** → tambahkan `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` (centang Production + Preview + Development).
+3. **Redeploy** project (env baru hanya aktif di deployment baru).
+4. Verifikasi: buka `/api/ai/status` atau panel **AI Router** → tombol **Tes Live Provider**.
+
+Lokal: `cp .env.example .env.local`, isi key, lalu `npm run dev`.
+Tanpa key pun aplikasi tetap hidup lewat fallback **Pollinations keyless (Rp 0)**.
+
+### Kualitas Visual & FPS (Target 120 FPS)
+
+- Target render **120 FPS** (panel POCO X8 Pro Max 120 Hz); angka **Aktual** di UI selalu hasil pengukuran frame time nyata, bukan target.
+- Pixel ratio tidak pernah di bawah **1.0x** (tidak ada upscaling blur), anti-aliasing selalu aktif, tekstur memakai mipmap trilinear + anisotropic filtering.
+- Detail penyebab & perubahan: **[`docs/VISUAL-QUALITY-FPS.md`](docs/VISUAL-QUALITY-FPS.md)**.
 
 ---
 
@@ -104,6 +122,7 @@ http://localhost:3000
 
 ```bash
 npm run typecheck
+npm test          # termasuk test kebijakan render/ketajaman (v7)
 npm run build
 npm run start
 ```

@@ -415,7 +415,7 @@ export function RealResultsDashboard({ compact = false }: { compact?: boolean })
             {OFFICE_FLOORS.length} Lantai
           </div>
           <div className="mt-1 text-[10px] text-emerald-300">
-            {workstations.length} desk · {adaptiveFps} FPS
+            {workstations.length} desk · {adaptiveFps} FPS aktual
           </div>
         </div>
       </div>

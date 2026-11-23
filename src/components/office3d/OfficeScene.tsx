@@ -19,6 +19,11 @@ import { WeatherEffects } from "@/components/office3d/WeatherEffects";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
 import { useSimulator } from "@/store/SimulatorContext";
+import {
+  shadowMapSizeFor,
+  shadowUpdateStrideFor,
+} from "@/lib/perf/render-telemetry";
+import { applyTextureQuality } from "@/components/office3d/realisticTextures";
 import type { CameraPreset, Vector3Tuple } from "@/types/office";
 
 const CAMERA_PRESETS: Record<
@@ -463,8 +468,40 @@ export function OfficeScene() {
 
   const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ff984c" : "#fff9ef";
   const sunIntensity = isNight ? 0.82 : isSunset ? 2.45 : 2.15;
-  // Performance Tiers: Eco = NO shadows, Bal = low-res 512 shadow, High = sharp 2048 shadow
-  const shadowSize = isHigh ? 2048 : 512;
+  // Shadow budget per tier (Eco = tanpa shadow, Balanced = 1024, High = 2048).
+  // Kualitas tekstur & resolusi render TIDAK ikut turun hanya karena tier/shadow.
+  const shadowSize = shadowMapSizeFor(performanceMode) || 1024;
+  const shadowStride = shadowUpdateStrideFor(performanceMode);
+  // Shadow di-refresh bertahap (bukan tiap frame) agar GPU tidak panas,
+  // tanpa menyentuh resolusi render / ketajaman gambar.
+  const shadowAutoUpdate = shadowStride === 1;
+
+  const sunLightRef = useRef<THREE.DirectionalLight>(null);
+  const shadowFrameRef = useRef(0);
+
+  // Texture sharpness: pakai anisotropic filtering maksimum GPU + mipmap trilinear.
+  // Dijalankan sekali per renderer/tier, bukan per zoom.
+  const { gl } = useThree();
+  useEffect(() => {
+    const maxAniso = Math.min(8, gl.capabilities.getMaxAnisotropy() || 1);
+    applyTextureQuality(maxAniso);
+  }, [gl, performanceMode]);
+
+  // Pastikan shadow map tetap di-render ulang saat tier / preset pencahayaan berubah
+  useEffect(() => {
+    const light = sunLightRef.current;
+    if (light) light.shadow.needsUpdate = true;
+  }, [performanceMode, lightingPreset]);
+
+  useFrame(() => {
+    if (shadowAutoUpdate || isEco) return;
+    const light = sunLightRef.current;
+    if (!light) return;
+    shadowFrameRef.current = (shadowFrameRef.current + 1) % Math.max(1, shadowStride);
+    if (shadowFrameRef.current === 0) {
+      light.shadow.needsUpdate = true;
+    }
+  });
 
   // Per-floor visibility & frustum culling for mobile-first performance
   const visibleAgents = useMemo(() => {
@@ -501,7 +538,7 @@ export function OfficeScene() {
       {isSunset && <SunsetGoldenHourSkyDome />}
       {!isNight && !isSunset && <ClearDaySkyDome />}
 
-      <Environment resolution={isEco ? 64 : 128} frames={1}>
+      <Environment resolution={isHigh ? 256 : isEco ? 64 : 128} frames={1}>
         <Lightformer
           form="ring"
           intensity={isNight ? 0.28 : isSunset ? 1.1 : 1.35}
@@ -536,10 +573,12 @@ export function OfficeScene() {
         ]}
       />
       <directionalLight
+        ref={sunLightRef}
         position={sunPosition}
         intensity={sunIntensity}
         color={sunColor}
         castShadow={!isEco}
+        shadow-autoUpdate={shadowAutoUpdate}
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-camera-left={-34}
         shadow-camera-right={34}
@@ -645,8 +684,10 @@ export function OfficeScene() {
       {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
 
-      {/* Selective Anti-Glare Emissive Bloom — Subtle & Crisp Without Blinding Reflection Glare */}
-      {!isEco && (
+      {/* Selective Anti-Glare Emissive Bloom — hanya tier High (desktop / GPU kuat).
+          Tier Balanced/Eco sengaja tanpa composer tambahan: render path tetap
+          full-resolution sehingga tepi objek & tekstur tetap tajam saat zoom. */}
+      {isHigh && (
         <EffectComposer multisampling={0}>
           <Bloom
             mipmapBlur

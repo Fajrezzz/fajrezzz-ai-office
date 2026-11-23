@@ -27,6 +27,19 @@ import {
   recordMemoryEvent,
 } from "@/lib/ai/agent-memory";
 import type { CreateTaskInput } from "@/lib/services/data-adapter";
+import {
+  INITIAL_RENDER_TELEMETRY,
+  detectDeviceCapability,
+  recommendPerformanceMode,
+  type RenderTelemetry,
+} from "@/lib/perf/render-telemetry";
+
+/**
+ * Key baru (v2). Key lama "fajrezzz_perf_mode" sengaja TIDAK dibaca lagi karena
+ * versi lama menyimpan keputusan otomatis (sering "eco"/DPR 0.82x) sehingga
+ * perangkat kuat bisa terjebak di kualitas rendah/blur.
+ */
+const PERF_MODE_STORAGE_KEY = "fajrezzz_perf_mode_v2";
 import type {
   ActivityEvent,
   ActivitySeverity,
@@ -115,6 +128,9 @@ interface OfficeContextValue {
   focusOnWorkstation: (workstationId: string) => void;
   adaptiveFps: number;
   setAdaptiveFps: (fps: number) => void;
+  /** Telemetri render aktual (FPS terukur, frame time, resolusi, DPR, status). */
+  renderTelemetry: RenderTelemetry;
+  setRenderTelemetry: React.Dispatch<React.SetStateAction<RenderTelemetry>>;
   cameraPreset: CameraPreset;
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
@@ -130,7 +146,15 @@ interface OfficeContextValue {
   setAutoRotate: (rotate: boolean) => void;
   performanceMode: PerformanceMode;
   performanceReady: boolean;
-  setPerformanceMode: (mode: PerformanceMode) => void;
+  /**
+   * `persist: true` = pilihan manual pengguna (disimpan ke localStorage).
+   * Perubahan otomatis dari AdaptivePerformanceController tidak disimpan,
+   * supaya perangkat flagship tidak "terkunci" di tier rendah selamanya.
+   */
+  setPerformanceMode: (
+    mode: PerformanceMode,
+    options?: { persist?: boolean }
+  ) => void;
   isSimulationRunning: boolean;
   setIsSimulationRunning: (running: boolean) => void;
   showLabelsIn3D: boolean;
@@ -250,7 +274,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [selectedWorkstationId, setSelectedWorkstationId] = useState<string | null>(
     null
   );
-  const [adaptiveFps, setAdaptiveFps] = useState<number>(60);
+  const [adaptiveFps, setAdaptiveFps] = useState<number>(0);
+  const [renderTelemetry, setRenderTelemetry] =
+    useState<RenderTelemetry>(INITIAL_RENDER_TELEMETRY);
   const [cameraPreset, setCameraPresetState] =
     useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
@@ -410,20 +436,24 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(true);
   const [showLabelsIn3D, setShowLabelsIn3D] = useState<boolean>(true);
 
-  const setPerformanceMode = useCallback((mode: PerformanceMode) => {
-    setPerformanceModeState(mode);
-    try {
-      window.localStorage.setItem("fajrezzz_perf_mode", mode);
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
+  const setPerformanceMode = useCallback(
+    (mode: PerformanceMode, options?: { persist?: boolean }) => {
+      setPerformanceModeState(mode);
+      if (!options?.persist) return;
+      try {
+        window.localStorage.setItem(PERF_MODE_STORAGE_KEY, mode);
+      } catch {
+        // Ignore storage errors
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
-      const savedPerf = window.localStorage.getItem("fajrezzz_perf_mode");
+      const savedPerf = window.localStorage.getItem(PERF_MODE_STORAGE_KEY);
       if (
         savedPerf === "eco" ||
         savedPerf === "balanced" ||
@@ -431,23 +461,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       ) {
         setPerformanceModeState(savedPerf);
       } else {
-        const isMobileViewport = window.innerWidth < 768;
-        const isAndroidUA = /Android/i.test(navigator.userAgent);
-        const isCoarsePointer =
-          typeof window.matchMedia === "function" &&
-          window.matchMedia("(pointer: coarse)").matches;
-        const hasLowHardwareConcurrency =
-          typeof navigator.hardwareConcurrency === "number" &&
-          navigator.hardwareConcurrency <= 4;
-
-        if (
-          isMobileViewport ||
-          isAndroidUA ||
-          isCoarsePointer ||
-          hasLowHardwareConcurrency
-        ) {
-          setPerformanceModeState("eco");
-        }
+        // Capability-based tiering: Android flagship (POCO X8 Pro Max: 8+ core,
+        // RAM >= 6GB) masuk "balanced" dengan tekstur + AA + shadow tetap tajam.
+        // "eco" hanya untuk perangkat benar-benar lemah.
+        setPerformanceModeState(recommendPerformanceMode(detectDeviceCapability()));
       }
 
       const savedTasks = window.localStorage.getItem("fajrezzz_local_tasks_v2");
@@ -1238,6 +1255,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       focusOnWorkstation,
       adaptiveFps,
       setAdaptiveFps,
+      renderTelemetry,
+      setRenderTelemetry,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
@@ -1304,6 +1323,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       selectedWorkstationId,
       focusOnWorkstation,
       adaptiveFps,
+      renderTelemetry,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
