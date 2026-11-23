@@ -5,6 +5,10 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import {
+  RealisticHumanAvatar,
+  type HumanAvatarPose,
+} from "@/components/office3d/RealisticHumanAvatar";
+import {
   BOSS_FLOOR_ELEVATIONS,
   useOffice,
 } from "@/store/OfficeContext";
@@ -36,17 +40,13 @@ export function BossPlayer() {
   const rootRef = useRef<THREE.Group>(null);
   const jumpOffsetRef = useRef(0);
   const jumpVelRef = useRef(0);
-  const bodyPivotRef = useRef<THREE.Group>(null);
-  const torsoRef = useRef<THREE.Group>(null);
-  const headRef = useRef<THREE.Group>(null);
-  const leftArmRef = useRef<THREE.Group>(null);
-  const rightArmRef = useRef<THREE.Group>(null);
-  const leftLegRef = useRef<THREE.Group>(null);
+  const rippleRef = useRef<THREE.Mesh>(null);
   const [bossLabelNear, setBossLabelNear] = useState(true);
   const bossLabelNearRef = useRef(true);
   const bossDistAccumRef = useRef(0);
-  const rightLegRef = useRef<THREE.Group>(null);
-  const rippleRef = useRef<THREE.Mesh>(null);
+
+  const [avatarPose, setAvatarPose] = useState<HumanAvatarPose>("idle");
+  const avatarPoseRef = useRef<HumanAvatarPose>("idle");
 
   const posRef = useRef(
     new THREE.Vector3(
@@ -55,7 +55,7 @@ export function BossPlayer() {
       bossPositionRef.current[2]
     )
   );
-  const yawRef = useRef<number>(Math.PI); // facing toward pool initially
+  const yawRef = useRef<number>(Math.PI);
   const swimDepthRef = useRef<number>(0);
   const lastActionRef = useRef<BossActionState>("idle");
   const keysRef = useRef<Set<string>>(new Set());
@@ -110,7 +110,12 @@ export function BossPlayer() {
     if (activeVehicleId) return;
 
     // Spacebar Jump Physics (when not swimming)
-    if (isBossMode && keysRef.current.has(" ") && jumpOffsetRef.current <= 0.01 && swimDepthRef.current < 0.1) {
+    if (
+      isBossMode &&
+      keysRef.current.has(" ") &&
+      jumpOffsetRef.current <= 0.01 &&
+      swimDepthRef.current < 0.1
+    ) {
       jumpVelRef.current = 5.4;
     }
     if (jumpOffsetRef.current > 0 || jumpVelRef.current > 0) {
@@ -159,6 +164,8 @@ export function BossPlayer() {
       posRef.current.z >= POOL_MIN_Z &&
       posRef.current.z <= POOL_MAX_Z;
 
+    let isAutoWalking = false;
+
     // 3. Move camera-relative on horizontal ground plane
     if (inputMag > 0.08) {
       camera.getWorldDirection(camForward);
@@ -189,20 +196,16 @@ export function BossPlayer() {
 
         // Smoothly clamp walkable world boundaries per floor
         if (bossFloor === 1) {
-          // Full L1 lobby + outdoor pool deck + supercar bay + west/east parking lots
           posRef.current.x = Math.max(-34.0, Math.min(34.0, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(24.0, posRef.current.z));
         } else if (bossFloor === 2 || bossFloor === 3) {
-          // Full L2 / L3 interior (widened 38m HQ) + cantilevered front glass balcony!
           posRef.current.x = Math.max(-18.2, Math.min(18.2, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(4.8, posRef.current.z));
         } else {
-          // Rooftop Helipad + Padel Court + Sky Terrace
           posRef.current.x = Math.max(-18.4, Math.min(18.4, posRef.current.x));
           posRef.current.z = Math.max(-9.5, Math.min(4.8, posRef.current.z));
         }
 
-        // Smoothly rotate character toward movement heading
         const targetYaw = Math.atan2(moveDir.x, moveDir.z);
         let diff = targetYaw - yawRef.current;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -216,6 +219,7 @@ export function BossPlayer() {
       const dz = wz - posRef.current.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 0.35) {
+        isAutoWalking = true;
         const step = Math.min(dist, 3.6 * dt);
         posRef.current.x += (dx / dist) * step;
         posRef.current.z += (dz / dist) * step;
@@ -235,7 +239,7 @@ export function BossPlayer() {
       ? "swimming"
       : inputMag > 0.86 || (isSprinting && inputMag > 0.1)
       ? "running"
-      : inputMag > 0.08
+      : inputMag > 0.08 || isAutoWalking
       ? "walking"
       : "idle";
 
@@ -244,98 +248,27 @@ export function BossPlayer() {
       setBossActionState(nextAction);
     }
 
-    const walkBob =
-      nextAction === "walking" || nextAction === "running"
-        ? Math.abs(Math.sin(t * (nextAction === "running" ? 11.5 : 8.0))) * 0.055
-        : inPool
-        ? Math.sin(t * 2.8) * 0.035
-        : 0;
-
-    posRef.current.y = baseFloorY + jumpOffsetRef.current;
-    bossPositionRef.current = [
-      posRef.current.x,
-      baseFloorY + jumpOffsetRef.current - swimDepthRef.current * 0.65,
-      posRef.current.z,
-    ];
-
-    root.position.set(
-      posRef.current.x,
-      baseFloorY + jumpOffsetRef.current - swimDepthRef.current + walkBob,
-      posRef.current.z
-    );
-    root.rotation.y = yawRef.current;
-
-    // 5. Realistic Swimming / Walking / Running / Idle Kinematics
-    if (bodyPivotRef.current) {
-      const targetPitch = inPool ? (inputMag > 0.1 ? 1.05 : 0.22) : 0;
-      bodyPivotRef.current.rotation.x +=
-        (targetPitch - bodyPivotRef.current.rotation.x) * Math.min(1, dt * 8);
+    const nextPose: HumanAvatarPose = nextAction;
+    if (nextPose !== avatarPoseRef.current) {
+      avatarPoseRef.current = nextPose;
+      setAvatarPose(nextPose);
     }
 
+    const swimBob = inPool ? Math.sin(t * 3.8) * 0.045 : 0;
+    const finalY =
+      baseFloorY - swimDepthRef.current + swimBob + jumpOffsetRef.current;
+    posRef.current.y = baseFloorY;
+    bossPositionRef.current = [posRef.current.x, baseFloorY, posRef.current.z];
+
+    root.position.set(posRef.current.x, finalY, posRef.current.z);
+    root.rotation.y = yawRef.current;
+
+    // Animated water ripple ring while swimming
     if (rippleRef.current) {
       rippleRef.current.visible = inPool;
       if (inPool) {
-        const pulse = 1 + Math.sin(t * 4.2) * 0.14;
-        rippleRef.current.scale.set(pulse, pulse, 1);
-      }
-    }
-
-    if (inPool) {
-      const stroke = Math.sin(t * (inputMag > 0.1 ? 6.5 : 2.6));
-      if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -1.6 + stroke * 0.95;
-        leftArmRef.current.rotation.z = 0.45 + Math.cos(t * 4) * 0.2;
-      }
-      if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = -1.6 - stroke * 0.95;
-        rightArmRef.current.rotation.z = -0.45 - Math.cos(t * 4) * 0.2;
-      }
-      if (leftLegRef.current) leftLegRef.current.rotation.x = stroke * 0.48;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -stroke * 0.48;
-      if (headRef.current) {
-        headRef.current.rotation.x = inputMag > 0.1 ? -0.75 : -0.15;
-        headRef.current.rotation.y = Math.sin(t * 1.4) * 0.14;
-      }
-    } else if (nextAction === "walking" || nextAction === "running") {
-      const freq = nextAction === "running" ? 11.5 : 8.0;
-      const amp = nextAction === "running" ? 0.78 : 0.56;
-      const stride = Math.sin(t * freq);
-      if (leftLegRef.current) leftLegRef.current.rotation.x = stride * amp;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -stride * amp;
-      if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -stride * (amp * 0.85);
-        leftArmRef.current.rotation.z = 0.08;
-      }
-      if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = stride * (amp * 0.85);
-        rightArmRef.current.rotation.z = -0.08;
-      }
-      if (torsoRef.current) {
-        torsoRef.current.rotation.x = nextAction === "running" ? 0.14 : 0.05;
-      }
-      if (headRef.current) {
-        headRef.current.rotation.x = 0;
-        headRef.current.rotation.y = 0;
-      }
-    } else {
-      const breathe = Math.sin(t * 2.2);
-      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = 0.04 + breathe * 0.025;
-        leftArmRef.current.rotation.z = 0.09;
-      }
-      if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = 0.04 - breathe * 0.025;
-        rightArmRef.current.rotation.z = -0.09;
-      }
-      if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0;
-        torsoRef.current.position.y = 1.06 + breathe * 0.012;
-      }
-      if (headRef.current) {
-        headRef.current.rotation.x = 0;
-        headRef.current.rotation.y = Math.sin(t * 0.65) * 0.22;
+        const s = 0.95 + Math.sin(t * 4.5) * 0.22;
+        rippleRef.current.scale.set(s, s, 1);
       }
     }
   });
@@ -343,17 +276,9 @@ export function BossPlayer() {
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     setIsBossMode(true);
+    const [bx, by, bz] = bossPositionRef.current;
+    focusCameraOn([bx, by + 1.35, bz] as Vector3Tuple, [4.6, 4.2, 7.2]);
   };
-
-  const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    const [x, y, z] = bossPositionRef.current;
-    focusCameraOn([x, y + 1.2, z], [3.5, 2.4, 4.5] as Vector3Tuple);
-  };
-
-  const skinColor = "#d9a986";
-  const suitColor = "#131c2e"; // Bespoke luxury midnight navy-charcoal executive suit
-  const hairColor = "#14161a";
 
   return (
     <group
@@ -364,176 +289,48 @@ export function BossPlayer() {
         bossPositionRef.current[2],
       ]}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
     >
-      {/* Active Gold Player Ring on Ground */}
-      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.48, 0.64, 32]} />
+      {/* Golden Executive Presence Halo on Ground */}
+      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.42, 0.54, 32]} />
         <meshBasicMaterial
           color={isBossMode ? "#facc15" : "#fbbf24"}
           transparent
-          opacity={isBossMode ? 0.95 : 0.45}
+          opacity={isBossMode ? 0.85 : 0.42}
         />
       </mesh>
 
-      {/* Water Swim Ripple Ring (visible automatically when swimming in pool!) */}
+      {/* Swimming Pool Water Ripple Ring */}
       <mesh
         ref={rippleRef}
         visible={false}
-        position={[0, 1.08, 0]}
+        position={[0, 0.94, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <ringGeometry args={[0.42, 0.66, 28]} />
-        <meshBasicMaterial color="#e0f2fe" transparent opacity={0.78} />
+        <ringGeometry args={[0.42, 0.72, 28]} />
+        <meshBasicMaterial
+          color="#bae6fd"
+          transparent
+          opacity={0.62}
+          side={THREE.DoubleSide}
+        />
       </mesh>
 
-      {/* Pivot for realistic upright vs horizontal swimming tilt */}
-      <group ref={bodyPivotRef} position={[0, 0, 0]}>
-        {/* LEFT LEG */}
-        <group ref={leftLegRef} position={[-0.11, 0.82, 0]}>
-          <mesh position={[0, -0.36, 0]} castShadow>
-            <capsuleGeometry args={[0.076, 0.55, 8, 12]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.72} />
-          </mesh>
-          <mesh position={[0, -0.74, 0.05]} castShadow>
-            <capsuleGeometry args={[0.058, 0.13, 6, 10]} />
-            <meshStandardMaterial color="#18181b" roughness={0.22} metalness={0.25} />
-          </mesh>
-        </group>
-
-        {/* RIGHT LEG */}
-        <group ref={rightLegRef} position={[0.11, 0.82, 0]}>
-          <mesh position={[0, -0.36, 0]} castShadow>
-            <capsuleGeometry args={[0.076, 0.55, 8, 12]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.72} />
-          </mesh>
-          <mesh position={[0, -0.74, 0.05]} castShadow>
-            <capsuleGeometry args={[0.058, 0.13, 6, 10]} />
-            <meshStandardMaterial color="#18181b" roughness={0.22} metalness={0.25} />
-          </mesh>
-        </group>
-
-        {/* SCULPTED EXECUTIVE TORSO */}
-        <group ref={torsoRef} position={[0, 1.06, 0]}>
-          <mesh position={[0, -0.18, 0]} castShadow>
-            <cylinderGeometry args={[0.165, 0.175, 0.24, 14]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.72} />
-          </mesh>
-          {/* Gold Belt Buckle */}
-          <mesh position={[0, -0.07, 0.165]}>
-            <boxGeometry args={[0.08, 0.045, 0.025]} />
-            <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.18} />
-          </mesh>
-
-          {/* Tapered Bespoke Suit Jacket */}
-          <mesh position={[0, 0.15, 0]} scale={[1.26, 1, 0.76]} castShadow>
-            <cylinderGeometry args={[0.195, 0.155, 0.52, 16]} />
-            <meshStandardMaterial color={suitColor} roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 0.37, 0]} scale={[1.32, 0.5, 0.76]} castShadow>
-            <sphereGeometry args={[0.195, 16, 12]} />
-            <meshStandardMaterial color={suitColor} roughness={0.6} />
-          </mesh>
-
-          {/* Crisp White Dress Shirt & Gold Silk Tie */}
-          <mesh position={[0, 0.23, 0.118]}>
-            <boxGeometry args={[0.12, 0.32, 0.036]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.5} />
-          </mesh>
-          <mesh position={[0, 0.18, 0.14]}>
-            <boxGeometry args={[0.044, 0.25, 0.015]} />
-            <meshStandardMaterial color="#d97706" roughness={0.35} metalness={0.25} />
-          </mesh>
-          {/* Gold Pocket Square & CEO Lapel Pin */}
-          <mesh position={[0.12, 0.25, 0.136]}>
-            <boxGeometry args={[0.06, 0.022, 0.014]} />
-            <meshStandardMaterial color="#facc15" metalness={0.8} roughness={0.2} />
-          </mesh>
-
-          {/* LEFT ARM + LUXURY GOLD WATCH */}
-          <group ref={leftArmRef} position={[-0.255, 0.35, 0]}>
-            <mesh position={[0, -0.24, 0]} castShadow>
-              <capsuleGeometry args={[0.06, 0.4, 8, 12]} />
-              <meshStandardMaterial color={suitColor} roughness={0.6} />
-            </mesh>
-            <mesh position={[0, -0.45, 0]}>
-              <cylinderGeometry args={[0.052, 0.052, 0.045, 12]} />
-              <meshStandardMaterial color="#facc15" metalness={0.92} roughness={0.15} />
-            </mesh>
-            <mesh position={[0, -0.52, 0]}>
-              <sphereGeometry args={[0.054, 10, 10]} />
-              <meshStandardMaterial color={skinColor} roughness={0.7} />
-            </mesh>
-          </group>
-
-          {/* RIGHT ARM */}
-          <group ref={rightArmRef} position={[0.255, 0.35, 0]}>
-            <mesh position={[0, -0.24, 0]} castShadow>
-              <capsuleGeometry args={[0.06, 0.4, 8, 12]} />
-              <meshStandardMaterial color={suitColor} roughness={0.6} />
-            </mesh>
-            <mesh position={[0, -0.45, 0]}>
-              <cylinderGeometry args={[0.048, 0.048, 0.05, 10]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.5} />
-            </mesh>
-            <mesh position={[0, -0.52, 0]}>
-              <sphereGeometry args={[0.054, 10, 10]} />
-              <meshStandardMaterial color={skinColor} roughness={0.7} />
-            </mesh>
-          </group>
-
-          {/* NECK & SCULPTED HEAD */}
-          <group ref={headRef} position={[0, 0.45, 0]}>
-            <mesh position={[0, 0.03, 0]}>
-              <cylinderGeometry args={[0.058, 0.068, 0.12, 12]} />
-              <meshStandardMaterial color={skinColor} roughness={0.68} />
-            </mesh>
-            <mesh position={[0, 0.2, 0]} scale={[0.94, 1.08, 0.96]} castShadow>
-              <sphereGeometry args={[0.146, 18, 16]} />
-              <meshStandardMaterial color={skinColor} roughness={0.64} />
-            </mesh>
-            {[-0.134, 0.134].map((ex, i) => (
-              <mesh key={i} position={[ex, 0.19, -0.01]}>
-                <sphereGeometry args={[0.025, 8, 8]} />
-                <meshStandardMaterial color={skinColor} roughness={0.68} />
-              </mesh>
-            ))}
-            <mesh position={[0, 0.185, 0.138]}>
-              <sphereGeometry args={[0.02, 8, 8]} />
-              <meshStandardMaterial color={skinColor} roughness={0.66} />
-            </mesh>
-            {/* Stylish Dark Sunglasses / Eyes */}
-            <mesh position={[-0.046, 0.21, 0.13]}>
-              <boxGeometry args={[0.054, 0.032, 0.02]} />
-              <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.12} />
-            </mesh>
-            <mesh position={[0.046, 0.21, 0.13]}>
-              <boxGeometry args={[0.054, 0.032, 0.02]} />
-              <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.12} />
-            </mesh>
-            <mesh position={[0, 0.212, 0.132]}>
-              <boxGeometry args={[0.04, 0.01, 0.016]} />
-              <meshStandardMaterial color="#facc15" metalness={0.9} roughness={0.15} />
-            </mesh>
-            {/* Groomed Executive Pompadour Hair */}
-            <mesh position={[0, 0.27, -0.01]} castShadow>
-              <sphereGeometry
-                args={[0.152, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.56]}
-              />
-              <meshStandardMaterial color={hairColor} roughness={0.7} />
-            </mesh>
-            <mesh position={[0, 0.31, 0.05]} castShadow>
-              <boxGeometry args={[0.19, 0.06, 0.16]} />
-              <meshStandardMaterial color={hairColor} roughness={0.68} />
-            </mesh>
-          </group>
-        </group>
-      </group>
+      {/* Photorealistic 1.78m Executive Human Avatar for BOS FAJREZ */}
+      <RealisticHumanAvatar
+        variant="rb_male_b"
+        pose={avatarPose}
+        topColor="#131926"
+        pantsColor="#0b101b"
+        targetHeight={1.78}
+        phaseOffset={0.2}
+        animSpeed={avatarPose === "running" ? 1.25 : 1.05}
+      />
 
       {/* Distance-Scaled Gold Crown Nameplate above BOS FAJREZ */}
       {showLabelsIn3D && (
         <Html
-          position={[0, 2.15, 0]}
+          position={[0, 2.12, 0]}
           center
           distanceFactor={13}
           zIndexRange={[25, 10]}
