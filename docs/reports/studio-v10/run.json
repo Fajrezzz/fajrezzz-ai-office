@@ -1,0 +1,4646 @@
+{
+  "generatedAt": "2026-11-23T18:13:20.491Z",
+  "candidateBankVerifiedAt": "2026-11-23T00:00:00.000Z",
+  "capabilities": {
+    "llm": {
+      "gemini": false,
+      "groq": false,
+      "openrouter": false,
+      "any": false
+    },
+    "network": false,
+    "tts": false,
+    "ffmpeg": false,
+    "browserRenderer": false,
+    "notes": [
+      "Tidak ada API key LLM di environment ini → naskah memakai generator deterministik (dilabeli).",
+      "Verifikasi sumber HTTP live tidak dijalankan di sandbox ini (jaringan hanya npm/github) → tahap sumber berstatus degraded.",
+      "ffmpeg/ffprobe tidak tersedia di sandbox → ekspor MP4 dan verifikasi metadata tidak bisa dijalankan di sini.",
+      "TTS neural butuh jaringan layanan suara → suara tidak dihasilkan di sandbox."
+    ]
+  },
+  "historyBefore": {
+    "count": 0,
+    "durability": "persistent-disk-dev",
+    "note": "Riwayat tersimpan sebagai file JSON di disk (khusus dev/CLI)."
+  },
+  "run": {
+    "runId": "run_1795457600473_qjqs7l",
+    "startedAt": "2026-11-23T18:13:20.473Z",
+    "finishedAt": "2026-11-23T18:13:20.491Z",
+    "durationMs": 18,
+    "capabilities": {
+      "llm": {
+        "gemini": false,
+        "groq": false,
+        "openrouter": false,
+        "any": false
+      },
+      "network": false,
+      "tts": false,
+      "ffmpeg": false,
+      "browserRenderer": false,
+      "notes": [
+        "Tidak ada API key LLM di environment ini → naskah memakai generator deterministik (dilabeli).",
+        "Verifikasi sumber HTTP live tidak dijalankan di sandbox ini (jaringan hanya npm/github) → tahap sumber berstatus degraded.",
+        "ffmpeg/ffprobe tidak tersedia di sandbox → ekspor MP4 dan verifikasi metadata tidak bisa dijalankan di sini.",
+        "TTS neural butuh jaringan layanan suara → suara tidak dihasilkan di sandbox."
+      ]
+    },
+    "episodes": [
+      {
+        "episodeId": "cand-supermoon-nov2026",
+        "episodeNumber": 1,
+        "producedAt": "2026-11-23T18:13:20.473Z",
+        "candidate": {
+          "id": "cand-supermoon-nov2026",
+          "title": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "thesis": "Purnama perige membuat bulan tampak lebih besar karena jaraknya sedang paling dekat dengan bumi, bukan karena bulan membesar",
+          "category": "sains",
+          "angle": "Membongkar salah kaprah 'bulan membesar' dengan penjelasan jarak perige",
+          "hook": "Malam ini bulan kelihatan besar sekali. Tapi bulan itu tidak membesar sedikit pun.",
+          "keyFacts": [
+            {
+              "claim": "BMKG menyebut supermoon atau purnama perige pertama tahun 2026 terjadi di langit Indonesia pada 24 November 2026",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Fenomena ini membuat bulan purnama tampak lebih besar dibandingkan biasanya karena posisinya lebih dekat ke bumi",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BMKG: Supermoon Pertama 2026 pada 24 November, Lebih Dekat dan Besar",
+              "url": "https://www.bmkg.go.id/berita/bmkg-supermoon-pertama-2026-pada-24-november-lebih-dekat-dan-besar",
+              "kind": "official",
+              "publishedAt": "2026-11-21"
+            }
+          ],
+          "noveltyNotes": "Bedanya dengan konten astronomi biasa: fokus pada koreksi miskonsepsi ukuran, bukan sekadar jadwal fenomena",
+          "audienceImportance": 62,
+          "difficulty": 3,
+          "durationFitSec": 45,
+          "clarity": 88,
+          "curiosity": 80,
+          "educationalValue": 85,
+          "visualPotential": 92,
+          "tags": [
+            "bulan",
+            "astronomi",
+            "bmkg",
+            "supermoon"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 10,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 9.1,
+          "repetitionPenalty": 0,
+          "total": 99
+        },
+        "blueprint": {
+          "episodeId": "cand-supermoon-nov2026",
+          "topic": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "category": "sains",
+          "audience": "Masyarakat umum yang ingin paham tanpa istilah rumit",
+          "coreMessage": "Purnama perige membuat bulan tampak lebih besar karena jaraknya sedang paling dekat dengan bumi, bukan karena bulan membesar",
+          "storyAngle": "Membongkar salah kaprah 'bulan membesar' dengan penjelasan jarak perige",
+          "hookStyle": "pertanyaan_awam",
+          "narrativeStructure": "myth_evidence_conclusion",
+          "visualStyle": "kinetic_typography",
+          "paletteFamily": "mono_contrast",
+          "palette": {
+            "bg": "#0b0b0b",
+            "fg": "#ffffff",
+            "accent": "#ff5a1f",
+            "support": "#9ca3af"
+          },
+          "typographyStyle": "side_stack_editorial",
+          "cameraLanguage": [
+            "parallax_layer",
+            "focus_rack",
+            "pull_out",
+            "dynamic_crop"
+          ],
+          "transitionLanguage": [
+            "mask_reveal",
+            "shape_wipe",
+            "clean_cut",
+            "whip_pan"
+          ],
+          "musicMood": "uplifting_progress",
+          "soundDesign": [
+            "whoosh halus per transisi",
+            "click tipis saat kata kunci muncul",
+            "ambience rendah"
+          ],
+          "assetMix": "kinetic_type_only",
+          "scenePlan": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "purpose": "hook: Mitos",
+              "visual": "b-roll pembuka nyata + wordmark",
+              "motion": "parallax_layer",
+              "transitionOut": "mask_reveal",
+              "durationSec": 5.6,
+              "emphasis": "none"
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "purpose": "context: Bukti",
+              "visual": "peta/timeline mini atau kartu konteks",
+              "motion": "focus_rack",
+              "transitionOut": "shape_wipe",
+              "durationSec": 9.6,
+              "emphasis": "none"
+            },
+            {
+              "index": 3,
+              "beat": "example",
+              "purpose": "example: Kesimpulan",
+              "visual": "contoh konkret: potret/dokumentasi atau demo layar",
+              "motion": "pull_out",
+              "transitionOut": "clean_cut",
+              "durationSec": 9.5,
+              "emphasis": "compare"
+            },
+            {
+              "index": 4,
+              "beat": "insight",
+              "purpose": "insight: insight",
+              "visual": "callout kontras + highlight angka bersumber",
+              "motion": "dynamic_crop",
+              "transitionOut": "whip_pan",
+              "durationSec": 8,
+              "emphasis": "number"
+            },
+            {
+              "index": 5,
+              "beat": "takeaway",
+              "purpose": "takeaway: takeaway",
+              "visual": "ringkasan 1 baris + ikon",
+              "motion": "parallax_layer",
+              "transitionOut": "mask_reveal",
+              "durationSec": 7,
+              "emphasis": "keyword"
+            },
+            {
+              "index": 6,
+              "beat": "ending",
+              "purpose": "ending: ending",
+              "visual": "frame brand + pertanyaan diskusi",
+              "motion": "focus_rack",
+              "transitionOut": "shape_wipe",
+              "durationSec": 6.2,
+              "emphasis": "none"
+            }
+          ],
+          "estimatedDurationSec": 46,
+          "signature": "bp_6b4c35e9",
+          "brand": {
+            "wordmark": "FAJREZZZ AI OFFICE",
+            "accentHex": "#ff5a1f",
+            "fontFamily": "Inter / system-ui (bold editorial)",
+            "safeZone": {
+              "top": 0.12,
+              "bottom": 0.18,
+              "left": 0.08,
+              "right": 0.08
+            },
+            "rules": [
+              "Wordmark kecil selalu ada di 3 detik pertama & frame terakhir.",
+              "Subtitle & headline tidak boleh keluar dari TikTok 9:16 safe zone.",
+              "Warna aksen brand dipakai minimal 1 elemen per scene (bukan dominan).",
+              "Tidak ada clickbait, panah merah, atau angka tanpa sumber."
+            ]
+          },
+          "generationNotes": []
+        },
+        "blueprintAttempts": [
+          {
+            "attempt": 1,
+            "signature": "bp_6b4c35e9",
+            "maxSimilarity": 0,
+            "accepted": true
+          }
+        ],
+        "script": {
+          "episodeId": "cand-supermoon-nov2026",
+          "topic": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "generator": "deterministic-fact-skeleton",
+          "lines": [
+            {
+              "beat": "hook",
+              "text": "Malam ini bulan kelihatan besar sekali. Tapi bulan itu tidak membesar sedikit pun.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "context",
+              "text": "Purnama perige membuat bulan tampak lebih besar.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "example",
+              "text": "Contohnya, BMKG menyebut supermoon atau purnama perige pertama tahun 2026 terjadi di langit Indonesia pada 24 November 2026.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "insight",
+              "text": "Yang sering luput, fenomena ini membuat bulan purnama tampak lebih besar dibandingkan biasanya karena posisinya lebih dekat ke bumi.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "takeaway",
+              "text": "Jadi intinya, jaraknya sedang paling dekat dengan bumi.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "ending",
+              "text": "Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            }
+          ],
+          "narration": "Malam ini bulan kelihatan besar sekali. Tapi bulan itu tidak membesar sedikit pun. Purnama perige membuat bulan tampak lebih besar. Contohnya, BMKG menyebut supermoon atau purnama perige pertama tahun 2026 terjadi di langit Indonesia pada 24 November 2026. Yang sering luput, fenomena ini membuat bulan purnama tampak lebih besar dibandingkan biasanya karena posisinya lebih dekat ke bumi. Jadi intinya, jaraknya sedang paling dekat dengan bumi. Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+          "estimatedDurationSec": 29.2,
+          "sources": [
+            "https://www.bmkg.go.id/berita/bmkg-supermoon-pertama-2026-pada-24-november-lebih-dekat-dan-besar"
+          ],
+          "disclaimer": "Naskah ini dirakit otomatis dari fakta + sumber kandidat (bukan hasil LLM). Struktur cerita: myth_evidence_conclusion. Wajib ditinjau manusia sebelum publikasi."
+        },
+        "scriptAudit": {
+          "score": 88,
+          "sentenceCount": 8,
+          "avgSentenceWords": 9.5,
+          "longestSentenceWords": 19,
+          "jargon": [],
+          "repeatedPhrases": [
+            "tampak lebih besar"
+          ],
+          "unsourcedNumbers": [],
+          "mainIdeaCount": 1,
+          "findings": [
+            {
+              "code": "LONG_SENTENCE",
+              "severity": "warning",
+              "message": "Kalimat 19 kata (batas 18). Pecah jadi dua kalimat pendek.",
+              "excerpt": "Yang sering luput, fenomena ini membuat bulan purnama tampak lebih besar dibandingkan bias"
+            },
+            {
+              "code": "REPEATED_PHRASE",
+              "severity": "warning",
+              "message": "1 frasa 3 kata diulang. Ringkas supaya tidak membosankan.",
+              "excerpt": "tampak lebih besar"
+            }
+          ],
+          "passes": true
+        },
+        "editingPlan": {
+          "episodeId": "cand-supermoon-nov2026",
+          "topic": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "styleId": "kinetic_typography",
+          "scenes": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "durationSec": 5.6,
+              "camera": "Parallax berlapis",
+              "transitionIn": "clean_cut",
+              "transitionOut": "Mask reveal",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [],
+              "asset": "Kinetic typography: b-roll pembuka nyata + wordmark",
+              "musicIntensity": 3,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 2.2
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "durationSec": 9.6,
+              "camera": "Slow push-in",
+              "transitionIn": "Mask reveal",
+              "transitionOut": "Shape wipe",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [],
+              "asset": "Kinetic typography: peta/timeline mini atau kartu konteks",
+              "musicIntensity": 2,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 3.8
+            },
+            {
+              "index": 3,
+              "beat": "example",
+              "durationSec": 9.5,
+              "camera": "Parallax berlapis",
+              "transitionIn": "Shape wipe",
+              "transitionOut": "Clean cut",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [
+                "24",
+                "2026",
+                "lebih"
+              ],
+              "asset": "Kinetic typography: contoh konkret: potret/dokumentasi atau demo layar",
+              "musicIntensity": 2,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 3.8
+            },
+            {
+              "index": 4,
+              "beat": "insight",
+              "durationSec": 8,
+              "camera": "Pull-out reveal",
+              "transitionIn": "Clean cut",
+              "transitionOut": "Whip pan",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [
+                "24",
+                "2026"
+              ],
+              "asset": "Kinetic typography: callout kontras + highlight angka bersumber",
+              "musicIntensity": 3,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 3.2
+            },
+            {
+              "index": 5,
+              "beat": "takeaway",
+              "durationSec": 7,
+              "camera": "Focus transition",
+              "transitionIn": "Whip pan",
+              "transitionOut": "Mask reveal",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [
+                "24",
+                "2026",
+                "lebih"
+              ],
+              "asset": "Kinetic typography: ringkasan 1 baris + ikon",
+              "musicIntensity": 2,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 2.8
+            },
+            {
+              "index": 6,
+              "beat": "ending",
+              "durationSec": 6.2,
+              "camera": "Tracking objek",
+              "transitionIn": "Mask reveal",
+              "transitionOut": "Shape wipe",
+              "typography": "Tumpukan teks samping (editorial)",
+              "emphasisWords": [],
+              "asset": "Kinetic typography: frame brand + pertanyaan diskusi",
+              "musicIntensity": 2,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 2.5
+            }
+          ],
+          "rhythm": {
+            "avgCutSec": 3.1,
+            "fastestCutSec": 2.2,
+            "slowestCutSec": 3.8,
+            "pace": "steady"
+          },
+          "subtitleStyle": {
+            "position": "lower_third_safe",
+            "wordsPerCue": 4,
+            "highlightNumbers": true
+          },
+          "signature": "ed_85dba33e",
+          "novelAgainstHistory": true,
+          "notes": []
+        },
+        "subtitleCues": [
+          {
+            "index": 1,
+            "word": "Malam",
+            "startSec": 0.08,
+            "endSec": 0.394,
+            "highlight": false
+          },
+          {
+            "index": 2,
+            "word": "ini",
+            "startSec": 0.394,
+            "endSec": 0.682,
+            "highlight": false
+          },
+          {
+            "index": 3,
+            "word": "bulan",
+            "startSec": 0.682,
+            "endSec": 0.996,
+            "highlight": false
+          },
+          {
+            "index": 4,
+            "word": "kelihatan",
+            "startSec": 0.996,
+            "endSec": 1.611,
+            "highlight": false
+          },
+          {
+            "index": 5,
+            "word": "besar",
+            "startSec": 1.611,
+            "endSec": 1.925,
+            "highlight": false
+          },
+          {
+            "index": 6,
+            "word": "sekali.",
+            "startSec": 1.925,
+            "endSec": 2.505,
+            "highlight": false
+          },
+          {
+            "index": 7,
+            "word": "Tapi",
+            "startSec": 2.505,
+            "endSec": 2.806,
+            "highlight": false
+          },
+          {
+            "index": 8,
+            "word": "bulan",
+            "startSec": 2.806,
+            "endSec": 3.12,
+            "highlight": false
+          },
+          {
+            "index": 9,
+            "word": "itu",
+            "startSec": 3.12,
+            "endSec": 3.408,
+            "highlight": false
+          },
+          {
+            "index": 10,
+            "word": "tidak",
+            "startSec": 3.408,
+            "endSec": 3.722,
+            "highlight": false
+          },
+          {
+            "index": 11,
+            "word": "membesar",
+            "startSec": 3.722,
+            "endSec": 4.2,
+            "highlight": false
+          },
+          {
+            "index": 12,
+            "word": "sedikit",
+            "startSec": 4.2,
+            "endSec": 4.664,
+            "highlight": false
+          },
+          {
+            "index": 13,
+            "word": "pun.",
+            "startSec": 4.664,
+            "endSec": 4.956,
+            "highlight": false
+          },
+          {
+            "index": 14,
+            "word": "Purnama",
+            "startSec": 4.956,
+            "endSec": 5.42,
+            "highlight": false
+          },
+          {
+            "index": 15,
+            "word": "perige",
+            "startSec": 5.42,
+            "endSec": 5.872,
+            "highlight": false
+          },
+          {
+            "index": 16,
+            "word": "membuat",
+            "startSec": 5.872,
+            "endSec": 6.212,
+            "highlight": false
+          },
+          {
+            "index": 17,
+            "word": "bulan",
+            "startSec": 6.212,
+            "endSec": 6.525,
+            "highlight": false
+          },
+          {
+            "index": 18,
+            "word": "tampak",
+            "startSec": 6.525,
+            "endSec": 6.852,
+            "highlight": false
+          },
+          {
+            "index": 19,
+            "word": "lebih",
+            "startSec": 6.852,
+            "endSec": 7.166,
+            "highlight": false
+          },
+          {
+            "index": 20,
+            "word": "besar.",
+            "startSec": 7.166,
+            "endSec": 7.608,
+            "highlight": false
+          },
+          {
+            "index": 21,
+            "word": "Contohnya,",
+            "startSec": 7.608,
+            "endSec": 8.169,
+            "highlight": false
+          },
+          {
+            "index": 22,
+            "word": "BMKG",
+            "startSec": 8.169,
+            "endSec": 8.47,
+            "highlight": false
+          },
+          {
+            "index": 23,
+            "word": "menyebut",
+            "startSec": 8.47,
+            "endSec": 8.947,
+            "highlight": false
+          },
+          {
+            "index": 24,
+            "word": "supermoon",
+            "startSec": 8.947,
+            "endSec": 9.437,
+            "highlight": false
+          },
+          {
+            "index": 25,
+            "word": "atau",
+            "startSec": 9.437,
+            "endSec": 9.739,
+            "highlight": false
+          },
+          {
+            "index": 26,
+            "word": "purnama",
+            "startSec": 9.739,
+            "endSec": 10.203,
+            "highlight": false
+          },
+          {
+            "index": 27,
+            "word": "perige",
+            "startSec": 10.203,
+            "endSec": 10.655,
+            "highlight": false
+          },
+          {
+            "index": 28,
+            "word": "pertama",
+            "startSec": 10.655,
+            "endSec": 11.119,
+            "highlight": false
+          },
+          {
+            "index": 29,
+            "word": "tahun",
+            "startSec": 11.119,
+            "endSec": 11.433,
+            "highlight": false
+          },
+          {
+            "index": 30,
+            "word": "2026",
+            "startSec": 11.433,
+            "endSec": 11.734,
+            "highlight": true
+          },
+          {
+            "index": 31,
+            "word": "terjadi",
+            "startSec": 11.734,
+            "endSec": 12.199,
+            "highlight": false
+          },
+          {
+            "index": 32,
+            "word": "di",
+            "startSec": 12.199,
+            "endSec": 12.349,
+            "highlight": false
+          },
+          {
+            "index": 33,
+            "word": "langit",
+            "startSec": 12.349,
+            "endSec": 12.676,
+            "highlight": false
+          },
+          {
+            "index": 34,
+            "word": "Indonesia",
+            "startSec": 12.676,
+            "endSec": 13.291,
+            "highlight": false
+          },
+          {
+            "index": 35,
+            "word": "pada",
+            "startSec": 13.291,
+            "endSec": 13.592,
+            "highlight": false
+          },
+          {
+            "index": 36,
+            "word": "24",
+            "startSec": 13.592,
+            "endSec": 13.743,
+            "highlight": true
+          },
+          {
+            "index": 37,
+            "word": "November",
+            "startSec": 13.743,
+            "endSec": 14.22,
+            "highlight": false
+          },
+          {
+            "index": 38,
+            "word": "2026.",
+            "startSec": 14.22,
+            "endSec": 14.65,
+            "highlight": true
+          },
+          {
+            "index": 39,
+            "word": "Yang",
+            "startSec": 14.65,
+            "endSec": 14.826,
+            "highlight": false
+          },
+          {
+            "index": 40,
+            "word": "sering",
+            "startSec": 14.826,
+            "endSec": 15.153,
+            "highlight": false
+          },
+          {
+            "index": 41,
+            "word": "luput,",
+            "startSec": 15.153,
+            "endSec": 15.537,
+            "highlight": false
+          },
+          {
+            "index": 42,
+            "word": "fenomena",
+            "startSec": 15.537,
+            "endSec": 16.139,
+            "highlight": false
+          },
+          {
+            "index": 43,
+            "word": "ini",
+            "startSec": 16.139,
+            "endSec": 16.428,
+            "highlight": false
+          },
+          {
+            "index": 44,
+            "word": "membuat",
+            "startSec": 16.428,
+            "endSec": 16.767,
+            "highlight": false
+          },
+          {
+            "index": 45,
+            "word": "bulan",
+            "startSec": 16.767,
+            "endSec": 17.081,
+            "highlight": false
+          },
+          {
+            "index": 46,
+            "word": "purnama",
+            "startSec": 17.081,
+            "endSec": 17.546,
+            "highlight": false
+          },
+          {
+            "index": 47,
+            "word": "tampak",
+            "startSec": 17.546,
+            "endSec": 17.872,
+            "highlight": false
+          },
+          {
+            "index": 48,
+            "word": "lebih",
+            "startSec": 17.872,
+            "endSec": 18.186,
+            "highlight": false
+          },
+          {
+            "index": 49,
+            "word": "besar",
+            "startSec": 18.186,
+            "endSec": 18.5,
+            "highlight": false
+          },
+          {
+            "index": 50,
+            "word": "dibandingkan",
+            "startSec": 18.5,
+            "endSec": 19.154,
+            "highlight": false
+          },
+          {
+            "index": 51,
+            "word": "biasanya",
+            "startSec": 19.154,
+            "endSec": 19.631,
+            "highlight": false
+          },
+          {
+            "index": 52,
+            "word": "karena",
+            "startSec": 19.631,
+            "endSec": 20.083,
+            "highlight": false
+          },
+          {
+            "index": 53,
+            "word": "posisinya",
+            "startSec": 20.083,
+            "endSec": 20.698,
+            "highlight": false
+          },
+          {
+            "index": 54,
+            "word": "lebih",
+            "startSec": 20.698,
+            "endSec": 21.012,
+            "highlight": false
+          },
+          {
+            "index": 55,
+            "word": "dekat",
+            "startSec": 21.012,
+            "endSec": 21.326,
+            "highlight": false
+          },
+          {
+            "index": 56,
+            "word": "ke",
+            "startSec": 21.326,
+            "endSec": 21.476,
+            "highlight": false
+          },
+          {
+            "index": 57,
+            "word": "bumi.",
+            "startSec": 21.476,
+            "endSec": 21.906,
+            "highlight": false
+          },
+          {
+            "index": 58,
+            "word": "Jadi",
+            "startSec": 21.906,
+            "endSec": 22.207,
+            "highlight": false
+          },
+          {
+            "index": 59,
+            "word": "intinya,",
+            "startSec": 22.207,
+            "endSec": 22.742,
+            "highlight": false
+          },
+          {
+            "index": 60,
+            "word": "jaraknya",
+            "startSec": 22.742,
+            "endSec": 23.219,
+            "highlight": false
+          },
+          {
+            "index": 61,
+            "word": "sedang",
+            "startSec": 23.219,
+            "endSec": 23.546,
+            "highlight": false
+          },
+          {
+            "index": 62,
+            "word": "paling",
+            "startSec": 23.546,
+            "endSec": 23.872,
+            "highlight": false
+          },
+          {
+            "index": 63,
+            "word": "dekat",
+            "startSec": 23.872,
+            "endSec": 24.186,
+            "highlight": false
+          },
+          {
+            "index": 64,
+            "word": "dengan",
+            "startSec": 24.186,
+            "endSec": 24.513,
+            "highlight": false
+          },
+          {
+            "index": 65,
+            "word": "bumi.",
+            "startSec": 24.513,
+            "endSec": 24.942,
+            "highlight": false
+          },
+          {
+            "index": 66,
+            "word": "Sumber",
+            "startSec": 24.942,
+            "endSec": 25.269,
+            "highlight": false
+          },
+          {
+            "index": 67,
+            "word": "lengkapnya",
+            "startSec": 25.269,
+            "endSec": 25.772,
+            "highlight": false
+          },
+          {
+            "index": 68,
+            "word": "ada",
+            "startSec": 25.772,
+            "endSec": 26.06,
+            "highlight": false
+          },
+          {
+            "index": 69,
+            "word": "di",
+            "startSec": 26.06,
+            "endSec": 26.211,
+            "highlight": false
+          },
+          {
+            "index": 70,
+            "word": "deskripsi.",
+            "startSec": 26.211,
+            "endSec": 26.829,
+            "highlight": false
+          },
+          {
+            "index": 71,
+            "word": "Simpan",
+            "startSec": 26.829,
+            "endSec": 27.156,
+            "highlight": false
+          },
+          {
+            "index": 72,
+            "word": "video",
+            "startSec": 27.156,
+            "endSec": 27.47,
+            "highlight": false
+          },
+          {
+            "index": 73,
+            "word": "ini",
+            "startSec": 27.47,
+            "endSec": 27.758,
+            "highlight": false
+          },
+          {
+            "index": 74,
+            "word": "kalau",
+            "startSec": 27.758,
+            "endSec": 28.072,
+            "highlight": false
+          },
+          {
+            "index": 75,
+            "word": "menurutmu",
+            "startSec": 28.072,
+            "endSec": 28.687,
+            "highlight": false
+          },
+          {
+            "index": 76,
+            "word": "berguna.",
+            "startSec": 28.687,
+            "endSec": 29.28,
+            "highlight": false
+          }
+        ],
+        "historyRecord": {
+          "episodeId": "cand-supermoon-nov2026",
+          "episodeNumber": 1,
+          "producedAt": "2026-11-23T18:13:20.473Z",
+          "title": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "mainTopic": "Purnama perige membuat bulan tampak lebih besar karena jaraknya sedang paling dekat dengan bumi, bukan karena bulan membesar",
+          "category": "sains",
+          "angle": "Membongkar salah kaprah 'bulan membesar' dengan penjelasan jarak perige",
+          "hook": "Malam ini bulan kelihatan besar sekali. Tapi bulan itu tidak membesar sedikit pun.",
+          "summary": "Purnama perige membuat bulan tampak lebih besar karena jaraknya sedang paling dekat dengan bumi, bukan karena bulan membesar (Membongkar salah kaprah 'bulan membesar' dengan penjelasan jarak perige)",
+          "sources": [
+            "https://www.bmkg.go.id/berita/bmkg-supermoon-pertama-2026-pada-24-november-lebih-dekat-dan-besar"
+          ],
+          "storyFormat": "myth_evidence_conclusion",
+          "visualStyle": "kinetic_typography",
+          "status": "draft",
+          "editingSignature": "ed_85dba33e",
+          "blueprintSignature": "bp_6b4c35e9",
+          "scoreTotal": 99
+        },
+        "qc": {
+          "ok": true,
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 88, 2 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "76 cue kata, urutan naik"
+            }
+          ]
+        },
+        "summary": {
+          "blueprintLine": "Kinetic typography · Tumpukan teks samping (editorial) · hook Pertanyaan awam · musik Uplifting progress · 4 transisi · 46s",
+          "editingLine": "kinetic_typography · 6 scene · rata-rata potong 3.1s (steady) · transisi: Mask reveal, Shape wipe, Clean cut, Whip pan",
+          "scriptScore": 88,
+          "estimatedDurationSec": 38
+        }
+      },
+      {
+        "episodeId": "cand-tpt-upah-agustus-2026",
+        "episodeNumber": 2,
+        "producedAt": "2026-11-23T18:13:20.473Z",
+        "candidate": {
+          "id": "cand-tpt-upah-agustus-2026",
+          "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "thesis": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan",
+          "category": "ekonomi",
+          "angle": "Membaca dua angka BPS berdampingan: kesempatan kerja bertambah, upah rata-rata melambat",
+          "hook": "Pengangguran turun. Tapi gaji temanmu tidak naik. Dua angka ini keluar di hari yang sama.",
+          "keyFacts": [
+            {
+              "claim": "Tingkat Pengangguran Terbuka Agustus 2026 sebesar 4,75 persen, turun 0,09 persen poin dibanding Agustus 2025",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Penduduk bekerja pada Agustus 2026 sebanyak 147,99 juta orang, naik 1,443 juta orang dari Agustus 2025",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Rata-rata upah buruh pada Agustus 2026 sebesar 3,42 juta rupiah",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Lapangan usaha dengan porsi penduduk bekerja terbesar adalah pertanian, kehutanan, dan perikanan sebanyak 41,73 juta orang atau 28,20 persen",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BPS — Tingkat Pengangguran Terbuka 4,75 persen, rata-rata upah buruh 3,42 juta rupiah",
+              "url": "https://www.bps.go.id/id/pressrelease/2026/11/05/169961/tingkat-pengangguran-terbuka--tpt--sebesar-4-75-persen---rata-rata-upah-buruh-sebesar-3-42-juta-rupiah.html",
+              "kind": "official",
+              "publishedAt": "2026-11-05"
+            }
+          ],
+          "noveltyNotes": "Angka pengangguran sering dibahas sendirian; di sini dua indikator dibaca bersamaan supaya tidak jadi klaim sepihak soal penyebab",
+          "audienceImportance": 90,
+          "difficulty": 5,
+          "durationFitSec": 55,
+          "clarity": 72,
+          "curiosity": 85,
+          "educationalValue": 82,
+          "visualPotential": 55,
+          "tags": [
+            "bps",
+            "ketenagakerjaan",
+            "upah",
+            "ekonomi"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 9,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 8.5,
+          "repetitionPenalty": 0,
+          "total": 98
+        },
+        "blueprint": {
+          "episodeId": "cand-tpt-upah-agustus-2026",
+          "topic": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "category": "ekonomi",
+          "audience": "Masyarakat umum yang ingin paham tanpa istilah rumit",
+          "coreMessage": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan",
+          "storyAngle": "Membaca dua angka BPS berdampingan: kesempatan kerja bertambah, upah rata-rata melambat",
+          "hookStyle": "mitos_yang_dibongkar",
+          "narrativeStructure": "numbers_walkthrough",
+          "visualStyle": "infographic_3d",
+          "paletteFamily": "neon_accent",
+          "palette": {
+            "bg": "#0a0a12",
+            "fg": "#f7f7ff",
+            "accent": "#a3ff12",
+            "support": "#7c3aed"
+          },
+          "typographyStyle": "word_by_word_reveal",
+          "cameraLanguage": [
+            "slow_push_in",
+            "pull_out",
+            "split_screen_drift"
+          ],
+          "transitionLanguage": [
+            "graphic_wipe",
+            "zoom_through",
+            "timeline_slide",
+            "shape_wipe"
+          ],
+          "musicMood": "calm_explainer",
+          "soundDesign": [
+            "whoosh halus per transisi",
+            "click tipis saat kata kunci muncul",
+            "ambience rendah"
+          ],
+          "assetMix": "diagram_infographic",
+          "scenePlan": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "purpose": "hook: Bedah angka",
+              "visual": "b-roll pembuka nyata + wordmark",
+              "motion": "slow_push_in",
+              "transitionOut": "graphic_wipe",
+              "durationSec": 6.4,
+              "emphasis": "none"
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "purpose": "context: context",
+              "visual": "peta/timeline mini atau kartu konteks",
+              "motion": "pull_out",
+              "transitionOut": "zoom_through",
+              "durationSec": 9.2,
+              "emphasis": "none"
+            },
+            {
+              "index": 3,
+              "beat": "explanation",
+              "purpose": "explanation: explanation",
+              "visual": "Foto dokumenter + peta — diagram utama",
+              "motion": "split_screen_drift",
+              "transitionOut": "timeline_slide",
+              "durationSec": 10,
+              "emphasis": "none"
+            },
+            {
+              "index": 4,
+              "beat": "example",
+              "purpose": "example: example",
+              "visual": "contoh konkret: potret/dokumentasi atau demo layar",
+              "motion": "slow_push_in",
+              "transitionOut": "shape_wipe",
+              "durationSec": 9.6,
+              "emphasis": "compare"
+            },
+            {
+              "index": 5,
+              "beat": "insight",
+              "purpose": "insight: insight",
+              "visual": "callout kontras + highlight angka bersumber",
+              "motion": "pull_out",
+              "transitionOut": "graphic_wipe",
+              "durationSec": 8.4,
+              "emphasis": "number"
+            },
+            {
+              "index": 6,
+              "beat": "takeaway",
+              "purpose": "takeaway: takeaway",
+              "visual": "ringkasan 1 baris + ikon",
+              "motion": "split_screen_drift",
+              "transitionOut": "zoom_through",
+              "durationSec": 6.6,
+              "emphasis": "keyword"
+            },
+            {
+              "index": 7,
+              "beat": "ending",
+              "purpose": "ending: ending",
+              "visual": "frame brand + pertanyaan diskusi",
+              "motion": "slow_push_in",
+              "transitionOut": "timeline_slide",
+              "durationSec": 5.7,
+              "emphasis": "none"
+            }
+          ],
+          "estimatedDurationSec": 56,
+          "signature": "bp_204ed785",
+          "brand": {
+            "wordmark": "FAJREZZZ AI OFFICE",
+            "accentHex": "#ff5a1f",
+            "fontFamily": "Inter / system-ui (bold editorial)",
+            "safeZone": {
+              "top": 0.12,
+              "bottom": 0.18,
+              "left": 0.08,
+              "right": 0.08
+            },
+            "rules": [
+              "Wordmark kecil selalu ada di 3 detik pertama & frame terakhir.",
+              "Subtitle & headline tidak boleh keluar dari TikTok 9:16 safe zone.",
+              "Warna aksen brand dipakai minimal 1 elemen per scene (bukan dominan).",
+              "Tidak ada clickbait, panah merah, atau angka tanpa sumber."
+            ]
+          },
+          "generationNotes": []
+        },
+        "blueprintAttempts": [
+          {
+            "attempt": 1,
+            "signature": "bp_204ed785",
+            "maxSimilarity": 0.028,
+            "accepted": true
+          }
+        ],
+        "script": {
+          "episodeId": "cand-tpt-upah-agustus-2026",
+          "topic": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "generator": "deterministic-fact-skeleton",
+          "lines": [
+            {
+              "beat": "hook",
+              "text": "Pengangguran turun. Tapi gaji temanmu tidak naik. Dua angka ini keluar di hari yang sama.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "context",
+              "text": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "explanation",
+              "text": "Tingkat Pengangguran Terbuka Agustus 2026 sebesar 4,75 persen, turun 0,09 persen poin dibanding Agustus 2025.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "example",
+              "text": "Contohnya, penduduk bekerja pada Agustus 2026 sebanyak 147,99 juta orang, naik 1,443 juta orang dari Agustus 2025.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "insight",
+              "text": "Yang sering luput, rata-rata upah buruh pada Agustus 2026 sebesar 3,42 juta rupiah.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "takeaway",
+              "text": "Jadi intinya, jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "ending",
+              "text": "Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            }
+          ],
+          "narration": "Pengangguran turun. Tapi gaji temanmu tidak naik. Dua angka ini keluar di hari yang sama. Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan. Tingkat Pengangguran Terbuka Agustus 2026 sebesar 4,75 persen, turun 0,09 persen poin dibanding Agustus 2025. Contohnya, penduduk bekerja pada Agustus 2026 sebanyak 147,99 juta orang, naik 1,443 juta orang dari Agustus 2025. Yang sering luput, rata-rata upah buruh pada Agustus 2026 sebesar 3,42 juta rupiah. Jadi intinya, jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42. Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+          "estimatedDurationSec": 40.4,
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/169961/tingkat-pengangguran-terbuka--tpt--sebesar-4-75-persen---rata-rata-upah-buruh-sebesar-3-42-juta-rupiah.html"
+          ],
+          "disclaimer": "Naskah ini dirakit otomatis dari fakta + sumber kandidat (bukan hasil LLM). Struktur cerita: numbers_walkthrough. Wajib ditinjau manusia sebelum publikasi."
+        },
+        "scriptAudit": {
+          "score": 94,
+          "sentenceCount": 10,
+          "avgSentenceWords": 10.5,
+          "longestSentenceWords": 18,
+          "jargon": [],
+          "repeatedPhrases": [
+            "jumlah orang bekerja",
+            "orang bekerja naik",
+            "bekerja naik dan",
+            "naik dan pengangguran",
+            "dan pengangguran turun",
+            "pengangguran turun namun",
+            "turun namun rata",
+            "namun rata rata",
+            "rata rata upah",
+            "rata upah buruh",
+            "upah buruh masih",
+            "buruh masih sekitar",
+            "masih sekitar 3",
+            "sekitar 3 42",
+            "3 42 juta",
+            "42 juta rupiah",
+            "agustus 2026 sebesar",
+            "pada agustus 2026"
+          ],
+          "unsourcedNumbers": [],
+          "mainIdeaCount": 1,
+          "findings": [
+            {
+              "code": "REPEATED_PHRASE",
+              "severity": "warning",
+              "message": "18 frasa 3 kata diulang. Ringkas supaya tidak membosankan.",
+              "excerpt": "jumlah orang bekerja | orang bekerja naik | bekerja naik dan"
+            }
+          ],
+          "passes": true
+        },
+        "editingPlan": {
+          "episodeId": "cand-tpt-upah-agustus-2026",
+          "topic": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "styleId": "infographic_3d",
+          "scenes": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "durationSec": 6.4,
+              "camera": "Slow push-in",
+              "transitionIn": "clean_cut",
+              "transitionOut": "Graphic wipe",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [],
+              "asset": "Diagram + infografis 3D: b-roll pembuka nyata + wordmark",
+              "musicIntensity": 1,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 3.2
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "durationSec": 9.2,
+              "camera": "Pan horizontal",
+              "transitionIn": "Graphic wipe",
+              "transitionOut": "Zoom through",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [],
+              "asset": "Diagram + infografis 3D: peta/timeline mini atau kartu konteks",
+              "musicIntensity": 1,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 4.6
+            },
+            {
+              "index": 3,
+              "beat": "explanation",
+              "durationSec": 10,
+              "camera": "Focus transition",
+              "transitionIn": "Zoom through",
+              "transitionOut": "Timeline slide",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [],
+              "asset": "Diagram + infografis 3D: Foto dokumenter + peta — diagram utama",
+              "musicIntensity": 1,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 5
+            },
+            {
+              "index": 4,
+              "beat": "example",
+              "durationSec": 9.6,
+              "camera": "Parallax berlapis",
+              "transitionIn": "Timeline slide",
+              "transitionOut": "Shape wipe",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [
+                "4,75 persen",
+                "2026",
+                "agustus"
+              ],
+              "asset": "Diagram + infografis 3D: contoh konkret: potret/dokumentasi atau demo layar",
+              "musicIntensity": 1,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 4.8
+            },
+            {
+              "index": 5,
+              "beat": "insight",
+              "durationSec": 8.4,
+              "camera": "Split-screen bergerak",
+              "transitionIn": "Shape wipe",
+              "transitionOut": "Graphic wipe",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [
+                "4,75 persen",
+                "2026"
+              ],
+              "asset": "Diagram + infografis 3D: callout kontras + highlight angka bersumber",
+              "musicIntensity": 1,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 4.2
+            },
+            {
+              "index": 6,
+              "beat": "takeaway",
+              "durationSec": 6.6,
+              "camera": "Pan horizontal",
+              "transitionIn": "Graphic wipe",
+              "transitionOut": "Zoom through",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [
+                "4,75 persen",
+                "2026",
+                "agustus"
+              ],
+              "asset": "Diagram + infografis 3D: ringkasan 1 baris + ikon",
+              "musicIntensity": 1,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 3.3
+            },
+            {
+              "index": 7,
+              "beat": "ending",
+              "durationSec": 5.7,
+              "camera": "Dynamic crop",
+              "transitionIn": "Zoom through",
+              "transitionOut": "Timeline slide",
+              "typography": "Kata muncul satu-satu",
+              "emphasisWords": [],
+              "asset": "Diagram + infografis 3D: frame brand + pertanyaan diskusi",
+              "musicIntensity": 1,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 2.9
+            }
+          ],
+          "rhythm": {
+            "avgCutSec": 4,
+            "fastestCutSec": 2.9,
+            "slowestCutSec": 5,
+            "pace": "calm"
+          },
+          "subtitleStyle": {
+            "position": "lower_third_safe",
+            "wordsPerCue": 4,
+            "highlightNumbers": true
+          },
+          "signature": "ed_8df7931d",
+          "novelAgainstHistory": true,
+          "notes": []
+        },
+        "subtitleCues": [
+          {
+            "index": 1,
+            "word": "Pengangguran",
+            "startSec": 0.08,
+            "endSec": 0.775,
+            "highlight": false
+          },
+          {
+            "index": 2,
+            "word": "turun.",
+            "startSec": 0.775,
+            "endSec": 1.245,
+            "highlight": false
+          },
+          {
+            "index": 3,
+            "word": "Tapi",
+            "startSec": 1.245,
+            "endSec": 1.565,
+            "highlight": false
+          },
+          {
+            "index": 4,
+            "word": "gaji",
+            "startSec": 1.565,
+            "endSec": 1.885,
+            "highlight": false
+          },
+          {
+            "index": 5,
+            "word": "temanmu",
+            "startSec": 1.885,
+            "endSec": 2.379,
+            "highlight": false
+          },
+          {
+            "index": 6,
+            "word": "tidak",
+            "startSec": 2.379,
+            "endSec": 2.712,
+            "highlight": false
+          },
+          {
+            "index": 7,
+            "word": "naik.",
+            "startSec": 2.712,
+            "endSec": 3.036,
+            "highlight": false
+          },
+          {
+            "index": 8,
+            "word": "Dua",
+            "startSec": 3.036,
+            "endSec": 3.209,
+            "highlight": false
+          },
+          {
+            "index": 9,
+            "word": "angka",
+            "startSec": 3.209,
+            "endSec": 3.543,
+            "highlight": false
+          },
+          {
+            "index": 10,
+            "word": "ini",
+            "startSec": 3.543,
+            "endSec": 3.85,
+            "highlight": false
+          },
+          {
+            "index": 11,
+            "word": "keluar",
+            "startSec": 3.85,
+            "endSec": 4.197,
+            "highlight": false
+          },
+          {
+            "index": 12,
+            "word": "di",
+            "startSec": 4.197,
+            "endSec": 4.357,
+            "highlight": false
+          },
+          {
+            "index": 13,
+            "word": "hari",
+            "startSec": 4.357,
+            "endSec": 4.677,
+            "highlight": false
+          },
+          {
+            "index": 14,
+            "word": "yang",
+            "startSec": 4.677,
+            "endSec": 4.864,
+            "highlight": false
+          },
+          {
+            "index": 15,
+            "word": "sama.",
+            "startSec": 4.864,
+            "endSec": 5.321,
+            "highlight": false
+          },
+          {
+            "index": 16,
+            "word": "Jumlah",
+            "startSec": 5.321,
+            "endSec": 5.668,
+            "highlight": false
+          },
+          {
+            "index": 17,
+            "word": "orang",
+            "startSec": 5.668,
+            "endSec": 6.002,
+            "highlight": false
+          },
+          {
+            "index": 18,
+            "word": "bekerja",
+            "startSec": 6.002,
+            "endSec": 6.496,
+            "highlight": false
+          },
+          {
+            "index": 19,
+            "word": "naik",
+            "startSec": 6.496,
+            "endSec": 6.683,
+            "highlight": false
+          },
+          {
+            "index": 20,
+            "word": "dan",
+            "startSec": 6.683,
+            "endSec": 6.856,
+            "highlight": false
+          },
+          {
+            "index": 21,
+            "word": "pengangguran",
+            "startSec": 6.856,
+            "endSec": 7.551,
+            "highlight": false
+          },
+          {
+            "index": 22,
+            "word": "turun,",
+            "startSec": 7.551,
+            "endSec": 7.96,
+            "highlight": false
+          },
+          {
+            "index": 23,
+            "word": "namun",
+            "startSec": 7.96,
+            "endSec": 8.293,
+            "highlight": false
+          },
+          {
+            "index": 24,
+            "word": "rata-rata",
+            "startSec": 8.293,
+            "endSec": 8.947,
+            "highlight": false
+          },
+          {
+            "index": 25,
+            "word": "upah",
+            "startSec": 8.947,
+            "endSec": 9.267,
+            "highlight": false
+          },
+          {
+            "index": 26,
+            "word": "buruh",
+            "startSec": 9.267,
+            "endSec": 9.601,
+            "highlight": false
+          },
+          {
+            "index": 27,
+            "word": "masih",
+            "startSec": 9.601,
+            "endSec": 9.935,
+            "highlight": false
+          },
+          {
+            "index": 28,
+            "word": "sekitar",
+            "startSec": 9.935,
+            "endSec": 10.429,
+            "highlight": false
+          },
+          {
+            "index": 29,
+            "word": "3,42",
+            "startSec": 10.429,
+            "endSec": 10.616,
+            "highlight": true
+          },
+          {
+            "index": 30,
+            "word": "juta",
+            "startSec": 10.616,
+            "endSec": 10.936,
+            "highlight": false
+          },
+          {
+            "index": 31,
+            "word": "rupiah",
+            "startSec": 10.936,
+            "endSec": 11.283,
+            "highlight": false
+          },
+          {
+            "index": 32,
+            "word": "per",
+            "startSec": 11.283,
+            "endSec": 11.457,
+            "highlight": false
+          },
+          {
+            "index": 33,
+            "word": "bulan.",
+            "startSec": 11.457,
+            "endSec": 11.927,
+            "highlight": false
+          },
+          {
+            "index": 34,
+            "word": "Tingkat",
+            "startSec": 11.927,
+            "endSec": 12.288,
+            "highlight": false
+          },
+          {
+            "index": 35,
+            "word": "Pengangguran",
+            "startSec": 12.288,
+            "endSec": 12.983,
+            "highlight": false
+          },
+          {
+            "index": 36,
+            "word": "Terbuka",
+            "startSec": 12.983,
+            "endSec": 13.476,
+            "highlight": false
+          },
+          {
+            "index": 37,
+            "word": "Agustus",
+            "startSec": 13.476,
+            "endSec": 13.97,
+            "highlight": false
+          },
+          {
+            "index": 38,
+            "word": "2026",
+            "startSec": 13.97,
+            "endSec": 14.29,
+            "highlight": true
+          },
+          {
+            "index": 39,
+            "word": "sebesar",
+            "startSec": 14.29,
+            "endSec": 14.784,
+            "highlight": false
+          },
+          {
+            "index": 40,
+            "word": "4,75",
+            "startSec": 14.784,
+            "endSec": 14.971,
+            "highlight": true
+          },
+          {
+            "index": 41,
+            "word": "persen,",
+            "startSec": 14.971,
+            "endSec": 15.393,
+            "highlight": false
+          },
+          {
+            "index": 42,
+            "word": "turun",
+            "startSec": 15.393,
+            "endSec": 15.727,
+            "highlight": false
+          },
+          {
+            "index": 43,
+            "word": "0,09",
+            "startSec": 15.727,
+            "endSec": 15.914,
+            "highlight": true
+          },
+          {
+            "index": 44,
+            "word": "persen",
+            "startSec": 15.914,
+            "endSec": 16.262,
+            "highlight": false
+          },
+          {
+            "index": 45,
+            "word": "poin",
+            "startSec": 16.262,
+            "endSec": 16.449,
+            "highlight": false
+          },
+          {
+            "index": 46,
+            "word": "dibanding",
+            "startSec": 16.449,
+            "endSec": 16.97,
+            "highlight": false
+          },
+          {
+            "index": 47,
+            "word": "Agustus",
+            "startSec": 16.97,
+            "endSec": 17.464,
+            "highlight": false
+          },
+          {
+            "index": 48,
+            "word": "2025.",
+            "startSec": 17.464,
+            "endSec": 17.92,
+            "highlight": true
+          },
+          {
+            "index": 49,
+            "word": "Contohnya,",
+            "startSec": 17.92,
+            "endSec": 18.516,
+            "highlight": false
+          },
+          {
+            "index": 50,
+            "word": "penduduk",
+            "startSec": 18.516,
+            "endSec": 19.023,
+            "highlight": false
+          },
+          {
+            "index": 51,
+            "word": "bekerja",
+            "startSec": 19.023,
+            "endSec": 19.517,
+            "highlight": false
+          },
+          {
+            "index": 52,
+            "word": "pada",
+            "startSec": 19.517,
+            "endSec": 19.837,
+            "highlight": false
+          },
+          {
+            "index": 53,
+            "word": "Agustus",
+            "startSec": 19.837,
+            "endSec": 20.331,
+            "highlight": false
+          },
+          {
+            "index": 54,
+            "word": "2026",
+            "startSec": 20.331,
+            "endSec": 20.651,
+            "highlight": true
+          },
+          {
+            "index": 55,
+            "word": "sebanyak",
+            "startSec": 20.651,
+            "endSec": 21.159,
+            "highlight": false
+          },
+          {
+            "index": 56,
+            "word": "147,99",
+            "startSec": 21.159,
+            "endSec": 21.506,
+            "highlight": true
+          },
+          {
+            "index": 57,
+            "word": "juta",
+            "startSec": 21.506,
+            "endSec": 21.826,
+            "highlight": false
+          },
+          {
+            "index": 58,
+            "word": "orang,",
+            "startSec": 21.826,
+            "endSec": 22.235,
+            "highlight": false
+          },
+          {
+            "index": 59,
+            "word": "naik",
+            "startSec": 22.235,
+            "endSec": 22.422,
+            "highlight": false
+          },
+          {
+            "index": 60,
+            "word": "1,443",
+            "startSec": 22.422,
+            "endSec": 22.756,
+            "highlight": true
+          },
+          {
+            "index": 61,
+            "word": "juta",
+            "startSec": 22.756,
+            "endSec": 23.076,
+            "highlight": false
+          },
+          {
+            "index": 62,
+            "word": "orang",
+            "startSec": 23.076,
+            "endSec": 23.409,
+            "highlight": false
+          },
+          {
+            "index": 63,
+            "word": "dari",
+            "startSec": 23.409,
+            "endSec": 23.73,
+            "highlight": false
+          },
+          {
+            "index": 64,
+            "word": "Agustus",
+            "startSec": 23.73,
+            "endSec": 24.223,
+            "highlight": false
+          },
+          {
+            "index": 65,
+            "word": "2025.",
+            "startSec": 24.223,
+            "endSec": 24.68,
+            "highlight": true
+          },
+          {
+            "index": 66,
+            "word": "Yang",
+            "startSec": 24.68,
+            "endSec": 24.867,
+            "highlight": false
+          },
+          {
+            "index": 67,
+            "word": "sering",
+            "startSec": 24.867,
+            "endSec": 25.214,
+            "highlight": false
+          },
+          {
+            "index": 68,
+            "word": "luput,",
+            "startSec": 25.214,
+            "endSec": 25.623,
+            "highlight": false
+          },
+          {
+            "index": 69,
+            "word": "rata-rata",
+            "startSec": 25.623,
+            "endSec": 26.277,
+            "highlight": false
+          },
+          {
+            "index": 70,
+            "word": "upah",
+            "startSec": 26.277,
+            "endSec": 26.597,
+            "highlight": false
+          },
+          {
+            "index": 71,
+            "word": "buruh",
+            "startSec": 26.597,
+            "endSec": 26.93,
+            "highlight": false
+          },
+          {
+            "index": 72,
+            "word": "pada",
+            "startSec": 26.93,
+            "endSec": 27.251,
+            "highlight": false
+          },
+          {
+            "index": 73,
+            "word": "Agustus",
+            "startSec": 27.251,
+            "endSec": 27.744,
+            "highlight": false
+          },
+          {
+            "index": 74,
+            "word": "2026",
+            "startSec": 27.744,
+            "endSec": 28.064,
+            "highlight": true
+          },
+          {
+            "index": 75,
+            "word": "sebesar",
+            "startSec": 28.064,
+            "endSec": 28.558,
+            "highlight": false
+          },
+          {
+            "index": 76,
+            "word": "3,42",
+            "startSec": 28.558,
+            "endSec": 28.745,
+            "highlight": true
+          },
+          {
+            "index": 77,
+            "word": "juta",
+            "startSec": 28.745,
+            "endSec": 29.066,
+            "highlight": false
+          },
+          {
+            "index": 78,
+            "word": "rupiah.",
+            "startSec": 29.066,
+            "endSec": 29.549,
+            "highlight": false
+          },
+          {
+            "index": 79,
+            "word": "Jadi",
+            "startSec": 29.549,
+            "endSec": 29.869,
+            "highlight": false
+          },
+          {
+            "index": 80,
+            "word": "intinya,",
+            "startSec": 29.869,
+            "endSec": 30.438,
+            "highlight": false
+          },
+          {
+            "index": 81,
+            "word": "jumlah",
+            "startSec": 30.438,
+            "endSec": 30.785,
+            "highlight": false
+          },
+          {
+            "index": 82,
+            "word": "orang",
+            "startSec": 30.785,
+            "endSec": 31.119,
+            "highlight": false
+          },
+          {
+            "index": 83,
+            "word": "bekerja",
+            "startSec": 31.119,
+            "endSec": 31.613,
+            "highlight": false
+          },
+          {
+            "index": 84,
+            "word": "naik",
+            "startSec": 31.613,
+            "endSec": 31.8,
+            "highlight": false
+          },
+          {
+            "index": 85,
+            "word": "dan",
+            "startSec": 31.8,
+            "endSec": 31.974,
+            "highlight": false
+          },
+          {
+            "index": 86,
+            "word": "pengangguran",
+            "startSec": 31.974,
+            "endSec": 32.668,
+            "highlight": false
+          },
+          {
+            "index": 87,
+            "word": "turun,",
+            "startSec": 32.668,
+            "endSec": 33.077,
+            "highlight": false
+          },
+          {
+            "index": 88,
+            "word": "namun",
+            "startSec": 33.077,
+            "endSec": 33.411,
+            "highlight": false
+          },
+          {
+            "index": 89,
+            "word": "rata-rata",
+            "startSec": 33.411,
+            "endSec": 34.064,
+            "highlight": false
+          },
+          {
+            "index": 90,
+            "word": "upah",
+            "startSec": 34.064,
+            "endSec": 34.385,
+            "highlight": false
+          },
+          {
+            "index": 91,
+            "word": "buruh",
+            "startSec": 34.385,
+            "endSec": 34.718,
+            "highlight": false
+          },
+          {
+            "index": 92,
+            "word": "masih",
+            "startSec": 34.718,
+            "endSec": 35.052,
+            "highlight": false
+          },
+          {
+            "index": 93,
+            "word": "sekitar",
+            "startSec": 35.052,
+            "endSec": 35.546,
+            "highlight": false
+          },
+          {
+            "index": 94,
+            "word": "3,42.",
+            "startSec": 35.546,
+            "endSec": 35.869,
+            "highlight": true
+          },
+          {
+            "index": 95,
+            "word": "Sumber",
+            "startSec": 35.869,
+            "endSec": 36.217,
+            "highlight": false
+          },
+          {
+            "index": 96,
+            "word": "lengkapnya",
+            "startSec": 36.217,
+            "endSec": 36.751,
+            "highlight": false
+          },
+          {
+            "index": 97,
+            "word": "ada",
+            "startSec": 36.751,
+            "endSec": 37.058,
+            "highlight": false
+          },
+          {
+            "index": 98,
+            "word": "di",
+            "startSec": 37.058,
+            "endSec": 37.218,
+            "highlight": false
+          },
+          {
+            "index": 99,
+            "word": "deskripsi.",
+            "startSec": 37.218,
+            "endSec": 37.875,
+            "highlight": false
+          },
+          {
+            "index": 100,
+            "word": "Simpan",
+            "startSec": 37.875,
+            "endSec": 38.222,
+            "highlight": false
+          },
+          {
+            "index": 101,
+            "word": "video",
+            "startSec": 38.222,
+            "endSec": 38.556,
+            "highlight": false
+          },
+          {
+            "index": 102,
+            "word": "ini",
+            "startSec": 38.556,
+            "endSec": 38.863,
+            "highlight": false
+          },
+          {
+            "index": 103,
+            "word": "kalau",
+            "startSec": 38.863,
+            "endSec": 39.196,
+            "highlight": false
+          },
+          {
+            "index": 104,
+            "word": "menurutmu",
+            "startSec": 39.196,
+            "endSec": 39.85,
+            "highlight": false
+          },
+          {
+            "index": 105,
+            "word": "berguna.",
+            "startSec": 39.85,
+            "endSec": 40.48,
+            "highlight": false
+          }
+        ],
+        "historyRecord": {
+          "episodeId": "cand-tpt-upah-agustus-2026",
+          "episodeNumber": 2,
+          "producedAt": "2026-11-23T18:13:20.473Z",
+          "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "mainTopic": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan",
+          "category": "ekonomi",
+          "angle": "Membaca dua angka BPS berdampingan: kesempatan kerja bertambah, upah rata-rata melambat",
+          "hook": "Pengangguran turun. Tapi gaji temanmu tidak naik. Dua angka ini keluar di hari yang sama.",
+          "summary": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan (Membaca dua angka BPS berdampingan: kesempatan kerja bertambah, upah rata-rata melambat)",
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/169961/tingkat-pengangguran-terbuka--tpt--sebesar-4-75-persen---rata-rata-upah-buruh-sebesar-3-42-juta-rupiah.html"
+          ],
+          "storyFormat": "numbers_walkthrough",
+          "visualStyle": "infographic_3d",
+          "status": "draft",
+          "editingSignature": "ed_8df7931d",
+          "blueprintSignature": "bp_204ed785",
+          "scoreTotal": 98
+        },
+        "qc": {
+          "ok": true,
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 94, 1 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "105 cue kata, urutan naik"
+            }
+          ]
+        },
+        "summary": {
+          "blueprintLine": "3D infographic · Kata muncul satu-satu · hook Mitos yang dibongkar · musik Calm explainer · 4 transisi · 56s",
+          "editingLine": "infographic_3d · 7 scene · rata-rata potong 4s (calm) · transisi: Graphic wipe, Zoom through, Timeline slide, Shape wipe",
+          "scriptScore": 94,
+          "estimatedDurationSec": 48
+        }
+      },
+      {
+        "episodeId": "cand-ipm-2026",
+        "episodeNumber": 3,
+        "producedAt": "2026-11-23T18:13:20.473Z",
+        "candidate": {
+          "id": "cand-ipm-2026",
+          "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "thesis": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran, sehingga satu angka tidak bisa mewakili kualitas hidup semua orang",
+          "category": "sosial",
+          "angle": "Membedah isi indeks dan batasannya, bukan merayakan kenaikan angkanya",
+          "hook": "Angka 76,59 ini katanya menunjukkan hidup kita membaik. Tapi ia cuma gabungan tiga hal.",
+          "keyFacts": [
+            {
+              "claim": "IPM Indonesia tahun 2026 mencapai 76,59, meningkat 0,69 poin dibanding tahun sebelumnya sebesar 75,90",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Umur Harapan Hidup saat lahir pada 2026 mencapai 74,68 tahun atau naik 0,21 tahun dari tahun sebelumnya",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Harapan Lama Sekolah penduduk umur 7 tahun ke atas sebesar 13,34 tahun, sedangkan Rata-rata Lama Sekolah penduduk umur 25 tahun ke atas 9,16 tahun",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BPS — Indeks Pembangunan Manusia Indonesia tahun 2026 mencapai 76,59",
+              "url": "https://www.bps.go.id/id/pressrelease/2026/11/05/171255/indeks-pembangunan-manusia--ipm--indonesia-tahun-2026-mencapai-76-59--meningkat-0-69-poin-dibandingkan-tahun-sebelumnya-yang-sebesar-75-90-.html",
+              "kind": "official",
+              "publishedAt": "2026-11-05"
+            }
+          ],
+          "noveltyNotes": "Kebanyakan konten hanya membaca kenaikan IPM; episode ini menjelaskan komponen dan apa yang tidak terlihat dari angka itu",
+          "audienceImportance": 74,
+          "difficulty": 5,
+          "durationFitSec": 52,
+          "clarity": 80,
+          "curiosity": 78,
+          "educationalValue": 92,
+          "visualPotential": 60,
+          "tags": [
+            "ipm",
+            "pendidikan",
+            "kesehatan",
+            "bps"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 9,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 8.5,
+          "repetitionPenalty": 0,
+          "total": 98
+        },
+        "blueprint": {
+          "episodeId": "cand-ipm-2026",
+          "topic": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "category": "sosial",
+          "audience": "Masyarakat umum yang ingin paham tanpa istilah rumit",
+          "coreMessage": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran, sehingga satu angka tidak bisa mewakili kualitas hidup semua orang",
+          "storyAngle": "Membedah isi indeks dan batasannya, bukan merayakan kenaikan angkanya",
+          "hookStyle": "angka_mengejutkan_bersumber",
+          "narrativeStructure": "myth_evidence_conclusion",
+          "visualStyle": "cinematic_documentary",
+          "paletteFamily": "warm_dark",
+          "palette": {
+            "bg": "#14100d",
+            "fg": "#f6efe7",
+            "accent": "#ff5a1f",
+            "support": "#c9895b"
+          },
+          "typographyStyle": "big_headline_lower_third",
+          "cameraLanguage": [
+            "parallax_layer",
+            "focus_rack",
+            "tracking_subject"
+          ],
+          "transitionLanguage": [
+            "zoom_through",
+            "match_cut",
+            "graphic_wipe",
+            "shape_wipe"
+          ],
+          "musicMood": "uplifting_progress",
+          "soundDesign": [
+            "whoosh halus per transisi",
+            "click tipis saat kata kunci muncul",
+            "ambience rendah"
+          ],
+          "assetMix": "photo_map",
+          "scenePlan": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "purpose": "hook: Mitos",
+              "visual": "b-roll pembuka nyata + wordmark",
+              "motion": "parallax_layer",
+              "transitionOut": "zoom_through",
+              "durationSec": 6.2,
+              "emphasis": "none"
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "purpose": "context: Bukti",
+              "visual": "peta/timeline mini atau kartu konteks",
+              "motion": "focus_rack",
+              "transitionOut": "match_cut",
+              "durationSec": 10.7,
+              "emphasis": "none"
+            },
+            {
+              "index": 3,
+              "beat": "example",
+              "purpose": "example: Kesimpulan",
+              "visual": "contoh konkret: potret/dokumentasi atau demo layar",
+              "motion": "tracking_subject",
+              "transitionOut": "graphic_wipe",
+              "durationSec": 11.1,
+              "emphasis": "compare"
+            },
+            {
+              "index": 4,
+              "beat": "insight",
+              "purpose": "insight: insight",
+              "visual": "callout kontras + highlight angka bersumber",
+              "motion": "parallax_layer",
+              "transitionOut": "shape_wipe",
+              "durationSec": 9.9,
+              "emphasis": "number"
+            },
+            {
+              "index": 5,
+              "beat": "takeaway",
+              "purpose": "takeaway: takeaway",
+              "visual": "ringkasan 1 baris + ikon",
+              "motion": "focus_rack",
+              "transitionOut": "zoom_through",
+              "durationSec": 6.4,
+              "emphasis": "keyword"
+            },
+            {
+              "index": 6,
+              "beat": "ending",
+              "purpose": "ending: ending",
+              "visual": "frame brand + pertanyaan diskusi",
+              "motion": "tracking_subject",
+              "transitionOut": "match_cut",
+              "durationSec": 7.6,
+              "emphasis": "none"
+            }
+          ],
+          "estimatedDurationSec": 52,
+          "signature": "bp_5f722f43",
+          "brand": {
+            "wordmark": "FAJREZZZ AI OFFICE",
+            "accentHex": "#ff5a1f",
+            "fontFamily": "Inter / system-ui (bold editorial)",
+            "safeZone": {
+              "top": 0.12,
+              "bottom": 0.18,
+              "left": 0.08,
+              "right": 0.08
+            },
+            "rules": [
+              "Wordmark kecil selalu ada di 3 detik pertama & frame terakhir.",
+              "Subtitle & headline tidak boleh keluar dari TikTok 9:16 safe zone.",
+              "Warna aksen brand dipakai minimal 1 elemen per scene (bukan dominan).",
+              "Tidak ada clickbait, panah merah, atau angka tanpa sumber."
+            ]
+          },
+          "generationNotes": []
+        },
+        "blueprintAttempts": [
+          {
+            "attempt": 1,
+            "signature": "bp_5f722f43",
+            "maxSimilarity": 0.269,
+            "accepted": true
+          }
+        ],
+        "script": {
+          "episodeId": "cand-ipm-2026",
+          "topic": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "generator": "deterministic-fact-skeleton",
+          "lines": [
+            {
+              "beat": "hook",
+              "text": "Angka 76,59 ini katanya menunjukkan hidup kita membaik. Tapi ia cuma gabungan tiga hal.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "context",
+              "text": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "example",
+              "text": "Contohnya, IPM Indonesia tahun 2026 mencapai 76,59, meningkat 0,69 poin dibanding tahun sebelumnya sebesar 75,90.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "insight",
+              "text": "Yang sering luput, umur Harapan Hidup saat lahir pada 2026 mencapai 74,68 tahun atau naik 0,21 tahun dari tahun sebelumnya.",
+              "claimBearing": true,
+              "sourceIndexes": [
+                0
+              ]
+            },
+            {
+              "beat": "takeaway",
+              "text": "Jadi intinya, satu angka tidak bisa mewakili kualitas hidup semua orang.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            },
+            {
+              "beat": "ending",
+              "text": "Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+              "claimBearing": false,
+              "sourceIndexes": []
+            }
+          ],
+          "narration": "Angka 76,59 ini katanya menunjukkan hidup kita membaik. Tapi ia cuma gabungan tiga hal. Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran. Contohnya, IPM Indonesia tahun 2026 mencapai 76,59, meningkat 0,69 poin dibanding tahun sebelumnya sebesar 75,90. Yang sering luput, umur Harapan Hidup saat lahir pada 2026 mencapai 74,68 tahun atau naik 0,21 tahun dari tahun sebelumnya. Jadi intinya, satu angka tidak bisa mewakili kualitas hidup semua orang. Sumber lengkapnya ada di deskripsi. Simpan video ini kalau menurutmu berguna.",
+          "estimatedDurationSec": 30.4,
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/171255/indeks-pembangunan-manusia--ipm--indonesia-tahun-2026-mencapai-76-59--meningkat-0-69-poin-dibandingkan-tahun-sebelumnya-yang-sebesar-75-90-.html"
+          ],
+          "disclaimer": "Naskah ini dirakit otomatis dari fakta + sumber kandidat (bukan hasil LLM). Struktur cerita: myth_evidence_conclusion. Wajib ditinjau manusia sebelum publikasi."
+        },
+        "scriptAudit": {
+          "score": 94,
+          "sentenceCount": 8,
+          "avgSentenceWords": 9.9,
+          "longestSentenceWords": 20,
+          "jargon": [],
+          "repeatedPhrases": [],
+          "unsourcedNumbers": [],
+          "mainIdeaCount": 1,
+          "findings": [
+            {
+              "code": "LONG_SENTENCE",
+              "severity": "warning",
+              "message": "Kalimat 20 kata (batas 18). Pecah jadi dua kalimat pendek.",
+              "excerpt": "Yang sering luput, umur Harapan Hidup saat lahir pada 2026 mencapai 74,68 tahun atau naik "
+            }
+          ],
+          "passes": true
+        },
+        "editingPlan": {
+          "episodeId": "cand-ipm-2026",
+          "topic": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "styleId": "cinematic_documentary",
+          "scenes": [
+            {
+              "index": 1,
+              "beat": "hook",
+              "durationSec": 6.2,
+              "camera": "Parallax berlapis",
+              "transitionIn": "clean_cut",
+              "transitionOut": "Zoom through",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [],
+              "asset": "Foto dokumenter + peta: b-roll pembuka nyata + wordmark",
+              "musicIntensity": 3,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 2.5
+            },
+            {
+              "index": 2,
+              "beat": "context",
+              "durationSec": 10.7,
+              "camera": "Slow push-in",
+              "transitionIn": "Zoom through",
+              "transitionOut": "Match cut",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [],
+              "asset": "Foto dokumenter + peta: peta/timeline mini atau kartu konteks",
+              "musicIntensity": 2,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 4.3
+            },
+            {
+              "index": 3,
+              "beat": "example",
+              "durationSec": 11.1,
+              "camera": "Dynamic crop",
+              "transitionIn": "Match cut",
+              "transitionOut": "Graphic wipe",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [
+                "76,59",
+                "2026",
+                "tahun"
+              ],
+              "asset": "Foto dokumenter + peta: contoh konkret: potret/dokumentasi atau demo layar",
+              "musicIntensity": 2,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 4.4
+            },
+            {
+              "index": 4,
+              "beat": "insight",
+              "durationSec": 9.9,
+              "camera": "Dynamic crop",
+              "transitionIn": "Graphic wipe",
+              "transitionOut": "Shape wipe",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [
+                "76,59",
+                "2026"
+              ],
+              "asset": "Foto dokumenter + peta: callout kontras + highlight angka bersumber",
+              "musicIntensity": 3,
+              "soundCue": "whoosh halus per transisi",
+              "cutIntervalSec": 4
+            },
+            {
+              "index": 5,
+              "beat": "takeaway",
+              "durationSec": 6.4,
+              "camera": "Parallax berlapis",
+              "transitionIn": "Shape wipe",
+              "transitionOut": "Zoom through",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [
+                "76,59",
+                "2026",
+                "tahun"
+              ],
+              "asset": "Foto dokumenter + peta: ringkasan 1 baris + ikon",
+              "musicIntensity": 2,
+              "soundCue": "click tipis saat kata kunci muncul",
+              "cutIntervalSec": 2.6
+            },
+            {
+              "index": 6,
+              "beat": "ending",
+              "durationSec": 7.6,
+              "camera": "Pull-out reveal",
+              "transitionIn": "Zoom through",
+              "transitionOut": "Match cut",
+              "typography": "Headline besar lower-third",
+              "emphasisWords": [],
+              "asset": "Foto dokumenter + peta: frame brand + pertanyaan diskusi",
+              "musicIntensity": 2,
+              "soundCue": "ambience rendah",
+              "cutIntervalSec": 3
+            }
+          ],
+          "rhythm": {
+            "avgCutSec": 3.5,
+            "fastestCutSec": 2.5,
+            "slowestCutSec": 4.4,
+            "pace": "steady"
+          },
+          "subtitleStyle": {
+            "position": "lower_third_safe",
+            "wordsPerCue": 4,
+            "highlightNumbers": true
+          },
+          "signature": "ed_e181dc0c",
+          "novelAgainstHistory": true,
+          "notes": []
+        },
+        "subtitleCues": [
+          {
+            "index": 1,
+            "word": "Angka",
+            "startSec": 0.08,
+            "endSec": 0.394,
+            "highlight": false
+          },
+          {
+            "index": 2,
+            "word": "76,59",
+            "startSec": 0.394,
+            "endSec": 0.708,
+            "highlight": true
+          },
+          {
+            "index": 3,
+            "word": "ini",
+            "startSec": 0.708,
+            "endSec": 0.996,
+            "highlight": false
+          },
+          {
+            "index": 4,
+            "word": "katanya",
+            "startSec": 0.996,
+            "endSec": 1.461,
+            "highlight": false
+          },
+          {
+            "index": 5,
+            "word": "menunjukkan",
+            "startSec": 1.461,
+            "endSec": 2.102,
+            "highlight": false
+          },
+          {
+            "index": 6,
+            "word": "hidup",
+            "startSec": 2.102,
+            "endSec": 2.416,
+            "highlight": false
+          },
+          {
+            "index": 7,
+            "word": "kita",
+            "startSec": 2.416,
+            "endSec": 2.717,
+            "highlight": false
+          },
+          {
+            "index": 8,
+            "word": "membaik.",
+            "startSec": 2.717,
+            "endSec": 3.185,
+            "highlight": false
+          },
+          {
+            "index": 9,
+            "word": "Tapi",
+            "startSec": 3.185,
+            "endSec": 3.486,
+            "highlight": false
+          },
+          {
+            "index": 10,
+            "word": "ia",
+            "startSec": 3.486,
+            "endSec": 3.636,
+            "highlight": false
+          },
+          {
+            "index": 11,
+            "word": "cuma",
+            "startSec": 3.636,
+            "endSec": 3.938,
+            "highlight": false
+          },
+          {
+            "index": 12,
+            "word": "gabungan",
+            "startSec": 3.938,
+            "endSec": 4.415,
+            "highlight": false
+          },
+          {
+            "index": 13,
+            "word": "tiga",
+            "startSec": 4.415,
+            "endSec": 4.716,
+            "highlight": false
+          },
+          {
+            "index": 14,
+            "word": "hal.",
+            "startSec": 4.716,
+            "endSec": 5.008,
+            "highlight": false
+          },
+          {
+            "index": 15,
+            "word": "Indeks",
+            "startSec": 5.008,
+            "endSec": 5.335,
+            "highlight": false
+          },
+          {
+            "index": 16,
+            "word": "Pembangunan",
+            "startSec": 5.335,
+            "endSec": 5.975,
+            "highlight": false
+          },
+          {
+            "index": 17,
+            "word": "Manusia",
+            "startSec": 5.975,
+            "endSec": 6.44,
+            "highlight": false
+          },
+          {
+            "index": 18,
+            "word": "menggabungkan",
+            "startSec": 6.44,
+            "endSec": 7.106,
+            "highlight": false
+          },
+          {
+            "index": 19,
+            "word": "kesehatan,",
+            "startSec": 7.106,
+            "endSec": 7.792,
+            "highlight": false
+          },
+          {
+            "index": 20,
+            "word": "pendidikan,",
+            "startSec": 7.792,
+            "endSec": 8.491,
+            "highlight": false
+          },
+          {
+            "index": 21,
+            "word": "dan",
+            "startSec": 8.491,
+            "endSec": 8.654,
+            "highlight": false
+          },
+          {
+            "index": 22,
+            "word": "pengeluaran.",
+            "startSec": 8.654,
+            "endSec": 9.423,
+            "highlight": false
+          },
+          {
+            "index": 23,
+            "word": "Contohnya,",
+            "startSec": 9.423,
+            "endSec": 9.984,
+            "highlight": false
+          },
+          {
+            "index": 24,
+            "word": "IPM",
+            "startSec": 9.984,
+            "endSec": 10.147,
+            "highlight": false
+          },
+          {
+            "index": 25,
+            "word": "Indonesia",
+            "startSec": 10.147,
+            "endSec": 10.762,
+            "highlight": false
+          },
+          {
+            "index": 26,
+            "word": "tahun",
+            "startSec": 10.762,
+            "endSec": 11.076,
+            "highlight": false
+          },
+          {
+            "index": 27,
+            "word": "2026",
+            "startSec": 11.076,
+            "endSec": 11.377,
+            "highlight": true
+          },
+          {
+            "index": 28,
+            "word": "mencapai",
+            "startSec": 11.377,
+            "endSec": 11.855,
+            "highlight": false
+          },
+          {
+            "index": 29,
+            "word": "76,59,",
+            "startSec": 11.855,
+            "endSec": 12.239,
+            "highlight": true
+          },
+          {
+            "index": 30,
+            "word": "meningkat",
+            "startSec": 12.239,
+            "endSec": 12.73,
+            "highlight": false
+          },
+          {
+            "index": 31,
+            "word": "0,69",
+            "startSec": 12.73,
+            "endSec": 12.906,
+            "highlight": true
+          },
+          {
+            "index": 32,
+            "word": "poin",
+            "startSec": 12.906,
+            "endSec": 13.082,
+            "highlight": false
+          },
+          {
+            "index": 33,
+            "word": "dibanding",
+            "startSec": 13.082,
+            "endSec": 13.572,
+            "highlight": false
+          },
+          {
+            "index": 34,
+            "word": "tahun",
+            "startSec": 13.572,
+            "endSec": 13.886,
+            "highlight": false
+          },
+          {
+            "index": 35,
+            "word": "sebelumnya",
+            "startSec": 13.886,
+            "endSec": 14.514,
+            "highlight": false
+          },
+          {
+            "index": 36,
+            "word": "sebesar",
+            "startSec": 14.514,
+            "endSec": 14.979,
+            "highlight": false
+          },
+          {
+            "index": 37,
+            "word": "75,90.",
+            "startSec": 14.979,
+            "endSec": 15.421,
+            "highlight": true
+          },
+          {
+            "index": 38,
+            "word": "Yang",
+            "startSec": 15.421,
+            "endSec": 15.597,
+            "highlight": false
+          },
+          {
+            "index": 39,
+            "word": "sering",
+            "startSec": 15.597,
+            "endSec": 15.924,
+            "highlight": false
+          },
+          {
+            "index": 40,
+            "word": "luput,",
+            "startSec": 15.924,
+            "endSec": 16.308,
+            "highlight": false
+          },
+          {
+            "index": 41,
+            "word": "umur",
+            "startSec": 16.308,
+            "endSec": 16.61,
+            "highlight": false
+          },
+          {
+            "index": 42,
+            "word": "Harapan",
+            "startSec": 16.61,
+            "endSec": 17.074,
+            "highlight": false
+          },
+          {
+            "index": 43,
+            "word": "Hidup",
+            "startSec": 17.074,
+            "endSec": 17.388,
+            "highlight": false
+          },
+          {
+            "index": 44,
+            "word": "saat",
+            "startSec": 17.388,
+            "endSec": 17.564,
+            "highlight": false
+          },
+          {
+            "index": 45,
+            "word": "lahir",
+            "startSec": 17.564,
+            "endSec": 17.878,
+            "highlight": false
+          },
+          {
+            "index": 46,
+            "word": "pada",
+            "startSec": 17.878,
+            "endSec": 18.18,
+            "highlight": false
+          },
+          {
+            "index": 47,
+            "word": "2026",
+            "startSec": 18.18,
+            "endSec": 18.481,
+            "highlight": true
+          },
+          {
+            "index": 48,
+            "word": "mencapai",
+            "startSec": 18.481,
+            "endSec": 18.958,
+            "highlight": false
+          },
+          {
+            "index": 49,
+            "word": "74,68",
+            "startSec": 18.958,
+            "endSec": 19.272,
+            "highlight": true
+          },
+          {
+            "index": 50,
+            "word": "tahun",
+            "startSec": 19.272,
+            "endSec": 19.586,
+            "highlight": false
+          },
+          {
+            "index": 51,
+            "word": "atau",
+            "startSec": 19.586,
+            "endSec": 19.887,
+            "highlight": false
+          },
+          {
+            "index": 52,
+            "word": "naik",
+            "startSec": 19.887,
+            "endSec": 20.064,
+            "highlight": false
+          },
+          {
+            "index": 53,
+            "word": "0,21",
+            "startSec": 20.064,
+            "endSec": 20.24,
+            "highlight": true
+          },
+          {
+            "index": 54,
+            "word": "tahun",
+            "startSec": 20.24,
+            "endSec": 20.554,
+            "highlight": false
+          },
+          {
+            "index": 55,
+            "word": "dari",
+            "startSec": 20.554,
+            "endSec": 20.855,
+            "highlight": false
+          },
+          {
+            "index": 56,
+            "word": "tahun",
+            "startSec": 20.855,
+            "endSec": 21.169,
+            "highlight": false
+          },
+          {
+            "index": 57,
+            "word": "sebelumnya.",
+            "startSec": 21.169,
+            "endSec": 21.925,
+            "highlight": false
+          },
+          {
+            "index": 58,
+            "word": "Jadi",
+            "startSec": 21.925,
+            "endSec": 22.226,
+            "highlight": false
+          },
+          {
+            "index": 59,
+            "word": "intinya,",
+            "startSec": 22.226,
+            "endSec": 22.761,
+            "highlight": false
+          },
+          {
+            "index": 60,
+            "word": "satu",
+            "startSec": 22.761,
+            "endSec": 23.063,
+            "highlight": false
+          },
+          {
+            "index": 61,
+            "word": "angka",
+            "startSec": 23.063,
+            "endSec": 23.377,
+            "highlight": false
+          },
+          {
+            "index": 62,
+            "word": "tidak",
+            "startSec": 23.377,
+            "endSec": 23.691,
+            "highlight": false
+          },
+          {
+            "index": 63,
+            "word": "bisa",
+            "startSec": 23.691,
+            "endSec": 23.992,
+            "highlight": false
+          },
+          {
+            "index": 64,
+            "word": "mewakili",
+            "startSec": 23.992,
+            "endSec": 24.594,
+            "highlight": false
+          },
+          {
+            "index": 65,
+            "word": "kualitas",
+            "startSec": 24.594,
+            "endSec": 25.072,
+            "highlight": false
+          },
+          {
+            "index": 66,
+            "word": "hidup",
+            "startSec": 25.072,
+            "endSec": 25.386,
+            "highlight": false
+          },
+          {
+            "index": 67,
+            "word": "semua",
+            "startSec": 25.386,
+            "endSec": 25.7,
+            "highlight": false
+          },
+          {
+            "index": 68,
+            "word": "orang.",
+            "startSec": 25.7,
+            "endSec": 26.142,
+            "highlight": false
+          },
+          {
+            "index": 69,
+            "word": "Sumber",
+            "startSec": 26.142,
+            "endSec": 26.469,
+            "highlight": false
+          },
+          {
+            "index": 70,
+            "word": "lengkapnya",
+            "startSec": 26.469,
+            "endSec": 26.972,
+            "highlight": false
+          },
+          {
+            "index": 71,
+            "word": "ada",
+            "startSec": 26.972,
+            "endSec": 27.26,
+            "highlight": false
+          },
+          {
+            "index": 72,
+            "word": "di",
+            "startSec": 27.26,
+            "endSec": 27.411,
+            "highlight": false
+          },
+          {
+            "index": 73,
+            "word": "deskripsi.",
+            "startSec": 27.411,
+            "endSec": 28.029,
+            "highlight": false
+          },
+          {
+            "index": 74,
+            "word": "Simpan",
+            "startSec": 28.029,
+            "endSec": 28.356,
+            "highlight": false
+          },
+          {
+            "index": 75,
+            "word": "video",
+            "startSec": 28.356,
+            "endSec": 28.67,
+            "highlight": false
+          },
+          {
+            "index": 76,
+            "word": "ini",
+            "startSec": 28.67,
+            "endSec": 28.958,
+            "highlight": false
+          },
+          {
+            "index": 77,
+            "word": "kalau",
+            "startSec": 28.958,
+            "endSec": 29.272,
+            "highlight": false
+          },
+          {
+            "index": 78,
+            "word": "menurutmu",
+            "startSec": 29.272,
+            "endSec": 29.887,
+            "highlight": false
+          },
+          {
+            "index": 79,
+            "word": "berguna.",
+            "startSec": 29.887,
+            "endSec": 30.48,
+            "highlight": false
+          }
+        ],
+        "historyRecord": {
+          "episodeId": "cand-ipm-2026",
+          "episodeNumber": 3,
+          "producedAt": "2026-11-23T18:13:20.473Z",
+          "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "mainTopic": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran, sehingga satu angka tidak bisa mewakili kualitas hidup semua orang",
+          "category": "sosial",
+          "angle": "Membedah isi indeks dan batasannya, bukan merayakan kenaikan angkanya",
+          "hook": "Angka 76,59 ini katanya menunjukkan hidup kita membaik. Tapi ia cuma gabungan tiga hal.",
+          "summary": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran, sehingga satu angka tidak bisa mewakili kualitas hidup semua orang (Membedah isi indeks dan batasannya, bukan merayakan kenaikan angkanya)",
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/171255/indeks-pembangunan-manusia--ipm--indonesia-tahun-2026-mencapai-76-59--meningkat-0-69-poin-dibandingkan-tahun-sebelumnya-yang-sebesar-75-90-.html"
+          ],
+          "storyFormat": "myth_evidence_conclusion",
+          "visualStyle": "cinematic_documentary",
+          "status": "draft",
+          "editingSignature": "ed_e181dc0c",
+          "blueprintSignature": "bp_5f722f43",
+          "scoreTotal": 98
+        },
+        "qc": {
+          "ok": true,
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 94, 1 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "79 cue kata, urutan naik"
+            }
+          ]
+        },
+        "summary": {
+          "blueprintLine": "Cinematic documentary · Headline besar lower-third · hook Angka mengejutkan (bersumber) · musik Uplifting progress · 4 transisi · 52s",
+          "editingLine": "cinematic_documentary · 6 scene · rata-rata potong 3.5s (steady) · transisi: Zoom through, Match cut, Graphic wipe, Shape wipe",
+          "scriptScore": 94,
+          "estimatedDurationSec": 41
+        }
+      }
+    ],
+    "stages": [
+      {
+        "stage": "trend_discovery",
+        "step": 1,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "operator-supplied-candidate-bank",
+        "startedAt": "2026-11-23T18:13:20.472Z",
+        "finishedAt": "2026-11-23T18:13:20.473Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tren live tidak dapat diambil dari sandbox; kandidat berasal dari bank kandidat bertanda sumber.",
+        "output": {
+          "candidateCount": 4
+        }
+      },
+      {
+        "stage": "topic_selection",
+        "step": 2,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "topic-intelligence",
+        "startedAt": "2026-11-23T18:13:20.473Z",
+        "finishedAt": "2026-11-23T18:13:20.474Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "chosen": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "category": "sains",
+          "score": 99,
+          "comparedEpisodes": 0,
+          "rejected": []
+        }
+      },
+      {
+        "stage": "source_verification",
+        "step": 3,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "offline-structural-check",
+        "startedAt": "2026-11-23T18:13:20.473Z",
+        "finishedAt": "2026-11-23T18:13:20.474Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Hanya validasi bentuk URL + tanggal; bukan pengecekan isi halaman.",
+        "output": {
+          "totalSources": 1,
+          "structurallyValid": 1,
+          "sources": [
+            "https://www.bmkg.go.id/berita/bmkg-supermoon-pertama-2026-pada-24-november-lebih-dekat-dan-besar (official, 2026-11-21)"
+          ]
+        }
+      },
+      {
+        "stage": "script_generation",
+        "step": 4,
+        "agent": "Dimas Anggara (Naskah)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "hyperframes",
+          "voicebox"
+        ],
+        "provider": "deterministic-fact-skeleton",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tidak ada API key LLM → naskah memakai kerangka fakta deterministik (dilabeli, bukan hasil AI).",
+        "output": {
+          "lines": 6,
+          "words": 76,
+          "generator": "deterministic-fact-skeleton"
+        }
+      },
+      {
+        "stage": "script_review",
+        "step": 5,
+        "agent": "Dimas Anggara (Naskah) + QC",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "script-intelligence",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "score": 88,
+          "avgSentenceWords": 9.5,
+          "findings": [
+            "LONG_SENTENCE: Kalimat 19 kata (batas 18). Pecah jadi dua kalimat pendek.",
+            "REPEATED_PHRASE: 1 frasa 3 kata diulang. Ringkas supaya tidak membosankan."
+          ]
+        }
+      },
+      {
+        "stage": "creative_blueprint",
+        "step": 6,
+        "agent": "Clara (Motion) + Creative Director",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "creative-blueprint",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "signature": "bp_6b4c35e9",
+          "line": "Kinetic typography · Tumpukan teks samping (editorial) · hook Pertanyaan awam · musik Uplifting progress · 4 transisi · 46s",
+          "attempts": 1,
+          "rejectedForSimilarity": 0
+        }
+      },
+      {
+        "stage": "storyboard",
+        "step": 7,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "dynamic-editing",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "editingSignature": "ed_85dba33e",
+          "scenes": 6,
+          "line": "kinetic_typography · 6 scene · rata-rata potong 3.1s (steady) · transisi: Mask reveal, Shape wipe, Clean cut, Whip pan"
+        }
+      },
+      {
+        "stage": "visual_asset_generation",
+        "step": 8,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "gemini-image / comfyui (tidak tersedia)",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "Butuh API key image provider. Tidak dijalankan di sandbox, tidak diklaim berhasil.",
+        "output": {
+          "plannedAssets": [
+            "Kinetic typography: b-roll pembuka nyata + wordmark",
+            "Kinetic typography: peta/timeline mini atau kartu konteks",
+            "Kinetic typography: contoh konkret: potret/dokumentasi atau demo layar",
+            "Kinetic typography: callout kontras + highlight angka bersumber",
+            "Kinetic typography: ringkasan 1 baris + ikon",
+            "Kinetic typography: frame brand + pertanyaan diskusi"
+          ]
+        }
+      },
+      {
+        "stage": "voice_generation",
+        "step": 9,
+        "agent": "Sari (Suara)",
+        "skills": [
+          "voicebox",
+          "moneyprinterturbo"
+        ],
+        "provider": "neural-tts (jaringan)",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "TTS neural butuh akses layanan suara; sandbox hanya boleh npm/github.",
+        "output": {
+          "narrationWords": 76
+        }
+      },
+      {
+        "stage": "subtitle",
+        "step": 10,
+        "agent": "Nadia (SEO/Subtitle)",
+        "skills": [
+          "marketingskills",
+          "hallmark",
+          "openrig",
+          "claude-plugins-official"
+        ],
+        "provider": "video-engine-v3.computeWordTimings",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "cues": 76,
+          "wordsPerCue": 4,
+          "firstCue": {
+            "index": 1,
+            "word": "Malam",
+            "startSec": 0.08,
+            "endSec": 0.394,
+            "highlight": false
+          },
+          "lastCue": {
+            "index": 76,
+            "word": "berguna.",
+            "startSec": 28.687,
+            "endSec": 29.28,
+            "highlight": false
+          }
+        }
+      },
+      {
+        "stage": "remotion_composition",
+        "step": 11,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "remotion-4 composition plan",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Komposisi direncanakan (scene + timing) tetapi Remotion tidak dirender: browser headless tidak tersedia di sandbox.",
+        "output": {
+          "scenes": [
+            "1.hook Mask reveal 5.6s",
+            "2.context Shape wipe 9.6s",
+            "3.example Clean cut 9.5s",
+            "4.insight Whip pan 8s",
+            "5.takeaway Mask reveal 7s",
+            "6.ending Shape wipe 6.2s"
+          ]
+        }
+      },
+      {
+        "stage": "ffmpeg_export",
+        "step": 12,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "ffmpeg",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "ffmpeg/ffprobe tidak terpasang di sandbox → tidak ada MP4 yang dibuat di sini.",
+        "output": {
+          "requiredBinary": "ffmpeg",
+          "checked": true
+        }
+      },
+      {
+        "stage": "quality_control",
+        "step": 13,
+        "agent": "QC (staff-07/15)",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "episode-factory.qc",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 88, 2 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "76 cue kata, urutan naik"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "final_mp4",
+        "step": 14,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "—",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "MP4 final tidak ada karena ekspor ffmpeg/Remotion tidak berjalan di environment ini.",
+        "output": {
+          "produced": false
+        }
+      },
+      {
+        "stage": "trend_discovery",
+        "step": 1,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "operator-supplied-candidate-bank",
+        "startedAt": "2026-11-23T18:13:20.480Z",
+        "finishedAt": "2026-11-23T18:13:20.481Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tren live tidak dapat diambil dari sandbox; kandidat berasal dari bank kandidat bertanda sumber.",
+        "output": {
+          "candidateCount": 3
+        }
+      },
+      {
+        "stage": "topic_selection",
+        "step": 2,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "topic-intelligence",
+        "startedAt": "2026-11-23T18:13:20.484Z",
+        "finishedAt": "2026-11-23T18:13:20.485Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "chosen": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "category": "ekonomi",
+          "score": 98,
+          "comparedEpisodes": 1,
+          "rejected": [
+            {
+              "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+              "reasons": [
+                "terlalu mirip episode #1 \"Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah\" (kemiripan 0.63)",
+                "sudut pembahasan sama dengan episode lama (1.00)",
+                "skor 42 di bawah ambang 58"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "stage": "source_verification",
+        "step": 3,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "offline-structural-check",
+        "startedAt": "2026-11-23T18:13:20.485Z",
+        "finishedAt": "2026-11-23T18:13:20.486Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Hanya validasi bentuk URL + tanggal; bukan pengecekan isi halaman.",
+        "output": {
+          "totalSources": 1,
+          "structurallyValid": 1,
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/169961/tingkat-pengangguran-terbuka--tpt--sebesar-4-75-persen---rata-rata-upah-buruh-sebesar-3-42-juta-rupiah.html (official, 2026-11-05)"
+          ]
+        }
+      },
+      {
+        "stage": "script_generation",
+        "step": 4,
+        "agent": "Dimas Anggara (Naskah)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "hyperframes",
+          "voicebox"
+        ],
+        "provider": "deterministic-fact-skeleton",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tidak ada API key LLM → naskah memakai kerangka fakta deterministik (dilabeli, bukan hasil AI).",
+        "output": {
+          "lines": 7,
+          "words": 105,
+          "generator": "deterministic-fact-skeleton"
+        }
+      },
+      {
+        "stage": "script_review",
+        "step": 5,
+        "agent": "Dimas Anggara (Naskah) + QC",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "script-intelligence",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "score": 94,
+          "avgSentenceWords": 10.5,
+          "findings": [
+            "REPEATED_PHRASE: 18 frasa 3 kata diulang. Ringkas supaya tidak membosankan."
+          ]
+        }
+      },
+      {
+        "stage": "creative_blueprint",
+        "step": 6,
+        "agent": "Clara (Motion) + Creative Director",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "creative-blueprint",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "signature": "bp_204ed785",
+          "line": "3D infographic · Kata muncul satu-satu · hook Mitos yang dibongkar · musik Calm explainer · 4 transisi · 56s",
+          "attempts": 1,
+          "rejectedForSimilarity": 0
+        }
+      },
+      {
+        "stage": "storyboard",
+        "step": 7,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "dynamic-editing",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "editingSignature": "ed_8df7931d",
+          "scenes": 7,
+          "line": "infographic_3d · 7 scene · rata-rata potong 4s (calm) · transisi: Graphic wipe, Zoom through, Timeline slide, Shape wipe"
+        }
+      },
+      {
+        "stage": "visual_asset_generation",
+        "step": 8,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "gemini-image / comfyui (tidak tersedia)",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "Butuh API key image provider. Tidak dijalankan di sandbox, tidak diklaim berhasil.",
+        "output": {
+          "plannedAssets": [
+            "Diagram + infografis 3D: b-roll pembuka nyata + wordmark",
+            "Diagram + infografis 3D: peta/timeline mini atau kartu konteks",
+            "Diagram + infografis 3D: Foto dokumenter + peta — diagram utama",
+            "Diagram + infografis 3D: contoh konkret: potret/dokumentasi atau demo layar",
+            "Diagram + infografis 3D: callout kontras + highlight angka bersumber",
+            "Diagram + infografis 3D: ringkasan 1 baris + ikon",
+            "Diagram + infografis 3D: frame brand + pertanyaan diskusi"
+          ]
+        }
+      },
+      {
+        "stage": "voice_generation",
+        "step": 9,
+        "agent": "Sari (Suara)",
+        "skills": [
+          "voicebox",
+          "moneyprinterturbo"
+        ],
+        "provider": "neural-tts (jaringan)",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "TTS neural butuh akses layanan suara; sandbox hanya boleh npm/github.",
+        "output": {
+          "narrationWords": 105
+        }
+      },
+      {
+        "stage": "subtitle",
+        "step": 10,
+        "agent": "Nadia (SEO/Subtitle)",
+        "skills": [
+          "marketingskills",
+          "hallmark",
+          "openrig",
+          "claude-plugins-official"
+        ],
+        "provider": "video-engine-v3.computeWordTimings",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "cues": 105,
+          "wordsPerCue": 4,
+          "firstCue": {
+            "index": 1,
+            "word": "Pengangguran",
+            "startSec": 0.08,
+            "endSec": 0.775,
+            "highlight": false
+          },
+          "lastCue": {
+            "index": 105,
+            "word": "berguna.",
+            "startSec": 39.85,
+            "endSec": 40.48,
+            "highlight": false
+          }
+        }
+      },
+      {
+        "stage": "remotion_composition",
+        "step": 11,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "remotion-4 composition plan",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Komposisi direncanakan (scene + timing) tetapi Remotion tidak dirender: browser headless tidak tersedia di sandbox.",
+        "output": {
+          "scenes": [
+            "1.hook Graphic wipe 6.4s",
+            "2.context Zoom through 9.2s",
+            "3.explanation Timeline slide 10s",
+            "4.example Shape wipe 9.6s",
+            "5.insight Graphic wipe 8.4s",
+            "6.takeaway Zoom through 6.6s",
+            "7.ending Timeline slide 5.7s"
+          ]
+        }
+      },
+      {
+        "stage": "ffmpeg_export",
+        "step": 12,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "ffmpeg",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "ffmpeg/ffprobe tidak terpasang di sandbox → tidak ada MP4 yang dibuat di sini.",
+        "output": {
+          "requiredBinary": "ffmpeg",
+          "checked": true
+        }
+      },
+      {
+        "stage": "quality_control",
+        "step": 13,
+        "agent": "QC (staff-07/15)",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "episode-factory.qc",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 94, 1 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "105 cue kata, urutan naik"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "final_mp4",
+        "step": 14,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "—",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "MP4 final tidak ada karena ekspor ffmpeg/Remotion tidak berjalan di environment ini.",
+        "output": {
+          "produced": false
+        }
+      },
+      {
+        "stage": "trend_discovery",
+        "step": 1,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "operator-supplied-candidate-bank",
+        "startedAt": "2026-11-23T18:13:20.486Z",
+        "finishedAt": "2026-11-23T18:13:20.487Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tren live tidak dapat diambil dari sandbox; kandidat berasal dari bank kandidat bertanda sumber.",
+        "output": {
+          "candidateCount": 2
+        }
+      },
+      {
+        "stage": "topic_selection",
+        "step": 2,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "topic-intelligence",
+        "startedAt": "2026-11-23T18:13:20.488Z",
+        "finishedAt": "2026-11-23T18:13:20.489Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "chosen": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "category": "sosial",
+          "score": 98,
+          "comparedEpisodes": 2,
+          "rejected": [
+            {
+              "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+              "reasons": [
+                "terlalu mirip episode #1 \"Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah\" (kemiripan 0.63)",
+                "sudut pembahasan sama dengan episode lama (1.00)",
+                "skor 42 di bawah ambang 58"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "stage": "source_verification",
+        "step": 3,
+        "agent": "Raka Pratama (Riset)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "openrig",
+          "ai-memory"
+        ],
+        "provider": "offline-structural-check",
+        "startedAt": "2026-11-23T18:13:20.488Z",
+        "finishedAt": "2026-11-23T18:13:20.489Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Hanya validasi bentuk URL + tanggal; bukan pengecekan isi halaman.",
+        "output": {
+          "totalSources": 1,
+          "structurallyValid": 1,
+          "sources": [
+            "https://www.bps.go.id/id/pressrelease/2026/11/05/171255/indeks-pembangunan-manusia--ipm--indonesia-tahun-2026-mencapai-76-59--meningkat-0-69-poin-dibandingkan-tahun-sebelumnya-yang-sebesar-75-90-.html (official, 2026-11-05)"
+          ]
+        }
+      },
+      {
+        "stage": "script_generation",
+        "step": 4,
+        "agent": "Dimas Anggara (Naskah)",
+        "skills": [
+          "marketingskills",
+          "linkedin-skills",
+          "hyperframes",
+          "voicebox"
+        ],
+        "provider": "deterministic-fact-skeleton",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Tidak ada API key LLM → naskah memakai kerangka fakta deterministik (dilabeli, bukan hasil AI).",
+        "output": {
+          "lines": 6,
+          "words": 79,
+          "generator": "deterministic-fact-skeleton"
+        }
+      },
+      {
+        "stage": "script_review",
+        "step": 5,
+        "agent": "Dimas Anggara (Naskah) + QC",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "script-intelligence",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "score": 94,
+          "avgSentenceWords": 9.9,
+          "findings": [
+            "LONG_SENTENCE: Kalimat 20 kata (batas 18). Pecah jadi dua kalimat pendek."
+          ]
+        }
+      },
+      {
+        "stage": "creative_blueprint",
+        "step": 6,
+        "agent": "Clara (Motion) + Creative Director",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "creative-blueprint",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "signature": "bp_5f722f43",
+          "line": "Cinematic documentary · Headline besar lower-third · hook Angka mengejutkan (bersumber) · musik Uplifting progress · 4 transisi · 52s",
+          "attempts": 1,
+          "rejectedForSimilarity": 0
+        }
+      },
+      {
+        "stage": "storyboard",
+        "step": 7,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "dynamic-editing",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "editingSignature": "ed_e181dc0c",
+          "scenes": 6,
+          "line": "cinematic_documentary · 6 scene · rata-rata potong 3.5s (steady) · transisi: Zoom through, Match cut, Graphic wipe, Shape wipe"
+        }
+      },
+      {
+        "stage": "visual_asset_generation",
+        "step": 8,
+        "agent": "Clara (Motion)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "data-formulator"
+        ],
+        "provider": "gemini-image / comfyui (tidak tersedia)",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "Butuh API key image provider. Tidak dijalankan di sandbox, tidak diklaim berhasil.",
+        "output": {
+          "plannedAssets": [
+            "Foto dokumenter + peta: b-roll pembuka nyata + wordmark",
+            "Foto dokumenter + peta: peta/timeline mini atau kartu konteks",
+            "Foto dokumenter + peta: contoh konkret: potret/dokumentasi atau demo layar",
+            "Foto dokumenter + peta: callout kontras + highlight angka bersumber",
+            "Foto dokumenter + peta: ringkasan 1 baris + ikon",
+            "Foto dokumenter + peta: frame brand + pertanyaan diskusi"
+          ]
+        }
+      },
+      {
+        "stage": "voice_generation",
+        "step": 9,
+        "agent": "Sari (Suara)",
+        "skills": [
+          "voicebox",
+          "moneyprinterturbo"
+        ],
+        "provider": "neural-tts (jaringan)",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "TTS neural butuh akses layanan suara; sandbox hanya boleh npm/github.",
+        "output": {
+          "narrationWords": 79
+        }
+      },
+      {
+        "stage": "subtitle",
+        "step": 10,
+        "agent": "Nadia (SEO/Subtitle)",
+        "skills": [
+          "marketingskills",
+          "hallmark",
+          "openrig",
+          "claude-plugins-official"
+        ],
+        "provider": "video-engine-v3.computeWordTimings",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "cues": 79,
+          "wordsPerCue": 4,
+          "firstCue": {
+            "index": 1,
+            "word": "Angka",
+            "startSec": 0.08,
+            "endSec": 0.394,
+            "highlight": false
+          },
+          "lastCue": {
+            "index": 79,
+            "word": "berguna.",
+            "startSec": 29.887,
+            "endSec": 30.48,
+            "highlight": false
+          }
+        }
+      },
+      {
+        "stage": "remotion_composition",
+        "step": 11,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "remotion-4 composition plan",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "degraded",
+        "error": "Komposisi direncanakan (scene + timing) tetapi Remotion tidak dirender: browser headless tidak tersedia di sandbox.",
+        "output": {
+          "scenes": [
+            "1.hook Zoom through 6.2s",
+            "2.context Match cut 10.7s",
+            "3.example Graphic wipe 11.1s",
+            "4.insight Shape wipe 9.9s",
+            "5.takeaway Zoom through 6.4s",
+            "6.ending Match cut 7.6s"
+          ]
+        }
+      },
+      {
+        "stage": "ffmpeg_export",
+        "step": 12,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "ffmpeg",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "ffmpeg/ffprobe tidak terpasang di sandbox → tidak ada MP4 yang dibuat di sini.",
+        "output": {
+          "requiredBinary": "ffmpeg",
+          "checked": true
+        }
+      },
+      {
+        "stage": "quality_control",
+        "step": 13,
+        "agent": "QC (staff-07/15)",
+        "skills": [
+          "hallmark",
+          "openrig",
+          "ai-memory",
+          "claude-plugins-official"
+        ],
+        "provider": "episode-factory.qc",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "ok",
+        "error": null,
+        "output": {
+          "checks": [
+            {
+              "name": "sumber",
+              "ok": true,
+              "detail": "1 sumber terdaftar"
+            },
+            {
+              "name": "audit naskah",
+              "ok": true,
+              "detail": "skor 94, 1 temuan"
+            },
+            {
+              "name": "rencana editing",
+              "ok": true,
+              "detail": "tidak ada pelanggaran ritme/transisi"
+            },
+            {
+              "name": "variasi blueprint",
+              "ok": true,
+              "detail": "1 percobaan, 0 ditolak karena mirip"
+            },
+            {
+              "name": "variasi editing",
+              "ok": true,
+              "detail": "pola editing baru"
+            },
+            {
+              "name": "subtitle sinkron",
+              "ok": true,
+              "detail": "79 cue kata, urutan naik"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "final_mp4",
+        "step": 14,
+        "agent": "Fajar (Editing)",
+        "skills": [
+          "hallmark",
+          "hyperframes",
+          "comfyui",
+          "atlas-os"
+        ],
+        "provider": "—",
+        "startedAt": "2026-11-23T18:13:20.489Z",
+        "finishedAt": "2026-11-23T18:13:20.490Z",
+        "durationMs": 1,
+        "status": "blocked",
+        "error": "MP4 final tidak ada karena ekspor ffmpeg/Remotion tidak berjalan di environment ini.",
+        "output": {
+          "produced": false
+        }
+      }
+    ],
+    "selection": [
+      {
+        "chosen": {
+          "id": "cand-supermoon-nov2026",
+          "title": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+          "thesis": "Purnama perige membuat bulan tampak lebih besar karena jaraknya sedang paling dekat dengan bumi, bukan karena bulan membesar",
+          "category": "sains",
+          "angle": "Membongkar salah kaprah 'bulan membesar' dengan penjelasan jarak perige",
+          "hook": "Malam ini bulan kelihatan besar sekali. Tapi bulan itu tidak membesar sedikit pun.",
+          "keyFacts": [
+            {
+              "claim": "BMKG menyebut supermoon atau purnama perige pertama tahun 2026 terjadi di langit Indonesia pada 24 November 2026",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Fenomena ini membuat bulan purnama tampak lebih besar dibandingkan biasanya karena posisinya lebih dekat ke bumi",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BMKG: Supermoon Pertama 2026 pada 24 November, Lebih Dekat dan Besar",
+              "url": "https://www.bmkg.go.id/berita/bmkg-supermoon-pertama-2026-pada-24-november-lebih-dekat-dan-besar",
+              "kind": "official",
+              "publishedAt": "2026-11-21"
+            }
+          ],
+          "noveltyNotes": "Bedanya dengan konten astronomi biasa: fokus pada koreksi miskonsepsi ukuran, bukan sekadar jadwal fenomena",
+          "audienceImportance": 62,
+          "difficulty": 3,
+          "durationFitSec": 45,
+          "clarity": 88,
+          "curiosity": 80,
+          "educationalValue": 85,
+          "visualPotential": 92,
+          "tags": [
+            "bulan",
+            "astronomi",
+            "bmkg",
+            "supermoon"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 10,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 9.1,
+          "repetitionPenalty": 0,
+          "total": 99
+        },
+        "ranked": [
+          {
+            "id": "cand-supermoon-nov2026",
+            "title": "Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah",
+            "category": "sains",
+            "score": 99
+          },
+          {
+            "id": "cand-supermoon-duplikat",
+            "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+            "category": "sains",
+            "score": 99
+          },
+          {
+            "id": "cand-tpt-upah-agustus-2026",
+            "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+            "category": "ekonomi",
+            "score": 98
+          },
+          {
+            "id": "cand-ipm-2026",
+            "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+            "category": "sosial",
+            "score": 98
+          }
+        ],
+        "rejected": [],
+        "needsFreshResearch": false,
+        "notes": [],
+        "comparedEpisodes": 0,
+        "categoryCoverage": []
+      },
+      {
+        "chosen": {
+          "id": "cand-tpt-upah-agustus-2026",
+          "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+          "thesis": "Jumlah orang bekerja naik dan pengangguran turun, namun rata-rata upah buruh masih sekitar 3,42 juta rupiah per bulan",
+          "category": "ekonomi",
+          "angle": "Membaca dua angka BPS berdampingan: kesempatan kerja bertambah, upah rata-rata melambat",
+          "hook": "Pengangguran turun. Tapi gaji temanmu tidak naik. Dua angka ini keluar di hari yang sama.",
+          "keyFacts": [
+            {
+              "claim": "Tingkat Pengangguran Terbuka Agustus 2026 sebesar 4,75 persen, turun 0,09 persen poin dibanding Agustus 2025",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Penduduk bekerja pada Agustus 2026 sebanyak 147,99 juta orang, naik 1,443 juta orang dari Agustus 2025",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Rata-rata upah buruh pada Agustus 2026 sebesar 3,42 juta rupiah",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Lapangan usaha dengan porsi penduduk bekerja terbesar adalah pertanian, kehutanan, dan perikanan sebanyak 41,73 juta orang atau 28,20 persen",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BPS — Tingkat Pengangguran Terbuka 4,75 persen, rata-rata upah buruh 3,42 juta rupiah",
+              "url": "https://www.bps.go.id/id/pressrelease/2026/11/05/169961/tingkat-pengangguran-terbuka--tpt--sebesar-4-75-persen---rata-rata-upah-buruh-sebesar-3-42-juta-rupiah.html",
+              "kind": "official",
+              "publishedAt": "2026-11-05"
+            }
+          ],
+          "noveltyNotes": "Angka pengangguran sering dibahas sendirian; di sini dua indikator dibaca bersamaan supaya tidak jadi klaim sepihak soal penyebab",
+          "audienceImportance": 90,
+          "difficulty": 5,
+          "durationFitSec": 55,
+          "clarity": 72,
+          "curiosity": 85,
+          "educationalValue": 82,
+          "visualPotential": 55,
+          "tags": [
+            "bps",
+            "ketenagakerjaan",
+            "upah",
+            "ekonomi"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 9,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 8.5,
+          "repetitionPenalty": 0,
+          "total": 98
+        },
+        "ranked": [
+          {
+            "id": "cand-tpt-upah-agustus-2026",
+            "title": "Pengangguran turun jadi 4,75 persen, tapi kenapa gaji terasa tetap segitu",
+            "category": "ekonomi",
+            "score": 98
+          },
+          {
+            "id": "cand-ipm-2026",
+            "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+            "category": "sosial",
+            "score": 98
+          },
+          {
+            "id": "cand-supermoon-duplikat",
+            "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+            "category": "sains",
+            "score": 42
+          }
+        ],
+        "rejected": [
+          {
+            "id": "cand-supermoon-duplikat",
+            "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+            "score": 42,
+            "reasons": [
+              "terlalu mirip episode #1 \"Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah\" (kemiripan 0.63)",
+              "sudut pembahasan sama dengan episode lama (1.00)",
+              "skor 42 di bawah ambang 58"
+            ]
+          }
+        ],
+        "needsFreshResearch": false,
+        "notes": [],
+        "comparedEpisodes": 1,
+        "categoryCoverage": [
+          "sains"
+        ]
+      },
+      {
+        "chosen": {
+          "id": "cand-ipm-2026",
+          "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+          "thesis": "Indeks Pembangunan Manusia menggabungkan kesehatan, pendidikan, dan pengeluaran, sehingga satu angka tidak bisa mewakili kualitas hidup semua orang",
+          "category": "sosial",
+          "angle": "Membedah isi indeks dan batasannya, bukan merayakan kenaikan angkanya",
+          "hook": "Angka 76,59 ini katanya menunjukkan hidup kita membaik. Tapi ia cuma gabungan tiga hal.",
+          "keyFacts": [
+            {
+              "claim": "IPM Indonesia tahun 2026 mencapai 76,59, meningkat 0,69 poin dibanding tahun sebelumnya sebesar 75,90",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Umur Harapan Hidup saat lahir pada 2026 mencapai 74,68 tahun atau naik 0,21 tahun dari tahun sebelumnya",
+              "sourceIndex": 0
+            },
+            {
+              "claim": "Harapan Lama Sekolah penduduk umur 7 tahun ke atas sebesar 13,34 tahun, sedangkan Rata-rata Lama Sekolah penduduk umur 25 tahun ke atas 9,16 tahun",
+              "sourceIndex": 0
+            }
+          ],
+          "sources": [
+            {
+              "name": "BPS — Indeks Pembangunan Manusia Indonesia tahun 2026 mencapai 76,59",
+              "url": "https://www.bps.go.id/id/pressrelease/2026/11/05/171255/indeks-pembangunan-manusia--ipm--indonesia-tahun-2026-mencapai-76-59--meningkat-0-69-poin-dibandingkan-tahun-sebelumnya-yang-sebesar-75-90-.html",
+              "kind": "official",
+              "publishedAt": "2026-11-05"
+            }
+          ],
+          "noveltyNotes": "Kebanyakan konten hanya membaca kenaikan IPM; episode ini menjelaskan komponen dan apa yang tidak terlihat dari angka itu",
+          "audienceImportance": 74,
+          "difficulty": 5,
+          "durationFitSec": 52,
+          "clarity": 80,
+          "curiosity": 78,
+          "educationalValue": 92,
+          "visualPotential": 60,
+          "tags": [
+            "ipm",
+            "pendidikan",
+            "kesehatan",
+            "bps"
+          ]
+        },
+        "score": {
+          "audienceImportance": 10,
+          "relevanceFreshness": 9,
+          "clarity": 10,
+          "curiosity": 10,
+          "educationalValue": 10,
+          "sourceQuality": 10,
+          "visualPotential": 10,
+          "originality": 10,
+          "formatFit": 8.5,
+          "repetitionPenalty": 0,
+          "total": 98
+        },
+        "ranked": [
+          {
+            "id": "cand-ipm-2026",
+            "title": "IPM Indonesia 76,59: angka ini sebenarnya mengukur apa dari hidup kita",
+            "category": "sosial",
+            "score": 98
+          },
+          {
+            "id": "cand-supermoon-duplikat",
+            "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+            "category": "sains",
+            "score": 42
+          }
+        ],
+        "rejected": [
+          {
+            "id": "cand-supermoon-duplikat",
+            "title": "Bulan besar 24 November, cek fakta supermoon malam ini",
+            "score": 42,
+            "reasons": [
+              "terlalu mirip episode #1 \"Supermoon 24 November 2026: kenapa bulan terlihat lebih besar padahal ukurannya tidak berubah\" (kemiripan 0.63)",
+              "sudut pembahasan sama dengan episode lama (1.00)",
+              "skor 42 di bawah ambang 58"
+            ]
+          }
+        ],
+        "needsFreshResearch": false,
+        "notes": [],
+        "comparedEpisodes": 2,
+        "categoryCoverage": [
+          "sains",
+          "ekonomi"
+        ]
+      }
+    ],
+    "finalStatus": "blocked",
+    "honestSummary": "3 episode dirancang · 18 tahap OK · 12 degraded · 12 BLOCKED (tidak diklaim selesai) · beda antar episode: berbeda"
+  },
+  "audit": {
+    "counts": {
+      "VERIFIED_ACTIVE": 6,
+      "INTEGRATED": 5,
+      "PARTIALLY_INTEGRATED": 3,
+      "REGISTERED_ONLY": 7,
+      "INACTIVE": 0,
+      "BLOCKED": 4,
+      "INCOMPATIBLE": 1
+    },
+    "verifiedActiveCount": 6,
+    "honestSummary": "26 skill terdaftar · 6 VERIFIED ACTIVE (probe fungsional lulus) · 5 INTEGRATED (kode + direktif prompt terbukti) · 3 PARTIALLY (butuh browser) · 4 BLOCKED (butuh API/biner/jaringan) · 1 INCOMPATIBLE (referensi saja)."
+  }
+}
