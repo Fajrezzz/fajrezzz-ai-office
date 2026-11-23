@@ -1420,17 +1420,18 @@ export function CyberOutdoorCampus({
     }
   };
 
+  // All 10 Palm Trees placed cleanly OUTSIDE the widened 38m HQ (X ∈ [-19, +19]) so ZERO fronds enter the office!
   const palmPositions: { pos: [number, number, number]; scale: number; rot: number }[] = [
-    { pos: [-16.6, 0, 5.4], scale: 1.15, rot: 0.4 },
-    { pos: [-17.4, 0, 11.8], scale: 1.05, rot: 1.3 },
-    { pos: [-15.2, 0, 17.6], scale: 1.2, rot: 2.1 },
-    { pos: [-7.5, 0, 19.1], scale: 1.0, rot: 0.8 },
-    { pos: [2.2, 0, 19.1], scale: 1.08, rot: 2.9 },
-    { pos: [15.4, 0, 17.4], scale: 1.18, rot: 1.7 },
-    { pos: [17.4, 0, 10.6], scale: 1.1, rot: 3.5 },
-    { pos: [16.5, 0, 4.6], scale: 1.22, rot: 0.2 },
-    { pos: [-16.8, 0, -5.5], scale: 1.12, rot: 2.4 },
-    { pos: [16.8, 0, -5.2], scale: 1.15, rot: 1.1 },
+    { pos: [-21.6, 0, 5.8], scale: 1.12, rot: 0.4 },
+    { pos: [-20.8, 0, 12.2], scale: 1.05, rot: 1.3 },
+    { pos: [-18.2, 0, 18.0], scale: 1.15, rot: 2.1 },
+    { pos: [-8.5, 0, 18.8], scale: 1.0, rot: 0.8 },
+    { pos: [2.8, 0, 18.8], scale: 1.06, rot: 2.9 },
+    { pos: [17.8, 0, 17.8], scale: 1.14, rot: 1.7 },
+    { pos: [20.8, 0, 11.4], scale: 1.08, rot: 3.5 },
+    { pos: [21.6, 0, 5.2], scale: 1.16, rot: 0.2 },
+    { pos: [-21.8, 0, -5.8], scale: 1.1, rot: 2.4 },
+    { pos: [21.8, 0, -5.4], scale: 1.12, rot: 1.1 },
   ];
 
   const bollards: [number, number, number][] = [
@@ -1874,8 +1875,8 @@ export function CyberOutdoorCampus({
         </>
       )}
 
-      {/* Landscaped Tropical Perimeter Hedges */}
-      {[-15.8, 15.8].map((hx, idx) => (
+      {/* Landscaped Tropical Perimeter Hedges (Clear Outside Widened 38m Building) */}
+      {[-20.2, 20.2].map((hx, idx) => (
         <mesh key={idx} position={[hx, 0.42, 11.3]} castShadow receiveShadow>
           <boxGeometry args={[0.85, 0.84, 14.4]} />
           <meshStandardMaterial color="#2f5f29" roughness={0.92} />

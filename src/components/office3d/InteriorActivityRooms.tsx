@@ -29,50 +29,46 @@ export function InteriorActivityRooms({
 
   return (
     <group>
-      {/* CYBERPUNK ARCHITECTURAL NEON EDGE STRIPS (Widened 38.2m Building Perimeter — 0 extra lights!) */}
+      {/* ARCHITECTURAL WARM-WHITE / CHAMPAGNE-GOLD BUILDING EDGE LIGHTS (Real-World Luxury Night Glow, 0 extra lights!) */}
       {showRoof && (
         <group>
           {[
-            { y: 3.88, color: CYBERPUNK_THEME.neon.cyan, emissive: CYBERPUNK_THEME.neon.cyanEmissive },
-            { y: 7.78, color: CYBERPUNK_THEME.neon.magenta, emissive: CYBERPUNK_THEME.neon.magentaEmissive },
-            { y: 11.76, color: CYBERPUNK_THEME.neon.purple, emissive: CYBERPUNK_THEME.neon.purpleEmissive },
+            { y: 3.88, color: "#fef3c7", emissive: "#fde68a" },
+            { y: 7.78, color: "#f8fafc", emissive: "#fffbeb" },
+            { y: 11.76, color: "#fef3c7", emissive: "#fde68a" },
           ].map((band, bi) => (
             <group key={`neon-band-${bi}`} position={[0, band.y, 0]}>
-              {/* Front Facade Neon Edge (38.2m) */}
+              {/* Front Facade Edge Light (38.2m) */}
               <mesh position={[0, 0, 4.12]}>
-                <boxGeometry args={[38.2, 0.06, 0.06]} />
+                <boxGeometry args={[38.2, 0.05, 0.05]} />
                 <meshStandardMaterial
                   color={band.color}
                   emissive={band.emissive}
-                  emissiveIntensity={neonGlow}
+                  emissiveIntensity={isNight ? 1.25 : 0.12}
                 />
               </mesh>
-              {/* Left & Right Side Neon Edges (X = ±19.1) */}
+              {/* Left & Right Side Edge Lights (X = ±19.1) */}
               {[-19.1, 19.1].map((sx, si) => (
                 <mesh key={si} position={[sx, 0, -3.0]}>
-                  <boxGeometry args={[0.06, 0.06, 14.2]} />
+                  <boxGeometry args={[0.05, 0.05, 14.2]} />
                   <meshStandardMaterial
                     color={band.color}
                     emissive={band.emissive}
-                    emissiveIntensity={neonGlow}
+                    emissiveIntensity={isNight ? 1.15 : 0.1}
                   />
                 </mesh>
               ))}
             </group>
           ))}
 
-          {/* Vertical Backlit Wood-Fin Cyber Strips (Alternating Cyan & Magenta at Night) */}
+          {/* Warm Architectural Vertical Backlit Wood-Fin Strips */}
           {[-17.8, -13.4, -9.0, 9.0, 13.4, 17.8].map((fx, fi) => (
             <mesh key={`vfin-${fi}`} position={[fx, 6.0, 4.08]}>
-              <boxGeometry args={[0.05, 11.4, 0.05]} />
+              <boxGeometry args={[0.045, 11.4, 0.045]} />
               <meshStandardMaterial
-                color={fi % 2 === 0 ? CYBERPUNK_THEME.neon.cyan : CYBERPUNK_THEME.neon.magenta}
-                emissive={
-                  fi % 2 === 0
-                    ? CYBERPUNK_THEME.neon.cyanEmissive
-                    : CYBERPUNK_THEME.neon.magentaEmissive
-                }
-                emissiveIntensity={isNight ? 1.35 : 0.14}
+                color="#fef3c7"
+                emissive="#fde68a"
+                emissiveIntensity={isNight ? 1.1 : 0.1}
               />
             </mesh>
           ))}

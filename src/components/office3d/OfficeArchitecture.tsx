@@ -709,8 +709,6 @@ export function OfficeArchitecture({
   const isNight = lightingPreset === "night";
   const isSunset = lightingPreset === "sunset";
   const interiorLightEmissive = isNight ? 1.05 : isSunset ? 0.85 : 0.6;
-  const cyanNeonIntensity = isNight ? 1.25 : isSunset ? 0.75 : 0.1;
-  const magentaNeonIntensity = isNight ? 1.15 : isSunset ? 0.7 : 0.08;
 
   const showL2 = activeFloor !== "l1";
   const showL3 =
@@ -1172,14 +1170,13 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Cyberpunk Cyan Neon Trim Line along L2 Balcony Edge */}
+          {/* Warm Architectural Gold Edge Light along L2 Balcony */}
           <mesh position={[0, FLOOR_2_Y - 0.25, 6.2]}>
-            <boxGeometry args={[38.6, 0.075, 0.09]} />
+            <boxGeometry args={[38.6, 0.06, 0.08]} />
             <meshStandardMaterial
-              color="#22d3ee"
-              emissive="#22d3ee"
-              emissiveIntensity={cyanNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#fef3c7"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.25 : isSunset ? 0.6 : 0.12}
             />
           </mesh>
 
@@ -1635,14 +1632,13 @@ export function OfficeArchitecture({
             />
           </mesh>
 
-          {/* Cyberpunk Magenta Neon Trim Line along L3 Flush Facade Edge */}
+          {/* Clean Warm-White Architectural Edge Light along L3 Facade */}
           <mesh position={[0, FLOOR_3_Y - 0.25, 4.18]}>
-            <boxGeometry args={[38.4, 0.075, 0.09]} />
+            <boxGeometry args={[38.4, 0.06, 0.08]} />
             <meshStandardMaterial
-              color="#e879f9"
-              emissive="#e879f9"
-              emissiveIntensity={magentaNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#fffbeb"
+              emissive="#fef3c7"
+              emissiveIntensity={isNight ? 1.15 : isSunset ? 0.55 : 0.12}
             />
           </mesh>
 
@@ -1760,29 +1756,33 @@ export function OfficeArchitecture({
               <boxGeometry args={[3.1, 0.06, 0.02]} />
               <meshStandardMaterial color="#f59e0b" metalness={0.85} roughness={0.2} />
             </mesh>
-            {/* Ultrawide CEO Display (Screen Faces North -Z Toward CEO Hendra Wijaya, Sleek Back Toward Visitors!) */}
-            <mesh position={[0, 1.18, -0.25]}>
-              <boxGeometry args={[1.45, 0.54, 0.05]} />
+            {/* Sleek Realistic Executive CEO Monitor (Proper Desk Proportions, Facing CEO at -Z) */}
+            <mesh position={[0, 1.07, -0.25]}>
+              <boxGeometry args={[0.86, 0.36, 0.036]} />
               <meshStandardMaterial color="#0f172a" roughness={0.38} metalness={0.45} />
             </mesh>
-            {/* Monitor Stand Base */}
-            <mesh position={[0, 0.87, -0.25]}>
-              <boxGeometry args={[0.12, 0.14, 0.06]} />
+            {/* Slim Monitor Stand Neck & Base */}
+            <mesh position={[0, 0.86, -0.25]}>
+              <boxGeometry args={[0.07, 0.14, 0.04]} />
               <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.5} />
             </mesh>
+            <mesh position={[0, 0.835, -0.25]}>
+              <boxGeometry args={[0.24, 0.014, 0.14]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.35} metalness={0.6} />
+            </mesh>
             {/* Active Dashboard Display Plane Facing CEO at -Z */}
-            <mesh position={[0, 1.18, -0.282]} rotation={[0, Math.PI, 0]}>
-              <planeGeometry args={[1.38, 0.48]} />
+            <mesh position={[0, 1.07, -0.27]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[0.80, 0.31]} />
               <meshStandardMaterial
                 map={textures.monitorScreen}
                 emissiveMap={textures.monitorScreen}
                 emissive="#ffffff"
-                emissiveIntensity={0.55}
+                emissiveIntensity={0.52}
               />
             </mesh>
             {/* Subtle Gold Executive Emblem on Visitor-Facing Rear Shell (+Z) */}
-            <mesh position={[0, 1.18, -0.222]}>
-              <boxGeometry args={[0.24, 0.03, 0.008]} />
+            <mesh position={[0, 1.07, -0.23]}>
+              <boxGeometry args={[0.14, 0.022, 0.006]} />
               <meshStandardMaterial color="#d4af37" metalness={0.6} roughness={0.35} />
             </mesh>
             {/* Real Ergonomic Gold-Trimmed CEO Executive Leather Chair */}
@@ -1948,23 +1948,21 @@ export function OfficeArchitecture({
           ============================================================ */}
       {showRoof && (
         <group>
-          {/* Vertical Corner Neon Edge Bars spanning Full Building Height (West Cyan, East Magenta) */}
+          {/* Vertical Corner Warm Architectural Edge Bars spanning Full Building Height */}
           <mesh position={[-19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.09, 11.4, 0.09]} />
+            <boxGeometry args={[0.075, 11.4, 0.075]} />
             <meshStandardMaterial
-              color="#22d3ee"
-              emissive="#22d3ee"
-              emissiveIntensity={cyanNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#fef3c7"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
             />
           </mesh>
           <mesh position={[19.12, 6.0, 4.2]}>
-            <boxGeometry args={[0.09, 11.4, 0.09]} />
+            <boxGeometry args={[0.075, 11.4, 0.075]} />
             <meshStandardMaterial
-              color="#e879f9"
-              emissive="#e879f9"
-              emissiveIntensity={magentaNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#fef3c7"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.2 : isSunset ? 0.5 : 0.1}
             />
           </mesh>
 
@@ -1988,23 +1986,21 @@ export function OfficeArchitecture({
             <meshStandardMaterial color="#161c28" metalness={0.72} roughness={0.3} />
           </mesh>
 
-          {/* Rooftop Full-Width Cyberpunk Cyan/Magenta Neon Perimeter Trim */}
+          {/* Rooftop Full-Width Warm Gold & White Architectural Perimeter Trim */}
           <mesh position={[0, 11.52, 5.64]}>
-            <boxGeometry args={[39.6, 0.08, 0.08]} />
+            <boxGeometry args={[39.6, 0.065, 0.07]} />
             <meshStandardMaterial
-              color="#22d3ee"
-              emissive="#22d3ee"
-              emissiveIntensity={cyanNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#fef3c7"
+              emissive="#fde68a"
+              emissiveIntensity={isNight ? 1.25 : isSunset ? 0.55 : 0.12}
             />
           </mesh>
           <mesh position={[0, 12.06, 5.64]}>
-            <boxGeometry args={[39.6, 0.06, 0.08]} />
+            <boxGeometry args={[39.6, 0.05, 0.07]} />
             <meshStandardMaterial
-              color="#e879f9"
-              emissive="#e879f9"
-              emissiveIntensity={magentaNeonIntensity}
-              toneMapped={!(isNight || isSunset)}
+              color="#ffffff"
+              emissive="#fffbeb"
+              emissiveIntensity={isNight ? 1.05 : isSunset ? 0.45 : 0.1}
             />
           </mesh>
 

@@ -399,9 +399,22 @@ export function RobotCharacter({
     }
   });
 
-  const { skinColor, hairColor, hairStyle, suitColor, shirtColor, pantsColor } =
-    agent.appearance;
-  const isFemale = hairStyle === "bob" || hairStyle === "ponytail";
+  const {
+    skinColor,
+    hairColor,
+    hairStyle,
+    suitColor,
+    shirtColor,
+    pantsColor,
+    sleeveColor,
+    outfitStyle,
+    hasGlasses,
+    hasNeckHeadphones,
+    tieColor,
+  } = agent.appearance;
+  const activeSleeveColor = sleeveColor ?? suitColor;
+  const isFemale =
+    hairStyle === "bob" || hairStyle === "ponytail" || hairStyle === "hijab";
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -532,74 +545,122 @@ export function RobotCharacter({
           <meshStandardMaterial color={suitColor} roughness={0.66} />
         </mesh>
 
-        {/* Crisp Shirt / Blouse Front */}
-        <mesh position={[0, 0.22, 0.112]}>
-          <boxGeometry args={[isFemale ? 0.1 : 0.11, 0.3, 0.035]} />
-          <meshStandardMaterial color={shirtColor} roughness={0.55} />
-        </mesh>
-        {/* Male Executive Tie vs Female Subtle Pendant Collar */}
-        {!isFemale ? (
-          <mesh position={[0, 0.17, 0.132]}>
-            <boxGeometry args={[0.044, 0.25, 0.016]} />
-            <meshStandardMaterial
-              color={agent.accentColor}
-              emissive={agent.accentColor}
-              emissiveIntensity={0.35}
-              roughness={0.36}
-            />
-          </mesh>
+        {/* Crisp Collar / Hoodie / Shirt Front Detail (Fajrezzz Modern Startup Look) */}
+        {outfitStyle === "hoodie" ? (
+          <group>
+            {/* Hood Collar Roll Around Back of Neck */}
+            <mesh position={[0, 0.38, -0.05]} rotation={[0.32, 0, 0]} castShadow>
+              <torusGeometry args={[0.105, 0.036, 10, 16]} />
+              <meshStandardMaterial color={suitColor} roughness={0.78} />
+            </mesh>
+            {/* Hoodie Drawstrings */}
+            <mesh position={[-0.036, 0.25, 0.125]}>
+              <cylinderGeometry args={[0.005, 0.005, 0.14, 6]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.6} />
+            </mesh>
+            <mesh position={[0.036, 0.25, 0.125]}>
+              <cylinderGeometry args={[0.005, 0.005, 0.14, 6]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.6} />
+            </mesh>
+          </group>
+        ) : outfitStyle === "varsity" ? (
+          <group>
+            {/* Varsity Striped Collar & White Center Button Placket */}
+            <mesh position={[0, 0.37, 0.02]}>
+              <cylinderGeometry args={[0.088, 0.095, 0.045, 14]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.5} />
+            </mesh>
+            <mesh position={[0, 0.18, 0.124]}>
+              <boxGeometry args={[0.024, 0.34, 0.014]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.55} />
+            </mesh>
+          </group>
         ) : (
-          <mesh position={[0, 0.27, 0.132]}>
-            <sphereGeometry args={[0.022, 10, 10]} />
+          <group>
+            {/* Crisp Collared Shirt / Blouse Placket */}
+            <mesh position={[0, 0.24, 0.112]}>
+              <boxGeometry args={[isFemale ? 0.095 : 0.105, 0.28, 0.03]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.52} />
+            </mesh>
+            {/* Clean Pointed Collar Flaps */}
+            <mesh position={[-0.045, 0.37, 0.095]} rotation={[0, 0, 0.35]}>
+              <boxGeometry args={[0.065, 0.036, 0.024]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.5} />
+            </mesh>
+            <mesh position={[0.045, 0.37, 0.095]} rotation={[0, 0, -0.35]}>
+              <boxGeometry args={[0.065, 0.036, 0.024]} />
+              <meshStandardMaterial color={shirtColor} roughness={0.5} />
+            </mesh>
+            {/* Optional Sleek Formal Tie */}
+            {tieColor && (
+              <mesh position={[0, 0.19, 0.132]}>
+                <boxGeometry args={[0.04, 0.25, 0.015]} />
+                <meshStandardMaterial color={tieColor} roughness={0.38} />
+              </mesh>
+            )}
+          </group>
+        )}
+
+        {/* FAJREZZZ SIGNATURE PURPLE-BLUE "F" CHEST EMBLEM */}
+        <group position={[0.085, 0.255, 0.13]}>
+          <mesh>
+            <boxGeometry args={[0.052, 0.056, 0.008]} />
             <meshStandardMaterial
-              color="#f8fafc"
-              emissive={agent.accentColor}
-              emissiveIntensity={0.45}
-              metalness={0.5}
-              roughness={0.2}
+              color="#3b267d"
+              emissive="#7c3aed"
+              emissiveIntensity={0.42}
+              roughness={0.3}
             />
           </mesh>
+          {/* Stylized Geometric "F" Bars */}
+          <mesh position={[-0.009, 0, 0.006]}>
+            <boxGeometry args={[0.008, 0.036, 0.004]} />
+            <meshStandardMaterial color="#e0e7ff" emissive="#c4b5fd" emissiveIntensity={0.55} />
+          </mesh>
+          <mesh position={[0.004, 0.014, 0.006]}>
+            <boxGeometry args={[0.024, 0.008, 0.004]} />
+            <meshStandardMaterial color="#e0e7ff" emissive="#c4b5fd" emissiveIntensity={0.55} />
+          </mesh>
+          <mesh position={[0.001, 0.001, 0.006]}>
+            <boxGeometry args={[0.018, 0.007, 0.004]} />
+            <meshStandardMaterial color="#a78bfa" emissive="#a78bfa" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+
+        {/* OPTIONAL STUDIO HEADPHONES RESTING AROUND NECK (Signature Tech Creator Look!) */}
+        {hasNeckHeadphones && (
+          <group position={[0, 0.39, 0.03]}>
+            {/* Neckband Arc */}
+            <mesh rotation={[Math.PI / 2 - 0.18, 0, 0]}>
+              <torusGeometry args={[0.095, 0.014, 8, 18, Math.PI * 1.28]} />
+              <meshStandardMaterial color="#18181b" roughness={0.32} metalness={0.45} />
+            </mesh>
+            {/* Left & Right Earcups with Purple Accent Ring */}
+            {[-0.088, 0.088].map((hx, hi) => (
+              <group key={hi} position={[hx, -0.02, 0.075]} rotation={[0.25, hi === 0 ? 0.3 : -0.3, 0]}>
+                <mesh>
+                  <cylinderGeometry args={[0.038, 0.038, 0.032, 14]} />
+                  <meshStandardMaterial color="#1f2433" roughness={0.3} metalness={0.5} />
+                </mesh>
+                <mesh position={[0, 0, 0.016]}>
+                  <torusGeometry args={[0.026, 0.005, 6, 14]} />
+                  <meshStandardMaterial color="#a78bfa" emissive="#7c3aed" emissiveIntensity={0.65} />
+                </mesh>
+              </group>
+            ))}
+          </group>
         )}
-        {/* Crisp Role-Colored Collar Piping on Shoulders */}
-        <mesh position={[-0.17, 0.36, 0.02]} rotation={[0, 0, 0.16]}>
-          <boxGeometry args={[0.08, 0.025, 0.08]} />
-          <meshStandardMaterial
-            color={agent.accentColor}
-            emissive={agent.accentColor}
-            emissiveIntensity={0.45}
-            roughness={0.32}
-          />
-        </mesh>
-        <mesh position={[0.17, 0.36, 0.02]} rotation={[0, 0, -0.16]}>
-          <boxGeometry args={[0.08, 0.025, 0.08]} />
-          <meshStandardMaterial
-            color={agent.accentColor}
-            emissive={agent.accentColor}
-            emissiveIntensity={0.45}
-            roughness={0.32}
-          />
-        </mesh>
-        {/* Corporate ID Lanyard Badge with Role Accent */}
-        <mesh position={[0.11, 0.21, 0.13]}>
-          <boxGeometry args={[0.062, 0.088, 0.014]} />
-          <meshStandardMaterial
-            color="#f8fafc"
-            emissive={agent.accentColor}
-            emissiveIntensity={0.25}
-            roughness={0.28}
-          />
-        </mesh>
 
         {/* ARTICULATED LEFT ARM (UPPER ARM + BENT ELBOW FOREARM FOR REAL KEYBOARD TYPING!) */}
         <group ref={leftArmRef} position={[-0.24, 0.33, 0]}>
           <mesh position={[0, -0.12, 0]} castShadow>
             <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
-            <meshStandardMaterial color={suitColor} roughness={0.66} />
+            <meshStandardMaterial color={activeSleeveColor} roughness={0.66} />
           </mesh>
           <group ref={leftElbowRef} position={[0, -0.24, 0]}>
             <mesh position={[0, -0.11, 0]} castShadow>
               <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
-              <meshStandardMaterial color={suitColor} roughness={0.66} />
+              <meshStandardMaterial color={activeSleeveColor} roughness={0.66} />
             </mesh>
             <mesh position={[0, -0.21, 0]}>
               <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
@@ -617,13 +678,13 @@ export function RobotCharacter({
           {/* Upper Arm */}
           <mesh position={[0, -0.12, 0]} castShadow>
             <capsuleGeometry args={[0.055, 0.16, 8, 10]} />
-            <meshStandardMaterial color={suitColor} roughness={0.66} />
+            <meshStandardMaterial color={activeSleeveColor} roughness={0.66} />
           </mesh>
           {/* Hinged Elbow Forearm */}
           <group ref={rightElbowRef} position={[0, -0.24, 0]}>
             <mesh position={[0, -0.11, 0]} castShadow>
               <capsuleGeometry args={[0.048, 0.15, 8, 10]} />
-              <meshStandardMaterial color={suitColor} roughness={0.66} />
+              <meshStandardMaterial color={activeSleeveColor} roughness={0.66} />
             </mesh>
             <mesh position={[0, -0.21, 0]}>
               <cylinderGeometry args={[0.044, 0.044, 0.045, 10]} />
@@ -702,102 +763,182 @@ export function RobotCharacter({
             <sphereGeometry args={[0.018, 8, 8]} />
             <meshStandardMaterial color={skinColor} roughness={0.68} />
           </mesh>
-          {/* Eyes & Brows */}
-          <mesh position={[-0.044, 0.2, 0.122]}>
-            <sphereGeometry args={[0.014, 8, 8]} />
-            <meshStandardMaterial color="#18181b" roughness={0.2} />
+          {/* Expressive Eyes, Brows & Warm Smile */}
+          <mesh position={[-0.044, 0.2, 0.123]}>
+            <sphereGeometry args={[0.015, 10, 10]} />
+            <meshStandardMaterial color="#18181b" roughness={0.14} />
           </mesh>
-          <mesh position={[0.044, 0.2, 0.122]}>
-            <sphereGeometry args={[0.014, 8, 8]} />
-            <meshStandardMaterial color="#18181b" roughness={0.2} />
+          <mesh position={[0.044, 0.2, 0.123]}>
+            <sphereGeometry args={[0.015, 10, 10]} />
+            <meshStandardMaterial color="#18181b" roughness={0.14} />
+          </mesh>
+          {/* Subtle Eyebrows */}
+          <mesh position={[-0.044, 0.228, 0.122]} rotation={[0, 0, 0.06]}>
+            <boxGeometry args={[0.036, 0.008, 0.008]} />
+            <meshStandardMaterial color={hairStyle === "hijab" ? "#1e1612" : hairColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[0.044, 0.228, 0.122]} rotation={[0, 0, -0.06]}>
+            <boxGeometry args={[0.036, 0.008, 0.008]} />
+            <meshStandardMaterial color={hairStyle === "hijab" ? "#1e1612" : hairColor} roughness={0.85} />
+          </mesh>
+          {/* Warm Friendly Smile */}
+          <mesh position={[0, 0.138, 0.124]} rotation={[0.12, 0, Math.PI]}>
+            <torusGeometry args={[0.024, 0.0045, 6, 12, Math.PI]} />
+            <meshStandardMaterial color="#b96d5e" roughness={0.55} />
           </mesh>
 
-          {/* Sculpted Hairstyles */}
+          {/* Optional Sleek Modern Glasses */}
+          {hasGlasses && (
+            <group position={[0, 0.2, 0.138]}>
+              {[-0.044, 0.044].map((gx, gi) => (
+                <mesh key={gi} position={[gx, 0, 0]}>
+                  <torusGeometry args={[0.028, 0.0042, 8, 16]} />
+                  <meshStandardMaterial color="#18181b" roughness={0.25} metalness={0.6} />
+                </mesh>
+              ))}
+              {/* Nose Bridge */}
+              <mesh position={[0, 0.003, 0]}>
+                <boxGeometry args={[0.034, 0.0045, 0.005]} />
+                <meshStandardMaterial color="#18181b" roughness={0.25} metalness={0.6} />
+              </mesh>
+              {/* Side Temples */}
+              {[-0.078, 0.078].map((tx, ti) => (
+                <mesh key={ti} position={[tx, 0.002, -0.055]}>
+                  <boxGeometry args={[0.004, 0.0045, 0.11]} />
+                  <meshStandardMaterial color="#18181b" roughness={0.25} metalness={0.6} />
+                </mesh>
+              ))}
+            </group>
+          )}
+
+          {/* Sculpted Modern Hairstyles & Elegant Black Hijab */}
           {hairStyle === "short" && (
             <group>
-              <mesh position={[0, 0.255, -0.012]} scale={[0.96, 1.0, 1.0]} castShadow>
+              {/* Textured Modern Layered Crown */}
+              <mesh position={[0, 0.255, -0.01]} scale={[0.98, 1.04, 1.02]} castShadow>
                 <sphereGeometry
-                  args={[0.145, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.56]}
+                  args={[0.148, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58]}
                 />
-                <meshStandardMaterial color={hairColor} roughness={0.82} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
               </mesh>
-              <mesh position={[0, 0.2, -0.095]}>
-                <boxGeometry args={[0.22, 0.14, 0.1]} />
-                <meshStandardMaterial color={hairColor} roughness={0.82} />
+              {/* Soft Curved Back Hair (No Blocky Box!) */}
+              <mesh position={[0, 0.195, -0.068]} scale={[0.96, 1.0, 0.72]} castShadow>
+                <sphereGeometry args={[0.132, 14, 12]} />
+                <meshStandardMaterial color={hairColor} roughness={0.78} />
+              </mesh>
+              {/* Natural Side-Part Curtain Bangs */}
+              <mesh position={[-0.052, 0.285, 0.088]} rotation={[0.28, -0.25, 0.18]} castShadow>
+                <capsuleGeometry args={[0.026, 0.085, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              </mesh>
+              <mesh position={[0.058, 0.288, 0.086]} rotation={[0.25, 0.28, -0.22]} castShadow>
+                <capsuleGeometry args={[0.026, 0.08, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.76} />
               </mesh>
             </group>
           )}
 
           {hairStyle === "bob" && (
             <group>
-              {/* Full Rounded Hair Crown */}
-              <mesh position={[0, 0.24, -0.02]} scale={[0.98, 1.05, 1.0]} castShadow>
-                <sphereGeometry args={[0.152, 16, 14]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              {/* Full Glossy Hair Crown */}
+              <mesh position={[0, 0.245, -0.018]} scale={[1.0, 1.06, 1.02]} castShadow>
+                <sphereGeometry args={[0.154, 18, 14]} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
               </mesh>
-              {/* Long Flowing Back Hair Drape Past Shoulders */}
-              <mesh position={[0, -0.03, -0.11]} castShadow>
-                <boxGeometry args={[0.26, 0.48, 0.11]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              {/* Long Flowing Wavy Back Hair Drape */}
+              <mesh position={[0, -0.02, -0.102]} scale={[1.06, 1.0, 0.54]} castShadow>
+                <capsuleGeometry args={[0.138, 0.34, 10, 14]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
               </mesh>
-              <mesh position={[0, -0.26, -0.115]} scale={[1.0, 0.65, 0.55]} castShadow>
-                <sphereGeometry args={[0.13, 12, 10]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              {/* Soft Layered Face-Framing Strands */}
+              <mesh position={[-0.122, 0.04, 0.02]} rotation={[0, 0, -0.05]} castShadow>
+                <capsuleGeometry args={[0.04, 0.32, 8, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
               </mesh>
-              {/* Long Face-Framing Side Hair Strands Reaching Chest/Shoulders */}
-              <mesh position={[-0.122, 0.03, 0.015]} castShadow>
-                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
-              </mesh>
-              <mesh position={[0.122, 0.03, 0.015]} castShadow>
-                <capsuleGeometry args={[0.042, 0.34, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+              <mesh position={[0.122, 0.04, 0.02]} rotation={[0, 0, 0.05]} castShadow>
+                <capsuleGeometry args={[0.04, 0.32, 8, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
               </mesh>
             </group>
           )}
 
           {hairStyle === "ponytail" && (
             <group>
-              {/* Sleek Hair Crown */}
+              {/* Sleek Glossy Crown */}
               <mesh position={[0, 0.25, -0.02]} castShadow>
                 <sphereGeometry
-                  args={[0.15, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]}
+                  args={[0.15, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.6]}
                 />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
               </mesh>
               {/* Soft Front Side-Framing Wisps */}
               <mesh position={[-0.12, 0.1, 0.02]} castShadow>
-                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+                <capsuleGeometry args={[0.032, 0.22, 8, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
               </mesh>
               <mesh position={[0.12, 0.1, 0.02]} castShadow>
-                <capsuleGeometry args={[0.032, 0.22, 6, 8]} />
-                <meshStandardMaterial color={hairColor} roughness={0.76} />
+                <capsuleGeometry args={[0.032, 0.22, 8, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
               </mesh>
               {/* Hair Tie Accent */}
               <mesh position={[0, 0.24, -0.145]}>
                 <torusGeometry args={[0.042, 0.012, 8, 12]} />
-                <meshStandardMaterial color={agent.accentColor} roughness={0.4} />
+                <meshStandardMaterial color="#a78bfa" roughness={0.38} />
               </mesh>
-              {/* Long Flowing High Ponytail Tail Reaching Mid-Back */}
+              {/* Long Flowing High Ponytail Reaching Mid-Back */}
               <mesh position={[0, 0.02, -0.175]} rotation={[0.18, 0, 0]} castShadow>
                 <capsuleGeometry args={[0.06, 0.44, 8, 12]} />
-                <meshStandardMaterial color={hairColor} roughness={0.74} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
               </mesh>
             </group>
           )}
 
           {hairStyle === "executive" && (
             <group>
-              <mesh position={[0, 0.26, -0.01]} castShadow>
+              {/* Modern Korean/Tech Curtain-Styled Male Hair */}
+              <mesh position={[0, 0.26, -0.01]} scale={[0.98, 1.05, 1.02]} castShadow>
                 <sphereGeometry
-                  args={[0.148, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.56]}
+                  args={[0.15, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58]}
                 />
-                <meshStandardMaterial color={hairColor} roughness={0.72} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
               </mesh>
-              <mesh position={[0, 0.3, 0.04]} castShadow>
-                <boxGeometry args={[0.18, 0.05, 0.15]} />
-                <meshStandardMaterial color={hairColor} roughness={0.72} />
+              <mesh position={[0, 0.2, -0.068]} scale={[0.95, 1.0, 0.7]} castShadow>
+                <sphereGeometry args={[0.132, 14, 12]} />
+                <meshStandardMaterial color={hairColor} roughness={0.7} />
+              </mesh>
+              {/* Swept Textured Top Fringe */}
+              <mesh position={[0.018, 0.305, 0.062]} rotation={[0.2, 0.15, -0.14]} castShadow>
+                <capsuleGeometry args={[0.036, 0.12, 8, 10]} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
+              </mesh>
+              <mesh position={[-0.065, 0.285, 0.075]} rotation={[0.25, -0.25, 0.24]} castShadow>
+                <capsuleGeometry args={[0.028, 0.085, 6, 8]} />
+                <meshStandardMaterial color={hairColor} roughness={0.68} />
+              </mesh>
+            </group>
+          )}
+
+          {hairStyle === "hijab" && (
+            <group>
+              {/* Smooth Sculpted Black Silk Hijab Head Wrap */}
+              <mesh position={[0, 0.215, -0.022]} scale={[1.02, 1.12, 1.06]} castShadow>
+                <sphereGeometry args={[0.152, 18, 16]} />
+                <meshStandardMaterial color="#11131a" roughness={0.62} />
+              </mesh>
+              {/* Soft Face-Framing Hijab Edge Halo */}
+              <mesh position={[0, 0.195, 0.048]} scale={[0.96, 1.08, 0.9]}>
+                <torusGeometry args={[0.125, 0.026, 10, 22]} />
+                <meshStandardMaterial color="#161923" roughness={0.64} />
+              </mesh>
+              {/* Flowing Neck & Chest Hijab Drape Shawl */}
+              <mesh position={[0, 0.045, 0.005]} scale={[1.15, 0.9, 0.95]} castShadow>
+                <cylinderGeometry args={[0.128, 0.195, 0.22, 18]} />
+                <meshStandardMaterial color="#13161f" roughness={0.64} />
+              </mesh>
+              {/* Back Flowing Hijab Layer */}
+              <mesh position={[0, -0.04, -0.08]} scale={[1.05, 1.0, 0.56]} castShadow>
+                <capsuleGeometry args={[0.142, 0.26, 10, 14]} />
+                <meshStandardMaterial color="#11131a" roughness={0.64} />
               </mesh>
             </group>
           )}

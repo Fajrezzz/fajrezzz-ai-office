@@ -73,10 +73,15 @@ export interface Workstation {
 export interface AvatarAppearance {
   skinColor: string;
   hairColor: string;
-  hairStyle: "short" | "bob" | "ponytail" | "executive";
+  hairStyle: "short" | "bob" | "ponytail" | "executive" | "hijab";
   suitColor: string;
   shirtColor: string;
   pantsColor: string;
+  sleeveColor?: string;
+  outfitStyle?: "hoodie" | "shirt" | "varsity" | "blouse" | "formal";
+  hasGlasses?: boolean;
+  hasNeckHeadphones?: boolean;
+  tieColor?: string;
 }
 
 export interface OfficeAgent {

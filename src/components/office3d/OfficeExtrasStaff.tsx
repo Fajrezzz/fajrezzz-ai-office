@@ -19,16 +19,19 @@ interface SeatedOrStandingPerson {
   rotationY: number;
   pose: "seated" | "standing";
   suitColor: string;
+  sleeveColor?: string;
   shirtColor: string;
   tieColor?: string;
   skinColor: string;
   hairColor: string;
   badgeColor: string;
   hasLaptop?: boolean;
+  hasGlasses?: boolean;
+  hasNeckHeadphones?: boolean;
 }
 
 const EXTRA_STAFF: SeatedOrStandingPerson[] = [
-  // ================= LANTAI 3 — ORANG-ORANG PENTING (CEO, MANAJER, SEKRETARIS, CFO) =================
+  // ================= LANTAI 3 — EKSEKUTIF FAJREZZZ (CEO, MANAJER, SEKRETARIS, CFO) =================
   {
     id: "vip-ceo",
     name: "Hendra Wijaya",
@@ -39,12 +42,13 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [7.4, FLOOR_3_Y, -5.22],
     rotationY: 0,
     pose: "seated",
-    suitColor: "#0f172a",
+    suitColor: "#141824",
     shirtColor: "#ffffff",
-    tieColor: "#eab308",
-    skinColor: "#d6a482",
-    hairColor: "#1e293b",
-    badgeColor: "#eab308",
+    tieColor: "#1e3a8a",
+    skinColor: "#e2b89a",
+    hairColor: "#171618",
+    badgeColor: "#7c3aed",
+    hasGlasses: true,
   },
   {
     id: "vip-manager",
@@ -59,9 +63,10 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     suitColor: "#1e3a5f",
     shirtColor: "#f8fafc",
     tieColor: "#38bdf8",
-    skinColor: "#cfa07e",
+    skinColor: "#ddb192",
     hairColor: "#18181b",
-    badgeColor: "#38bdf8",
+    badgeColor: "#6366f1",
+    hasGlasses: true,
   },
   {
     id: "vip-secretary",
@@ -73,11 +78,11 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [-2.7, FLOOR_3_Y, -5.0],
     rotationY: 0,
     pose: "seated",
-    suitColor: "#7f1d1d",
-    shirtColor: "#fffbeb",
-    skinColor: "#ebc2a4",
-    hairColor: "#2a1b14",
-    badgeColor: "#f472b6",
+    suitColor: "#a78bfa",
+    shirtColor: "#ffffff",
+    skinColor: "#efc6a9",
+    hairColor: "#261811",
+    badgeColor: "#a78bfa",
   },
   {
     id: "vip-cfo",
@@ -89,15 +94,15 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [-6.3, FLOOR_3_Y, -2.0],
     rotationY: Math.PI,
     pose: "seated",
-    suitColor: "#27272a",
-    shirtColor: "#f1f5f9",
-    tieColor: "#10b981",
-    skinColor: "#c89572",
-    hairColor: "#1c1917",
-    badgeColor: "#10b981",
+    suitColor: "#27272e",
+    shirtColor: "#f8fafc",
+    skinColor: "#dab090",
+    hairColor: "#1a1716",
+    badgeColor: "#8b5cf6",
+    hasGlasses: true,
   },
 
-  // ================= LANTAI 1 — SECURITY COWOK (PINTU UTAMA), RESEPSIONIS & LOUNGE =================
+  // ================= LANTAI 1 — SECURITY COWOK (PINTU UTAMA), RESEPSIONIS & TIM FAJREZZZ LOBBY =================
   {
     id: "l1-security-1",
     name: "Bambang Suryo",
@@ -112,7 +117,7 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     suitColor: "#0f2442",
     shirtColor: "#dbeafe",
     tieColor: "#0f172a",
-    skinColor: "#c89572",
+    skinColor: "#d6a482",
     hairColor: "#171717",
     badgeColor: "#f59e0b",
   },
@@ -130,7 +135,7 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     suitColor: "#0f2442",
     shirtColor: "#dbeafe",
     tieColor: "#0f172a",
-    skinColor: "#cf9d78",
+    skinColor: "#d9a986",
     hairColor: "#18181b",
     badgeColor: "#f59e0b",
   },
@@ -144,11 +149,12 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [-1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
     pose: "standing",
-    suitColor: "#1e293b",
-    shirtColor: "#fdf2f8",
-    skinColor: "#ebc0a2",
-    hairColor: "#271811",
-    badgeColor: "#06b6d4",
+    suitColor: "#f8fafc",
+    shirtColor: "#ffffff",
+    skinColor: "#efc5a8",
+    hairColor: "#24160f",
+    badgeColor: "#7c3aed",
+    hasGlasses: true,
   },
   {
     id: "l1-recep-2",
@@ -160,12 +166,12 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [1.1, FLOOR_1_Y, -6.22],
     rotationY: 0,
     pose: "standing",
-    suitColor: "#1f2937",
-    shirtColor: "#e0f2fe",
-    tieColor: "#0284c7",
-    skinColor: "#d3a17e",
+    suitColor: "#f1f5f9",
+    shirtColor: "#ffffff",
+    tieColor: "#1e3a8a",
+    skinColor: "#dfb293",
     hairColor: "#171717",
-    badgeColor: "#0ea5e9",
+    badgeColor: "#6366f1",
   },
   {
     id: "l1-sofa-w1",
@@ -177,10 +183,10 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [-9.2, FLOOR_1_Y, -2.7],
     rotationY: 0.14,
     pose: "seated",
-    suitColor: "#312e81",
+    suitColor: "#171a24",
     shirtColor: "#f8fafc",
-    skinColor: "#e8bc9d",
-    hairColor: "#3a2216",
+    skinColor: "#ecc3a5",
+    hairColor: "#2c1b12",
     badgeColor: "#8b5cf6",
     hasLaptop: true,
   },
@@ -194,12 +200,13 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [-7.55, FLOOR_1_Y, -2.7],
     rotationY: -0.18,
     pose: "seated",
-    suitColor: "#1e3a5f",
-    shirtColor: "#f0f9ff",
-    tieColor: "#38bdf8",
-    skinColor: "#cd9c7a",
-    hairColor: "#18181b",
-    badgeColor: "#38bdf8",
+    suitColor: "#181a26",
+    sleeveColor: "#3b267d",
+    shirtColor: "#ddd6fe",
+    skinColor: "#d9ab8c",
+    hairColor: "#161618",
+    badgeColor: "#7c3aed",
+    hasNeckHeadphones: true,
   },
   {
     id: "l1-sofa-e1",
@@ -211,12 +218,13 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [7.55, FLOOR_1_Y, -2.7],
     rotationY: 0.18,
     pose: "seated",
-    suitColor: "#134e4a",
-    shirtColor: "#f0fdfa",
-    skinColor: "#e4b797",
-    hairColor: "#24160f",
-    badgeColor: "#14b8a6",
+    suitColor: "#a78bfa",
+    shirtColor: "#ffffff",
+    skinColor: "#edc4a7",
+    hairColor: "#23160f",
+    badgeColor: "#a78bfa",
     hasLaptop: true,
+    hasGlasses: true,
   },
   {
     id: "l1-sofa-e2",
@@ -228,12 +236,12 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     position: [9.2, FLOOR_1_Y, -2.7],
     rotationY: -0.14,
     pose: "seated",
-    suitColor: "#374151",
-    shirtColor: "#fef3c7",
-    tieColor: "#f59e0b",
-    skinColor: "#d19e7a",
-    hairColor: "#1c1917",
-    badgeColor: "#f59e0b",
+    suitColor: "#2563eb",
+    sleeveColor: "#f8fafc",
+    shirtColor: "#ffffff",
+    skinColor: "#dfb291",
+    hairColor: "#181615",
+    badgeColor: "#3b82f6",
   },
 ];
 
@@ -416,6 +424,55 @@ function StaffFigure({
           <meshStandardMaterial color={person.tieColor} roughness={0.45} />
         </mesh>
       )}
+      {/* Fajrezzz Signature Purple-Blue "F" Chest Emblem (non-security staff) */}
+      {!person.isSecurity && (
+        <group position={[isFemale ? 0.085 : 0.115, torsoY + 0.1, isFemale ? 0.108 : 0.132]}>
+          <mesh>
+            <boxGeometry args={[0.052, 0.056, 0.008]} />
+            <meshStandardMaterial
+              color="#3b267d"
+              emissive="#7c3aed"
+              emissiveIntensity={0.42}
+              roughness={0.3}
+            />
+          </mesh>
+          <mesh position={[-0.009, 0, 0.006]}>
+            <boxGeometry args={[0.008, 0.036, 0.004]} />
+            <meshStandardMaterial color="#e0e7ff" emissive="#c4b5fd" emissiveIntensity={0.55} />
+          </mesh>
+          <mesh position={[0.004, 0.014, 0.006]}>
+            <boxGeometry args={[0.024, 0.008, 0.004]} />
+            <meshStandardMaterial color="#e0e7ff" emissive="#c4b5fd" emissiveIntensity={0.55} />
+          </mesh>
+          <mesh position={[0.001, 0.001, 0.006]}>
+            <boxGeometry args={[0.018, 0.007, 0.004]} />
+            <meshStandardMaterial color="#a78bfa" emissive="#a78bfa" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+      )}
+
+      {/* Optional Studio Headphones Resting Around Neck */}
+      {person.hasNeckHeadphones && (
+        <group position={[0, torsoY + 0.25, 0.03]}>
+          <mesh rotation={[Math.PI / 2 - 0.18, 0, 0]}>
+            <torusGeometry args={[0.095, 0.014, 8, 18, Math.PI * 1.28]} />
+            <meshStandardMaterial color="#18181b" roughness={0.32} metalness={0.45} />
+          </mesh>
+          {[-0.088, 0.088].map((hx, hi) => (
+            <group key={hi} position={[hx, -0.02, 0.075]} rotation={[0.25, hi === 0 ? 0.3 : -0.3, 0]}>
+              <mesh>
+                <cylinderGeometry args={[0.038, 0.038, 0.032, 14]} />
+                <meshStandardMaterial color="#1f2433" roughness={0.3} metalness={0.5} />
+              </mesh>
+              <mesh position={[0, 0, 0.016]}>
+                <torusGeometry args={[0.026, 0.005, 6, 14]} />
+                <meshStandardMaterial color="#a78bfa" emissive="#7c3aed" emissiveIntensity={0.65} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )}
+
       {/* Security Uniform Gold Chest Badge + White Shoulder Epaulettes */}
       {person.isSecurity && (
         <group>
@@ -440,7 +497,7 @@ function StaffFigure({
         castShadow
       >
         <capsuleGeometry args={[isFemale ? 0.052 : 0.062, 0.4, 6, 8]} />
-        <meshStandardMaterial color={person.suitColor} roughness={0.75} />
+        <meshStandardMaterial color={person.sleeveColor ?? person.suitColor} roughness={0.75} />
       </mesh>
       <mesh
         ref={rightArmRef}
@@ -449,7 +506,7 @@ function StaffFigure({
         castShadow
       >
         <capsuleGeometry args={[isFemale ? 0.052 : 0.062, 0.4, 6, 8]} />
-        <meshStandardMaterial color={person.suitColor} roughness={0.75} />
+        <meshStandardMaterial color={person.sleeveColor ?? person.suitColor} roughness={0.75} />
       </mesh>
 
       {/* Optional Lap Laptop for Seated Lounge Staff */}
@@ -476,21 +533,57 @@ function StaffFigure({
           <sphereGeometry args={[0.155, 14, 12]} />
           <meshStandardMaterial color={person.skinColor} roughness={0.7} />
         </mesh>
-        {/* Eyes */}
+        {/* Eyes, Brows, Warm Smile & Optional Sleek Glasses */}
         <mesh position={[-0.048, 0.02, 0.138]}>
-          <sphereGeometry args={[0.015, 8, 8]} />
-          <meshStandardMaterial color="#18181b" roughness={0.2} />
+          <sphereGeometry args={[0.016, 10, 10]} />
+          <meshStandardMaterial color="#18181b" roughness={0.14} />
         </mesh>
         <mesh position={[0.048, 0.02, 0.138]}>
-          <sphereGeometry args={[0.015, 8, 8]} />
-          <meshStandardMaterial color="#18181b" roughness={0.2} />
+          <sphereGeometry args={[0.016, 10, 10]} />
+          <meshStandardMaterial color="#18181b" roughness={0.14} />
         </mesh>
+        <mesh position={[-0.048, 0.05, 0.136]} rotation={[0, 0, 0.05]}>
+          <boxGeometry args={[0.038, 0.008, 0.008]} />
+          <meshStandardMaterial color={person.hairColor} roughness={0.85} />
+        </mesh>
+        <mesh position={[0.048, 0.05, 0.136]} rotation={[0, 0, -0.05]}>
+          <boxGeometry args={[0.038, 0.008, 0.008]} />
+          <meshStandardMaterial color={person.hairColor} roughness={0.85} />
+        </mesh>
+        <mesh position={[0, -0.042, 0.138]} rotation={[0.12, 0, Math.PI]}>
+          <torusGeometry args={[0.025, 0.0045, 6, 12, Math.PI]} />
+          <meshStandardMaterial color="#b96d5e" roughness={0.55} />
+        </mesh>
+        {person.hasGlasses && (
+          <group position={[0, 0.02, 0.153]}>
+            {[-0.048, 0.048].map((gx, gi) => (
+              <mesh key={gi} position={[gx, 0, 0]}>
+                <torusGeometry args={[0.03, 0.0044, 8, 16]} />
+                <meshStandardMaterial color="#18181b" roughness={0.25} metalness={0.6} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.003, 0]}>
+              <boxGeometry args={[0.036, 0.0045, 0.005]} />
+              <meshStandardMaterial color="#18181b" roughness={0.25} metalness={0.6} />
+            </mesh>
+          </group>
+        )}
 
         {person.hairStyle === "short" && (
-          <mesh position={[0, 0.06, -0.02]}>
-            <sphereGeometry args={[0.162, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.56]} />
-            <meshStandardMaterial color={person.hairColor} roughness={0.85} />
-          </mesh>
+          <group>
+            <mesh position={[0, 0.06, -0.012]} scale={[1.0, 1.04, 1.02]}>
+              <sphereGeometry args={[0.162, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            <mesh position={[-0.052, 0.095, 0.095]} rotation={[0.25, -0.22, 0.18]}>
+              <capsuleGeometry args={[0.026, 0.085, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+            <mesh position={[0.055, 0.095, 0.095]} rotation={[0.25, 0.25, -0.22]}>
+              <capsuleGeometry args={[0.026, 0.085, 6, 8]} />
+              <meshStandardMaterial color={person.hairColor} roughness={0.76} />
+            </mesh>
+          </group>
         )}
 
         {person.hairStyle === "bob" && (
