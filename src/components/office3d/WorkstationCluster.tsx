@@ -192,8 +192,8 @@ export function WorkstationCluster({
               <boxGeometry args={[1.14, 0.01, 0.44]} />
               <meshStandardMaterial color="#18202c" roughness={0.9} />
             </mesh>
-            {/* Detailed Mechanical Keyboard */}
-            <group position={[-0.1, 0.79, 0.18]}>
+            {/* Detailed Mechanical Keyboard (Positioned Cleanly Within Working Hand Reach!) */}
+            <group position={[-0.1, 0.79, 0.25]}>
               <mesh castShadow>
                 <boxGeometry args={[0.48, 0.024, 0.175]} />
                 <meshStandardMaterial color="#0f172a" roughness={0.38} metalness={0.45} />
@@ -217,7 +217,7 @@ export function WorkstationCluster({
               </mesh>
             </group>
             {/* Dedicated Ergonomic Mouse Pad Accent + Sculpted Wireless Office Mouse */}
-            <group position={[0.32, 0.785, 0.18]}>
+            <group position={[0.3, 0.785, 0.25]}>
               <mesh position={[0, -0.002, 0]}>
                 <boxGeometry args={[0.24, 0.006, 0.26]} />
                 <meshStandardMaterial color="#111827" roughness={0.85} />

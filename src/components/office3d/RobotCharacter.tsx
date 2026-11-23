@@ -256,6 +256,7 @@ export function RobotCharacter({
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0.05;
         torsoRef.current.position.y = 1.02;
+        torsoRef.current.position.z = 0;
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 1.5) * 0.1;
@@ -268,34 +269,35 @@ export function RobotCharacter({
       if (leftKneeRef.current) leftKneeRef.current.rotation.x = 1.48;
       if (rightKneeRef.current) rightKneeRef.current.rotation.x = 1.48;
 
-      // REALISTIC OFFICE WORK: Left hand actively typing over mechanical keyboard, Right hand gliding & clicking mouse!
-      const typeTap = Math.sin(t * 15.5) * 0.08 + Math.sin(t * 23.0) * 0.04;
-      const mouseGlide = Math.sin(t * 2.1) * 0.14;
-      const mouseClick = Math.sin(t * 7.4) > 0.86 ? 0.06 : 0;
+      // REALISTIC OFFICE WORK: Torso tucked snugly to desk so left hand ACTUALLY types on keyboard & right hand glides on 3D mouse!
+      const typeTap = Math.sin(t * 16.5) * 0.09 + Math.sin(t * 24.0) * 0.04;
+      const mouseGlide = Math.sin(t * 2.2) * 0.15;
+      const mouseClick = Math.sin(t * 7.8) > 0.85 ? 0.07 : 0;
 
       if (leftArmRef.current) {
-        leftArmRef.current.rotation.x = -0.44 + Math.sin(t * 3.8) * 0.03;
-        leftArmRef.current.rotation.y = 0.14 + Math.sin(t * 2.6) * 0.05;
-        leftArmRef.current.rotation.z = -0.06;
+        leftArmRef.current.rotation.x = -0.82 + Math.sin(t * 4.0) * 0.03;
+        leftArmRef.current.rotation.y = 0.16 + Math.sin(t * 2.8) * 0.06;
+        leftArmRef.current.rotation.z = -0.04;
       }
       if (leftElbowRef.current) {
-        leftElbowRef.current.rotation.x = -1.08 + typeTap;
+        leftElbowRef.current.rotation.x = -0.66 + typeTap;
       }
       if (rightArmRef.current) {
-        rightArmRef.current.rotation.x = -0.4 + Math.cos(t * 2.2) * 0.03;
-        rightArmRef.current.rotation.y = -0.12 + mouseGlide;
-        rightArmRef.current.rotation.z = 0.12;
+        rightArmRef.current.rotation.x = -0.78 + Math.cos(t * 2.4) * 0.03;
+        rightArmRef.current.rotation.y = -0.14 + mouseGlide;
+        rightArmRef.current.rotation.z = 0.08;
       }
       if (rightElbowRef.current) {
-        rightElbowRef.current.rotation.x = -1.06 + mouseClick;
+        rightElbowRef.current.rotation.x = -0.68 + mouseClick;
       }
       if (torsoRef.current) {
-        torsoRef.current.rotation.x = 0.12;
+        torsoRef.current.rotation.x = 0.16;
         torsoRef.current.position.y = 1.02;
+        torsoRef.current.position.z = 0.12;
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 0.85) * 0.22;
-        headRef.current.rotation.x = 0.1;
+        headRef.current.rotation.x = 0.12;
       }
     } else if (isIdleSeatedCoffee) {
       // REAL 90-DEGREE SEATED RELAXED POSE WITH BENT ELBOW & COFFEE MUG
@@ -355,6 +357,7 @@ export function RobotCharacter({
       if (torsoRef.current) {
         torsoRef.current.rotation.x = -0.05;
         torsoRef.current.position.y = 1.02 + breathe * 0.01;
+        torsoRef.current.position.z = 0;
       }
       if (headRef.current) {
         headRef.current.rotation.y =
@@ -387,6 +390,7 @@ export function RobotCharacter({
       if (torsoRef.current) {
         torsoRef.current.rotation.x = 0;
         torsoRef.current.position.y = 1.02 + breathe * 0.012;
+        torsoRef.current.position.z = 0;
       }
       if (headRef.current) {
         headRef.current.rotation.y = Math.sin(t * 0.65) * 0.22;
