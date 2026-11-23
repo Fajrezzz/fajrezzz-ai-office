@@ -61,6 +61,7 @@ import {
 import { useAgency } from "@/store/AgencyContext";
 import { useOffice } from "@/store/OfficeContext";
 import { YouTubeUploadModal } from "@/components/kids/YouTubeUploadModal";
+import { ProductionDashboardPanel } from "@/components/kids/ProductionDashboardPanel";
 
 const STATUS_BADGE: Record<
   RealDivisionStatus,
@@ -151,6 +152,7 @@ export function KidsStudioPanel() {
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [skillsDrawerOpen, setSkillsDrawerOpen] = useState(false);
   const [manualOverrideOpen, setManualOverrideOpen] = useState(false);
+  const [studioTab, setStudioTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [longTermMem, setLongTermMem] = useState<AgentLongTermMemoryState | null>(null);
 
   useEffect(() => {
@@ -707,6 +709,36 @@ export function KidsStudioPanel() {
           )}
         </div>
       </section>
+
+      {/* ================= STUDIO VIEW SWITCHER (PIPELINE vs PRODUCTION DASHBOARD) ================= */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setStudioTab("pipeline")}
+          className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black transition ${
+            studioTab === "pipeline"
+              ? "border-cyan-400 bg-cyan-500/20 text-cyan-200"
+              : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+          }`}
+        >
+          <Film className="h-3.5 w-3.5" />
+          Studio Pipeline 7 Divisi
+        </button>
+        <button
+          type="button"
+          onClick={() => setStudioTab("dashboard")}
+          className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black transition ${
+            studioTab === "dashboard"
+              ? "border-violet-400 bg-violet-500/20 text-violet-200"
+              : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+          }`}
+        >
+          <Cpu className="h-3.5 w-3.5" />
+          Production Control Center (Remotion + 11 Skills + Trend Queue)
+        </button>
+      </div>
+
+      {studioTab === "dashboard" && <ProductionDashboardPanel />}
 
       {/* ================= EPISODE SELECTOR BAR ================= */}
       {episodes.length > 0 && (

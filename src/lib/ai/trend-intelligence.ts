@@ -1,12 +1,25 @@
 import type { TrendSourceRecord } from "@/types/pipeline";
 
+export interface TrendRankingBreakdown {
+  freshnessScore: number;      // 0-25 (Kebaruan)
+  relevanceScore: number;      // 0-25 (Relevansi AI Agent / Claude Code)
+  attentionScore: number;      // 0-20 (Potensi menarik perhatian tanpa clickbait)
+  sourceQualityScore: number;  // 0-15 (Kualitas sumber resmi vs komunitas)
+  demoEaseScore: number;       // 0-15 (Kemudahan demonstrasi visual nyata)
+  totalScore: number;          // 0-100
+}
+
+export interface RankedTrendSourceRecord extends TrendSourceRecord {
+  ranking: TrendRankingBreakdown;
+}
+
 export interface TrendIntelligenceReport {
   fetchedAt: string;
   verifiedOnline: boolean;
   verificationNote: string;
   officialCount: number;
   communityCount: number;
-  items: TrendSourceRecord[];
+  items: RankedTrendSourceRecord[];
 }
 
 interface OfficialRepoTarget {
@@ -228,10 +241,85 @@ async function fetchHackerNewsCommunityTrends(
 }
 
 /**
+ * Phase 6 — Transparent 5-Factor Topic Ranking Engine (0–100).
+ * Never promises viral views or fabricates traffic counts!
+ * Ranks purely on: Kebaruan, Relevansi AI Agent/Claude Code, Potensi Menarik Perhatian,
+ * Kualitas Sumber, dan Kemudahan Demonstrasi Nyata.
+ */
+export function scoreTrendTopic(item: TrendSourceRecord): TrendRankingBreakdown {
+  const text = `${item.title} ${item.summary} ${item.tags.join(" ")}`.toLowerCase();
+
+  // 1. Kebaruan (0-25)
+  const freshnessScore =
+    item.freshnessDays <= 3
+      ? 25
+      : item.freshnessDays <= 7
+      ? 22
+      : item.freshnessDays <= 14
+      ? 18
+      : item.freshnessDays <= 30
+      ? 13
+      : item.freshnessDays <= 60
+      ? 8
+      : 4;
+
+  // 2. Relevansi AI Agent / Claude Code / Coding Agent / Multi-Agent (0-25)
+  let relevanceScore = 8;
+  if (/claude[- ]?code|anthropic/.test(text)) relevanceScore += 9;
+  if (/ai agent|coding agent|multi-agent|autonomous|openhands|cline|codex|gemini-cli/.test(text)) {
+    relevanceScore += 8;
+  }
+  relevanceScore = Math.min(25, relevanceScore);
+
+  // 3. Potensi Menarik Perhatian (0-20): rilis versi baru, fitur baru, benchmark/eksperimen nyata
+  let attentionScore = 8;
+  if (/rilis resmi|release|v\d+\.\d+|added|new|support/.test(text)) attentionScore += 6;
+  if (/browser|terminal|github|workflow|automation|mcp|tool/.test(text)) attentionScore += 6;
+  attentionScore = Math.min(20, attentionScore);
+
+  // 4. Kualitas Sumber (0-15)
+  const sourceQualityScore = !item.verified
+    ? 2
+    : item.classification === "official_release"
+    ? 15
+    : item.classification === "community_discussion"
+    ? 10
+    : 5;
+
+  // 5. Kemudahan Demonstrasi Nyata (0-15): CLI, GitHub PR, kode, diagram arsitektur
+  let demoEaseScore = 5;
+  if (/cli|terminal|bash|command|install|git|pr|code|diff/.test(text)) demoEaseScore += 6;
+  if (/agent|workflow|multi-agent|browser|mcp/.test(text)) demoEaseScore += 4;
+  demoEaseScore = Math.min(15, demoEaseScore);
+
+  const totalScore =
+    freshnessScore + relevanceScore + attentionScore + sourceQualityScore + demoEaseScore;
+
+  return {
+    freshnessScore,
+    relevanceScore,
+    attentionScore,
+    sourceQualityScore,
+    demoEaseScore,
+    totalScore,
+  };
+}
+
+export function rankTrendTopics(items: TrendSourceRecord[]): RankedTrendSourceRecord[] {
+  return items
+    .map((item) => ({
+      ...item,
+      ranking: scoreTrendTopic(item),
+    }))
+    .sort((a, b) => b.ranking.totalScore - a.ranking.totalScore);
+}
+
+/**
  * Trend Intelligence Division:
  * - Queries REAL official GitHub releases + Hacker News community discussions
  * - Filters stale items (> 90 days) so old news is NEVER disguised as breaking news
- * - Never fabricates views/search volume/features; explicitly marks unverified if offline
+ * - Ranks topics transparently via 5-factor editorial scoring (zero fake views!)
+ * - Explicitly marks unverified if offline
  */
 export async function fetchLiveAiTrends(maxFreshnessDays = 90): Promise<TrendIntelligenceReport> {
   const fetchedAt = new Date().toISOString();
@@ -249,18 +337,9 @@ export async function fetchLiveAiTrends(maxFreshnessDays = 90): Promise<TrendInt
     (item) => item.freshnessDays <= Math.min(30, maxFreshnessDays)
   );
 
-  // Prioritize official releases first, then fresh community discussions, sorted by recency
-  const combined = [...verifiedOfficial, ...verifiedCommunity].sort((a, b) => {
-    if (a.classification === "official_release" && b.classification !== "official_release") {
-      return -1;
-    }
-    if (b.classification === "official_release" && a.classification !== "official_release") {
-      return 1;
-    }
-    return a.freshnessDays - b.freshnessDays;
-  });
+  const ranked = rankTrendTopics([...verifiedOfficial, ...verifiedCommunity]);
 
-  if (combined.length === 0) {
+  if (ranked.length === 0) {
     return {
       fetchedAt,
       verifiedOnline: false,
@@ -275,10 +354,10 @@ export async function fetchLiveAiTrends(maxFreshnessDays = 90): Promise<TrendInt
   return {
     fetchedAt,
     verifiedOnline: true,
-    verificationNote: `Terverifikasi ${verifiedOfficial.length} sumber resmi GitHub & ${verifiedCommunity.length} diskusi komunitas segar (maks ${maxFreshnessDays} hari terakhir).`,
+    verificationNote: `Terverifikasi ${verifiedOfficial.length} sumber resmi GitHub & ${verifiedCommunity.length} diskusi komunitas segar (diperingkat berdasarkan 5 faktor objektif).`,
     officialCount: verifiedOfficial.length,
     communityCount: verifiedCommunity.length,
-    items: combined,
+    items: ranked,
   };
 }
 

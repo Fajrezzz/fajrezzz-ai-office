@@ -11,6 +11,7 @@ import {
   getTikTokSafeZone,
   SPEECH_START_OFFSET_SEC,
 } from "./video-engine-v3.ts";
+import { evaluateGsapSceneTimeline } from "./gsap-timeline-choreographer.ts";
 
 /* ============================================================================
    FAJREZZZ AI OFFICE — V3 TIKTOK AI AGENT & CLAUDE CODE MOTION ENGINE
@@ -760,19 +761,32 @@ function renderSingleScene(
   const palette = getScenePalette(episode.visualStyle, sceneIndex, scene.template);
   const safe = getTikTokSafeZone(w, h);
   const sceneDur = Math.max(2, scene.durationSec);
-  const sceneProg = clamp01(localSec / sceneDur);
 
   drawCinematicBackdrop(ctx, w, h, s, palette, globalSec, sceneIndex);
 
-  // Subtle 2.5D continuous camera micro-dolly + handheld float (NEVER static!)
-  const camZoom = 1.0 + Math.sin(sceneProg * Math.PI) * 0.022;
-  const camX = Math.sin(globalSec * 1.15 + sceneIndex) * 4.5 * s;
-  const camY = Math.cos(globalSec * 0.9 + sceneIndex) * 4.0 * s;
+  // REAL GSAP Timeline Choreography (`gsap.timeline({ paused: true })` scrubbed to localSec)
+  const gsapMotion = evaluateGsapSceneTimeline(localSec, sceneDur);
+  const camZoom = gsapMotion.cameraZoom;
+  const camX = gsapMotion.parallaxX * 6.5 * s;
+  const camY = gsapMotion.parallaxY * 5.5 * s;
 
   ctx.save();
   ctx.translate(safe.centerX + camX, h * 0.44 + camY);
   ctx.scale(camZoom, camZoom);
   ctx.translate(-safe.centerX, -h * 0.44);
+
+  // Subtle GSAP expo.inOut diagonal cinematic light sweep across the backdrop
+  if (gsapMotion.lightSweep > 0.02 && gsapMotion.lightSweep < 0.98) {
+    ctx.save();
+    const sweepX = lerp(-w * 0.35, w * 1.35, gsapMotion.lightSweep);
+    const sweepGrad = ctx.createLinearGradient(sweepX - 180 * s, 0, sweepX + 180 * s, h * 0.55);
+    sweepGrad.addColorStop(0, "rgba(255,255,255,0)");
+    sweepGrad.addColorStop(0.5, palette.isLight ? "rgba(255,255,255,0.14)" : "rgba(56,189,248,0.06)");
+    sweepGrad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sweepGrad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
 
   const stageX = safe.left;
   const stageW = safe.width;
@@ -862,26 +876,42 @@ function renderSingleScene(
     ctx.lineWidth = 1.5 * s;
     ctx.stroke();
 
-    // Live character-by-character typing prompt!
+    // Live character-by-character multiline typing prompt (preserves \n & stays strictly inside terminal padding!)
     const cmdPrompt =
       scene.codeSnippet ||
       `claude "automate ${episode.title.split(" ").slice(0, 5).join(" ")}"`;
     const typeP = clamp01((localSec - 0.25) / Math.min(1.15, sceneDur * 0.38));
     const typedText = cmdPrompt.slice(0, Math.floor(cmdPrompt.length * typeP));
 
-    ctx.font = `700 ${Math.round(26 * s)}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.font = `700 ${Math.round(24 * s)}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillStyle = palette.accent;
     ctx.fillText("❯", stageX + 26 * s, winY + headerH + 24 * s);
 
-    ctx.fillStyle = "#f8fafc";
-    const promptLines = wrapLines(ctx, typedText, winW - 88 * s, 2);
+    const maxTermTextW = winW - 98 * s;
+    const rawTermLines = typedText.split("\n");
+    const promptLines: string[] = [];
+    for (const rawLine of rawTermLines) {
+      if (promptLines.length >= 6) break;
+      const wrapped = wrapLines(ctx, rawLine, maxTermTextW, 2);
+      for (const wl of wrapped) {
+        if (promptLines.length >= 6) break;
+        promptLines.push(wl);
+      }
+    }
+
     promptLines.forEach((ln, li) => {
       const ly = winY + headerH + 24 * s + li * 36 * s;
-      ctx.fillText(ln, stageX + 56 * s, ly);
+      const trimmed = ln.trim();
+      ctx.fillStyle = trimmed.startsWith("✓")
+        ? "#34d399"
+        : trimmed.startsWith("→")
+        ? "#93c5fd"
+        : "#f8fafc";
+      ctx.fillText(ln, stageX + 56 * s, ly, maxTermTextW);
       if (li === promptLines.length - 1 && Math.floor(globalSec * 4) % 2 === 0) {
-        const cw = ctx.measureText(ln).width;
+        const cw = Math.min(maxTermTextW, ctx.measureText(ln).width);
         ctx.fillStyle = palette.accent;
         ctx.fillRect(stageX + 59 * s + cw, ly + 2 * s, 12 * s, 28 * s);
       }
@@ -894,15 +924,17 @@ function renderSingleScene(
       { icon: "✓", text: "Generated 3 files (+142 -18 lines)", col: "#34d399", at: clickAt + 0.48 },
       { icon: "✓", text: "Tests passed · Ready to deploy", col: "#a3e635", at: clickAt + 0.85 },
     ];
+    const logsBaseOffset = Math.max(114 * s, (42 + promptLines.length * 36) * s);
     logs.forEach((log, li) => {
       const lp = expoOut((localSec - log.at) / 0.32);
       if (lp <= 0.01) return;
+      const ly = winY + headerH + logsBaseOffset + li * 40 * s + (1 - lp) * 14 * s;
+      if (ly > winY + winH - 102 * s) return;
       ctx.save();
       ctx.globalAlpha = lp;
-      const ly = winY + headerH + 114 * s + li * 42 * s + (1 - lp) * 14 * s;
       ctx.font = `700 ${Math.round(22 * s)}px ui-monospace, SFMono-Regular, monospace`;
       ctx.fillStyle = log.col;
-      ctx.fillText(`${log.icon} ${log.text}`, stageX + 30 * s, ly);
+      ctx.fillText(`${log.icon} ${log.text}`, stageX + 30 * s, ly, winW - 60 * s);
       ctx.restore();
     });
 

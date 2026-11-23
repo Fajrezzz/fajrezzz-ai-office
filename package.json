@@ -9,12 +9,14 @@
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/video-engine-v3.test.ts"
+    "test": "node --experimental-strip-types --test tests/video-engine-v3.test.ts && node --experimental-strip-types tests/advanced-skills-v4.test.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",
+    "@remotion/player": "^4.0.546",
+    "gsap": "^3.15.1",
     "lucide-react": "^1.77.0",
     "mp4-muxer": "^5.2.2",
     "msedge-tts": "^2.1.1",
@@ -22,6 +24,7 @@
     "postprocessing": "^6.39.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "remotion": "^4.0.546",
     "three": "^0.187.0"
   },
   "devDependencies": {
