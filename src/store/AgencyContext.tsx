@@ -10,6 +10,11 @@ import React, {
 } from "react";
 import type { PublishPlatform, VideoFormat } from "@/lib/kids-studio/episode-brain";
 import {
+  detectSpeechSegments,
+  describeUploadedPlan,
+  planUploadedTimeline,
+} from "@/lib/pipeline/uploaded-audio-plan";
+import {
   runEditingDivisionBrowser,
   runMotionDivisionBrowser,
   runVoiceDivisionBrowser,
@@ -120,6 +125,13 @@ export interface AutoPilotTopicDecision {
   decidedAt: string;
 }
 
+export interface UploadedVoiceState {
+  fileName: string;
+  durationSec: number;
+  /** ringkasan siap tampil, mis. "24,0 dtk · 5 adegan · 82% bersuara" */
+  summary: string;
+}
+
 interface AgencyContextValue {
   episodes: RealEpisode[];
   activeEpisodeId: string | null;
@@ -132,6 +144,10 @@ interface AgencyContextValue {
   renderProgress: RenderProgressSnapshot | null;
   exportQualityPreset: ExportQualityPreset;
   setExportQualityPreset: (preset: ExportQualityPreset) => void;
+  /** Rekaman suara Bos (fallback "edit dari audio") — dipakai Divisi Editing bila ada. */
+  uploadedVoiceInfo: UploadedVoiceState | null;
+  uploadVoiceFile: (file: File) => Promise<string>;
+  clearUploadedVoice: () => void;
   cancelActiveRender: () => void;
   runningDivision: PipelineDivisionKey | null;
   /** Zero-Click Full Auto-Pilot Video Studio (AI discovers topic -> scripts -> voices -> motion -> edits -> renders video) */
@@ -223,6 +239,12 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
   const [renderProgress, setRenderProgress] = useState<RenderProgressSnapshot | null>(null);
   const [exportQualityPreset, setExportQualityPresetState] =
     useState<ExportQualityPreset>("ultra");
+  const [uploadedVoice, setUploadedVoice] = useState<{
+    buffer: AudioBuffer;
+    info: UploadedVoiceState;
+  } | null>(null);
+  const uploadedVoiceRef = useRef<AudioBuffer | null>(null);
+  uploadedVoiceRef.current = uploadedVoice?.buffer ?? null;
   const exportQualityPresetRef = useRef<ExportQualityPreset>("ultra");
   exportQualityPresetRef.current = exportQualityPreset;
   const renderAbortRef = useRef<AbortController | null>(null);
@@ -287,6 +309,63 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
 
   const episodesRef = useRef<RealEpisode[]>(episodes);
   episodesRef.current = episodes;
+
+  /**
+   * Bos upload rekaman sendiri → dipakai sebagai voice track Divisi Editing.
+   * Bonus: hitung durasi per adegan, potong di jeda hening, dan tampilkan ringkasan.
+   */
+  const uploadVoiceFile = useCallback(
+    async (file: File): Promise<string> => {
+      if (typeof window === "undefined") {
+        throw new Error("Upload audio hanya bisa dari browser.");
+      }
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) throw new Error("Browser ini belum mendukung Web Audio untuk decode audio.");
+
+      const ctx = new AudioCtx();
+      try {
+        const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
+        if (!buffer || buffer.duration < 3) {
+          throw new Error("Rekaman terlalu pendek (minimal 3 detik untuk 1 video TikTok).");
+        }
+        const current = episodesRef.current.find((ep) => ep.id === activeEpisodeId) ?? episodesRef.current[0];
+        const scenes = current?.divisions.script.output?.scenes ?? [];
+        const sceneTexts =
+          scenes.length > 0
+            ? scenes.map((sc) => sc.narration || sc.subtitle || sc.label)
+            : ["rekaman bos"];
+        const plan = planUploadedTimeline({
+          durationSec: buffer.duration,
+          sceneTexts,
+          segments: detectSpeechSegments(buffer.getChannelData(0), buffer.sampleRate),
+        });
+        const summary = describeUploadedPlan(plan);
+        setUploadedVoice({
+          buffer,
+          info: {
+            fileName: file.name,
+            durationSec: Math.round(buffer.duration * 10) / 10,
+            summary,
+          },
+        });
+        return summary;
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "Audio tidak bisa dibaca. Coba MP3/WAV/M4A yang lain.";
+        throw new Error(message);
+      } finally {
+        await ctx.close().catch(() => {});
+      }
+    },
+    [activeEpisodeId]
+  );
+
+  const clearUploadedVoice = useCallback(() => setUploadedVoice(null), []);
+
 
   // Hydrate persisted real episodes, division KPI history & Auto-Pilot toggle from localStorage
   useEffect(() => {
@@ -963,7 +1042,11 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
           });
           markRunning(
             input,
-            `Merender TikTok Vertical 9:16 preset ${activePreset.toUpperCase()} (WebCodecs MP4 H.264/AAC + Audio Ducking + QC Aktual)...`
+            uploadedVoiceRef.current
+              ? `Merender TikTok 9:16 dari REKAMAN BOS (${uploadedVoiceRef.current.duration.toFixed(
+                  1
+                )} dtk) — potongan mengikuti jeda hening, gaya visual episode tetap dipakai...`
+              : `Merender TikTok Vertical 9:16 preset ${activePreset.toUpperCase()} (WebCodecs MP4 H.264/AAC + Audio Ducking + QC Aktual)...`
           );
 
           try {
@@ -977,6 +1060,7 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
               {
                 qualityPreset: activePreset,
                 signal: abortCtrl.signal,
+                voiceTrack: uploadedVoiceRef.current,
               }
             );
             renderAbortRef.current = null;
@@ -1762,6 +1846,9 @@ export function AgencyProvider({ children }: { children: React.ReactNode }) {
         renderProgress,
         exportQualityPreset,
         setExportQualityPreset,
+        uploadedVoiceInfo: uploadedVoice?.info ?? null,
+        uploadVoiceFile,
+        clearUploadedVoice,
         cancelActiveRender,
         runningDivision,
         autoPilotEnabled,

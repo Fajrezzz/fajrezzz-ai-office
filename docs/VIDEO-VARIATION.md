@@ -104,3 +104,28 @@ ZINE_EP=32 ZINE_OUT=.zine-preview/b npm run preview:zine -- "BAGAIMANA AI MEMBAC
 - layout berotasi 4 mode dan kembali di scene ke-4,
 - tipografi berotasi 3 gaya, transisi 4 gaya,
 - rotasi kartu ±3.4° dan `darkSceneEvery ∈ {0,3}` (tidak ada frame acak di luar batas aman).
+
+---
+
+# 8. Fallback: edit dari rekaman suara Bos
+
+Bos tidak harus menunggu TTS. Di panel **Kids Studio** ada kartu
+**"🎙️ Pakai Rekaman Suara Bos (opsional)"**:
+
+1. Pilih file MP3/WAV/M4A → di-decode di browser (`AudioContext.decodeAudioData`).
+2. `detectSpeechSegments()` mencari bagian bersuara (RMS per jendela 20 ms,
+   ambang −38 dBFS, segmen < 0,18 s dibuang, jeda < 0,16 s digabung).
+3. `planUploadedTimeline()` membagi rekaman ke jumlah adegan naskah, bobot =
+   panjang narasi tiap adegan, lalu **tiap titik potong digeser ke tengah jeda
+   hening terdekat** (maks 1,1 s) — jadi tidak ada kata yang terpotong.
+4. `runEditingDivisionBrowser({ voiceTrack })` memotong rekaman per adegan
+   (`sliceAudioBuffer`) dan memakainya sebagai voice track. TTS **tidak dipanggil**.
+5. Gaya visual tetap milik episode (lihat bagian 1–4), file keluar sebagai
+   `audio-bos-ep-XX-….mp4`.
+
+Ringkasan di UI: `24,0 dtk · 5 adegan · 82% bersuara` — jadi kelihatan kalau
+rekamannya banyak hening atau terlalu pendek (< 3 dtk ditolak).
+
+Dijaga `tests/uploaded-audio-plan-v9.test.ts` (10 tes): deteksi segmen, klik/napas
+dibuang, cut menempel jeda hening, cut selalu monoton naik, durasi menjumlah tepat
+ke durasi rekaman, serta penolakan audio kosong.

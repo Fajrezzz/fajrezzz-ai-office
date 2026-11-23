@@ -136,6 +136,9 @@ export function KidsStudioPanel() {
     renderProgress,
     exportQualityPreset,
     setExportQualityPreset,
+    uploadedVoiceInfo,
+    uploadVoiceFile,
+    clearUploadedVoice,
     cancelActiveRender,
     runningDivision,
     autoPilotEnabled,
@@ -165,6 +168,33 @@ export function KidsStudioPanel() {
   const [manualOverrideOpen, setManualOverrideOpen] = useState(false);
   const [studioTab, setStudioTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [longTermMem, setLongTermMem] = useState<AgentLongTermMemoryState | null>(null);
+  const [voiceUploadState, setVoiceUploadState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [voiceUploadError, setVoiceUploadError] = useState<string | null>(null);
+  const voiceInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleVoiceUpload = async (file: File | null | undefined) => {
+    if (!file) return;
+    setVoiceUploadState("loading");
+    setVoiceUploadError(null);
+    try {
+      await uploadVoiceFile(file);
+      setVoiceUploadState("ready");
+    } catch (err) {
+      setVoiceUploadState("error");
+      setVoiceUploadError(
+        err instanceof Error ? err.message : "Audio tidak bisa dibaca."
+      );
+    }
+  };
+
+  const resetVoiceUpload = () => {
+    clearUploadedVoice();
+    setVoiceUploadState("idle");
+    setVoiceUploadError(null);
+    if (voiceInputRef.current) voiceInputRef.current.value = "";
+  };
 
   useEffect(() => {
     setLongTermMem(loadLongTermMemory());
@@ -516,6 +546,64 @@ export function KidsStudioPanel() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Fallback: pakai rekaman suara Bos sendiri (edit dari audio) */}
+          <div className="mt-2.5 rounded-xl border border-slate-700 bg-slate-900/60 p-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-bold text-slate-300">
+                🎙️ Pakai Rekaman Suara Bos (opsional)
+              </div>
+              <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] text-slate-400">
+                gaya zine episode tetap dipakai
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+              Upload voice note / rekaman (MP3, WAV, M4A). Video dipotong mengikuti jeda
+              hening rekaman, bukan menimpa suara TTS. Teks di layar tetap dari naskah
+              episode — jadi bacakan naskah itu saat merekam.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                ref={voiceInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => void handleVoiceUpload(e.target.files?.[0])}
+              />
+              <button
+                type="button"
+                disabled={voiceUploadState === "loading" || runningDivision === "editing"}
+                onClick={() => voiceInputRef.current?.click()}
+                className="rounded-xl border border-cyan-400/50 bg-cyan-500/15 px-3 py-1 text-[11px] font-black text-cyan-100 transition hover:bg-cyan-500/25 disabled:opacity-50"
+              >
+                {voiceUploadState === "loading" ? "Membaca audio…" : "Pilih file audio"}
+              </button>
+              {uploadedVoiceInfo && (
+                <>
+                  <span className="max-w-[190px] truncate text-[10px] font-mono text-emerald-200">
+                    {uploadedVoiceInfo.fileName}
+                  </span>
+                  <span className="text-[10px] text-slate-300">{uploadedVoiceInfo.summary}</span>
+                  <button
+                    type="button"
+                    onClick={resetVoiceUpload}
+                    className="rounded-lg border border-slate-700 px-2 py-0.5 text-[10px] font-bold text-slate-300 hover:border-rose-400/60 hover:text-rose-200"
+                  >
+                    Hapus
+                  </button>
+                </>
+              )}
+            </div>
+            {voiceUploadError && (
+              <p className="mt-1 text-[10px] font-semibold text-rose-300">{voiceUploadError}</p>
+            )}
+            {uploadedVoiceInfo && (
+              <p className="mt-1 text-[10px] text-emerald-300/90">
+                ✓ Divisi Editing akan memakai rekaman ini (Divisi Suara tidak perlu dijalankan).
+                Butuh naskah episode minimal 4 adegan.
+              </p>
+            )}
           </div>
 
           {/* Live Android-Safe Render Progress Bar + ETA + Safe Cancel */}
