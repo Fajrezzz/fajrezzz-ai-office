@@ -153,8 +153,12 @@ export function stepLift(
         // sudah di lantai tujuan → buka pintu
         next = { ...next, phase: "doors_opening", phaseSec: 0, targetFloor: target };
         next.queue = next.queue.slice(1);
+      } else if (next.doorOpen > 0.02) {
+        // pintu masih terbuka → tutup dulu, baru jalan
+        next = { ...next, phase: "doors_closing", phaseSec: 0, targetFloor: target };
       } else {
-        next = { ...next, phase: "doors_closing", phaseSec: 0, doorOpen: 0, targetFloor: target };
+        // pintu sudah tertutup → langsung jalan (tidak ada jeda tutup palsu 0,9 dtk)
+        next = { ...next, phase: "moving", phaseSec: 0, travel: 0, targetFloor: target, doorOpen: 0 };
       }
       break;
     }

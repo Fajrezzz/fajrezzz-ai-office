@@ -49,7 +49,7 @@ export function LiftRideHUD({ compact = false }: { compact?: boolean }) {
   const arrow = status.direction === 1 ? "▲" : status.direction === -1 ? "▼" : "●";
 
   return (
-    <div className="pointer-events-auto absolute bottom-3 left-3 z-20 select-none">
+    <div className="pointer-events-auto absolute left-3 top-1/2 z-20 -translate-y-1/2 select-none">
       {!open ? (
         <button
           type="button"

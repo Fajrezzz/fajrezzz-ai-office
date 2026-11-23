@@ -155,8 +155,19 @@ test("v9.3 lift: snapshot status siap tampil di HUD", () => {
   assert.match(snap.label, /Siap · L1/);
   assert.ok(snap.etaSec > 0, "harus ada ETA walau belum jalan");
 
-  const closing = stepLift(s, 0.1);
-  assert.equal(closing.targetFloor, 2);
+  // pintu masih tertutup → langsung jalan, tanpa jeda tutup palsu
+  const started = stepLift(s, 0.1);
+  assert.equal(started.targetFloor, 2);
+  assert.equal(started.phase, "moving");
+  assert.match(liftStatusSnapshot(started).label, /^Naik ke L2/);
+
+  // kalau pintu sedang terbuka di lantai yang sama, tutup dulu baru jalan
+  let openDoors = requestLiftFloor(createLiftState(1), 1);
+  openDoors = runUntil(openDoors, (v) => v.phase === "dwell");
+  const next = requestLiftFloor(openDoors, 3);
+  // pintu masih terbuka → tunggu dwell selesai, lalu tutup dulu sebelum jalan
+  const closing = runUntil(next, (v) => v.phase === "doors_closing");
+  assert.equal(closing.targetFloor, 3);
   assert.match(liftStatusSnapshot(closing).label, /Pintu menutup/);
   const moving = runUntil(s, (v) => v.phase === "moving");
   const movingSnap = liftStatusSnapshot(moving);
