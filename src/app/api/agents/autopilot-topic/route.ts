@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
 import { buildInstalledSkillsPrompt } from "@/lib/ai/github-skills-registry";
+import {
+  buildRecencyPromptBlock,
+  classifyRecency,
+  summarizeRecency,
+} from "@/lib/ai/research-recency";
 import { fetchLiveAiTrends } from "@/lib/ai/trend-intelligence";
 import type { PublishPlatform } from "@/lib/kids-studio/episode-brain";
 import type {
@@ -137,7 +142,17 @@ export async function POST(req: Request) {
 
     // 1. REAL TREND INTELLIGENCE: Fetch verified official GitHub releases & fresh community discussions!
     const trendReport = await fetchLiveAiTrends(90);
-    const topTrends = trendReport.items.slice(0, 8);
+    // v9.3 (last30days): tren ≤ 30 hari didahulukan, yang lebih tua tetap ada
+    // tapi ditandai umurnya supaya agent tidak mengklaim "baru" untuk berita lama.
+    const recency = summarizeRecency(
+      trendReport.items.map((t) => ({ name: t.sourceName, publishedAt: t.publishedAt }))
+    );
+    const freshFirst = [...trendReport.items].sort((a, b) => {
+      const rank = (p: string) =>
+        classifyRecency(p) === "fresh" ? 0 : classifyRecency(p) === "current" ? 1 : 2;
+      return rank(a.publishedAt) - rank(b.publishedAt);
+    });
+    const topTrends = freshFirst.slice(0, 8);
 
     const { promptBlock, activeSkillRepos } =
       buildInstalledSkillsPrompt("autopilot");
@@ -146,6 +161,9 @@ export async function POST(req: Request) {
 PRIORITAS MUTLAK: Konten TikTok Vertical 9:16 (20–60 detik) khusus topik AI AGENT, CLAUDE CODE, AI CODING, MULTI-AGENT SYSTEMS, AI AUTOMATION, TERMINAL & GITHUB WORKFLOW, serta UPDATE AI TERKINI.
 
 ${promptBlock}
+${buildRecencyPromptBlock()}
+
+KESEGARAN SUMBER HARI INI: ${recency.verdict} (${recency.fresh} segar / ${recency.current} ≤30 hari / ${recency.stale} basi).
 
 ATURAN INTEGRITAS KETAT (WAJIB):
 1. Platform SELALU "tiktok" (Vertical 9:16). JANGAN pernah pilih YouTube landscape.
@@ -154,7 +172,8 @@ ATURAN INTEGRITAS KETAT (WAJIB):
 4. Jika tersedia daftar "TREN TERVERIFIKASI ONLINE" di bawah, pilih dan rujuk salah satu sumber resmi/komunitas yang belum dibahas di daftar topik lama, dan sertakan "sourceIndex" yang sesuai (0..N-1).
 5. Jika daftar tren kosong, fokus pada tutorial/eksperimen/perbandingan arsitektur AI Agent & Claude Code yang faktual dan tandai "sourceIndex": -1.
 6. DILARANG mengulang topik yang mirip dengan daftar topik sebelumnya.
-7. Balas HANYA JSON valid:
+7. Pilih sumber yang paling SEGAR (≤ 30 hari) bila kualitasnya setara; kalau memakai sumber lebih tua, sebutkan umurnya di reasoning.
+8. Balas HANYA JSON valid:
 {
   "theme": "Topik TikTok 9:16 spesifik 1 kalimat tentang AI Agent / Claude Code / AI Coding",
   "niche": "Nama sub-niche singkat (misal: Claude Code Workflow / Breaking AI Agent)",

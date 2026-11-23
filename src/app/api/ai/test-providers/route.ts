@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import {
   callCentralAIRouter,
   classifyAiTask,
+  classifyProviderError,
+  describeProviderError,
   getConfiguredProvidersStatus,
   isProviderConfigured,
+  sanitizeErrorMessage,
   summarizeProviderFailures,
   type LlmProviderId,
   type ProviderAttempt,
@@ -20,6 +23,11 @@ interface SingleProviderProbeResult {
   durationMs: number;
   replyPreview: string | null;
   error: string | null;
+  /** Kelas error (KEY_INVALID / OVERLOADED / MODEL_GONE / ...) untuk menjelaskan ke Bos. */
+  errorClass?: string | null;
+  errorHint?: string | null;
+  /** v9.4d — pesan mentah (sudah disanitasi) supaya Bos & agent bisa melihat sebab asli. */
+  rawError?: string | null;
   attempts?: ProviderAttempt[];
 }
 
@@ -98,6 +106,15 @@ export async function POST(request: Request) {
         error: null,
       });
     } else {
+      const lastFailure = [...res.attempts].reverse().find((a) => !a.ok);
+      const errorClass = classifyProviderError(lastFailure?.status, lastFailure?.error ?? res.error);
+      // v9.4c — pesan 429 kuota gratis harian tidak boleh terbaca "key rusak".
+      const detail = describeProviderError(
+        lastFailure?.status,
+        [lastFailure?.error, res.error, ...(res.attempts ?? []).map((a) => a.error ?? "")]
+          .filter(Boolean)
+          .join(" | ")
+      );
       results.push({
         provider,
         configured: true,
@@ -107,6 +124,11 @@ export async function POST(request: Request) {
         durationMs: Date.now() - start,
         replyPreview: null,
         error: res.error,
+        errorClass,
+        errorHint: detail.hint,
+        rawError: sanitizeErrorMessage(
+          [lastFailure?.error, res.error].filter(Boolean).join(" | ") || "gagal tanpa pesan"
+        ),
         attempts: res.attempts,
       });
     }

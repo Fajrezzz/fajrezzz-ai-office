@@ -7,6 +7,7 @@ import { AlertTriangle, Box, RotateCcw } from "lucide-react";
 import { OfficeScene } from "@/components/office3d/OfficeScene";
 import { NandaSimulatorHUD } from "@/components/office3d/NandaSimulatorHUD";
 import { SceneControlsHUD } from "@/components/office3d/SceneControlsHUD";
+import { LiftRideHUD } from "@/components/office3d/LiftRideHUD";
 import { useOffice } from "@/store/OfficeContext";
 import { resolvePixelRatio } from "@/lib/perf/render-telemetry";
 
@@ -174,6 +175,7 @@ export function VirtualOfficeCanvas({
           </Canvas>
           <NandaSimulatorHUD />
           <SceneControlsHUD compact={compactHud} />
+          <LiftRideHUD compact={compactHud} />
         </CanvasErrorBoundary>
       )}
     </div>

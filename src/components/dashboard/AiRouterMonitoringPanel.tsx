@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Bot,
   CheckCircle2,
+  Clock,
   Cpu,
   ExternalLink,
   FlaskConical,
@@ -23,6 +24,29 @@ import type {
   RouterTelemetrySnapshot,
 } from "@/lib/ai/llm-provider";
 import type { AutonomousTaskExecutionReport } from "@/lib/ai/autonomous-agent-engine";
+
+/**
+ * v9.4c — contoh nama model yang benar per provider. Sebelumnya panel selalu
+ * menyarankan `gemini-flash-latest`, bahkan untuk OpenRouter (salah alamat).
+ */
+function modelEnvExample(provider: string): string {
+  switch (provider) {
+    case "gemini":
+      return "gemini-flash-latest";
+    case "groq":
+      return "openai/gpt-oss-120b";
+    case "openrouter":
+      return "lihat model :free yang masih hidup di openrouter.ai/models";
+    default:
+      return "nama model dari halaman /models provider";
+  }
+}
+
+/** 429 kuota gratis harian (OpenRouter `free-models-per-day`) — bukan key rusak. */
+function freeModelsPerDay(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return /free-models-per-day|free model requests per (day|24 ?h)|daily (free )?quota/i.test(text);
+}
 
 interface AiStatusApiResponse {
   ok: boolean;
@@ -50,6 +74,9 @@ interface ProviderTestResponse {
     durationMs: number;
     replyPreview: string | null;
     error: string | null;
+    errorClass?: string | null;
+    errorHint?: string | null;
+    rawError?: string | null;
   }>;
   routingVerification?: {
     reasoningTask: { primaryProvider: string; taskType: string; reason: string };
@@ -420,6 +447,18 @@ export function AiRouterMonitoringPanel() {
         )}
 
         {/* 3 Primary Provider Cards: Gemini, Groq, OpenRouter */}
+        <div className="mt-3 flex items-start gap-1.5 rounded-xl border border-cyan-400/25 bg-cyan-950/20 p-2.5 text-[11px] text-cyan-100">
+          <Activity className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <span>
+            <strong className="font-bold">Cara baca panel ini:</strong> error{" "}
+            <code className="font-mono font-bold">503</code> /{" "}
+            <code className="font-mono font-bold">429</code> berarti provider sedang sibuk atau
+            kuota gratis habis — <strong>API key tetap sehat</strong>. Hanya{" "}
+            <code className="font-mono font-bold">401/403</code> yang berarti key bermasalah.
+            Router otomatis pindah provider, jadi fitur AI tetap jalan.
+          </span>
+        </div>
+
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {triadProviders.map((p) => (
             <div
@@ -453,6 +492,51 @@ export function AiRouterMonitoringPanel() {
                 Model: {p.activeModel}
               </div>
 
+              {p.configured && (
+                <div
+                  className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    p.lastErrorClass === "KEY_INVALID" || !p.keyHealthy
+                      ? "bg-rose-500/20 text-rose-200"
+                      : "bg-emerald-500/15 text-emerald-300"
+                  }`}
+                >
+                  {p.lastErrorClass === "KEY_INVALID" || !p.keyHealthy ? (
+                    <>
+                      <ShieldAlert className="h-3 w-3" /> KEY DITOLAK
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-3 w-3" /> API KEY SEHAT
+                    </>
+                  )}
+                </div>
+              )}
+
+              {p.dailyQuotaExhausted && (
+                <div className="mt-1 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-200">
+                  <Clock className="h-3 w-3" /> KUOTA HARIAN HABIS
+                </div>
+              )}
+
+              {p.lastErrorHuman && p.lastErrorClass && (
+                <div className="mt-2 rounded-lg border border-slate-500/25 bg-slate-900/60 px-2 py-1.5 text-[10px] text-slate-200">
+                  <strong className="font-bold text-white">
+                    {p.dailyQuotaExhausted
+                      ? "Kuota gratis harian habis (bukan key rusak):"
+                      : p.lastErrorClass === "OVERLOADED"
+                        ? "Provider sibuk:"
+                        : p.lastErrorClass === "RATE_LIMIT"
+                          ? "Kuota sementara habis:"
+                          : p.lastErrorClass === "MODEL_GONE"
+                            ? "Nama model tidak ada:"
+                            : p.lastErrorClass === "KEY_INVALID"
+                              ? "Key ditolak:"
+                              : "Error:"}
+                  </strong>{" "}
+                  {p.lastErrorHuman}
+                </div>
+              )}
+
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-slate-300">
                 <div>
                   Latency:{" "}
@@ -461,7 +545,7 @@ export function AiRouterMonitoringPanel() {
                   </strong>
                 </div>
                 <div>
-                  Error Rate:{" "}
+                  Error rate (total):{" "}
                   <strong className="text-white">{p.errorRatePct}%</strong>
                 </div>
                 <div>
@@ -491,9 +575,52 @@ export function AiRouterMonitoringPanel() {
                 </div>
               )}
 
+              {p.deprecatedModels && p.deprecatedModels.length > 0 && (
+                <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-400/35 bg-amber-950/35 px-2 py-1.5 text-[10px] text-amber-200">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span className="min-w-0">
+                    <strong className="font-bold">Nama model sudah tidak tersedia (404):</strong>{" "}
+                    <span className="font-mono break-all">{p.deprecatedModels.join(", ")}</span>
+                    <br />
+                    Ini <strong>bukan</strong> masalah API key — key-nya tetap dipakai untuk
+                    model pengganti. Router otomatis pindah model. Kalau perlu ganti permanen,
+                    set{" "}
+                    <code className="font-mono font-bold">{p.modelEnvVar}</code> di Vercel
+                    (contoh: <code className="font-mono">{modelEnvExample(p.provider)}</code>).
+                    <br />
+                    Router juga sudah otomatis memakai daftar model <em>live</em> dari{" "}
+                    <code className="font-mono">/models</code> provider, jadi nama basi seperti
+                    daftar di atas tidak dicoba lagi.
+                  </span>
+                </div>
+              )}
+
+              <a
+                href={`/api/ai/model-catalog?provider=${p.provider}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-950/40 px-2 py-0.5 text-[10px] font-bold text-cyan-200"
+              >
+                <FlaskConical className="h-3 w-3" /> Cek katalog model {p.provider}
+              </a>
+
               {p.lastError && (
-                <div className="mt-2 truncate rounded-lg border border-rose-500/30 bg-rose-950/30 px-2 py-1 text-[10px] text-rose-200">
-                  Last error: {p.lastError}
+                <div
+                  className="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/30 px-2 py-1 text-[10px] text-rose-200"
+                  title={p.lastError}
+                >
+                  <span className="line-clamp-2 break-words">Last error: {p.lastError}</span>
+                  {/\b(404)\b|not found|is not supported/i.test(p.lastError) && (
+                    <span className="mt-1 block font-semibold text-amber-200">
+                      Model ini tidak dikenali provider → lihat catatan model 404 di atas.
+                    </span>
+                  )}
+                  {freeModelsPerDay(p.lastError) && (
+                    <span className="mt-1 block font-semibold text-amber-200">
+                      Kuota gratis harian habis (429) — bukan key rusak. Reset 00:00 UTC atau
+                      beli kredit ≥10 USD di OpenRouter untuk 1.000 req/hari.
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -547,6 +674,20 @@ export function AiRouterMonitoringPanel() {
                     <div className="mt-0.5 truncate font-mono text-[10px] opacity-85">
                       {r.model ?? r.error ?? "–"}
                     </div>
+                    {!r.ok && r.errorHint && (
+                      <div className="mt-1 rounded border border-white/15 bg-black/25 px-1.5 py-1 text-[10px] font-medium opacity-95">
+                        {r.errorHint}
+                      </div>
+                    )}
+                    {/* v9.4d — sebab asli dari provider, biar tidak menebak lagi */}
+                    {!r.ok && r.rawError && (
+                      <div
+                        className="mt-1 max-h-20 overflow-y-auto rounded border border-white/10 bg-black/40 px-1.5 py-1 font-mono text-[9px] leading-snug opacity-80"
+                        title={r.rawError}
+                      >
+                        {r.rawError}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

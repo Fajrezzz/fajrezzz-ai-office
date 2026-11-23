@@ -26,3 +26,28 @@ Serverless, Rp 0).
 Perlu **Render Worker** (bukan Vercel): Docker image berisi Python 3.11 + Chromium + OpenViking
 + PostgreSQL. Alur aplikasi sudah disiapkan lewat `service-adapter` sehingga tinggal mengisi
 `OPENVIKING_URL` / `BROWSER_USE_URL` saat worker tersedia.
+
+---
+
+# 4 Repo Baru (Skill Packs v9.3) — 23 Nov 2026
+
+Bos kirim 4 repo lagi. Statusnya jujur, sama seperti 7 repo sebelumnya: yang bisa jalan
+di Next.js + Vercel dipasang sebagai kode nyata; yang butuh worker/binari dicatat sebagai
+referensi dan **tidak** diklaim aktif.
+
+| # | Repo | Status di aplikasi | Yang benar-benar dipakai |
+|---|---|---|---|
+| 8 | `blader/humanizer` | **Aktif (adapter)** | `src/lib/ai/writing-humanizer.ts` — `detectAiTells()` mendeteksi 11 pola tulisan AI (pembuka asisten, "di era digital ini", "bukan hanya X tetapi juga Y", em dash berlebih, "mari kita", "!!"), `humanizeText()` memperbaiki yang mekanis, `humanizeSceneNarrations()` dipanggil di Divisi Naskah sebelum TTS/timeline. Prinsip "jangan mengubah tulisan manusia yang sudah wajar" diikuti: teks bersih tetap dibiarkan. |
+| 9 | `nextlevelbuilder/ui-ux-pro-max-skill` | **Aktif (adapter)** | `src/lib/ai/design-intelligence.ts` — playbook per tipe produk (palet, skala teks, aturan layout, anti-pattern), `contrastRatio()` + `wcagLevel()` (WCAG 2.x asli), `auditDesign()` untuk kontras/target sentuh 44px/ukuran teks. Dipakai sebagai direktif prompt desain + unit test yang menjaga warna panel Kids Studio tetap lulus kontras. |
+| 10 | `mvanhorn/last30days-skill` | **Aktif (adapter)** | `src/lib/ai/research-recency.ts` — `classifyRecency()` (fresh ≤7 hari, current ≤30, stale), `summarizeRecency()` (rasio kesegaran + verdict jujur), `pickFreshSources()`, `buildRecencyPromptBlock()` disuntik ke Divisi Riset & Autopilot. Tren di Autopilot sekarang diurutkan yang paling segar dulu dan diberi tahu kalau mayoritas sumber sudah basi. |
+| 11 | `morluto/rea` | **Reference-only (worker-required)** | Playbook reverse engineering (APK/jadx/apktool, analisis statis, MCP bridge) butuh Android SDK + Frida + worker Linux terpisah. Yang diadopsi hanya disiplinnya: statis dulu, catat hash & versi, jangan menyimpulkan dari satu file, nyatakan batasan alat. Tidak ada tool ofensif yang dipasang. |
+
+## Kode & tes
+
+- `tests/skills-v93.test.ts` — 20 tes: deteksi & perbaikan bau AI, matematika kontras WCAG,
+  audit desain panel nyata (lulus), klasifikasi kesegaran sumber, sortir/pilih sumber segar,
+  dan isi prompt block.
+- Registry prompt bertambah dari 22 → **26 modul** (`src/lib/ai/github-skills-registry.ts`);
+  Divisi Naskah kini menerima direktif `[humanizer]` + `[ui-ux-pro-max]`, Divisi Riset &
+  Autopilot menerima `[last30days]`.
+- Verifikasi: `tsc --noEmit`, `eslint`, `npm test`, `next build` hijau sebelum PR dikirim.

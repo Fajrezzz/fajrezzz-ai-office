@@ -85,3 +85,68 @@ setiap istilah teknis diberi analogi sehari-hari, alur "apa itu → kenapa penti
 kesimpulan", larangan mengarang angka. Di sisi render, frame zine kini menambahkan
 **caption penjelas** (kalimat narasi utuh) di bawah headline, jadi penonton yang mematikan
 suara tetap paham konteks adegan.
+
+---
+
+# v9.3 — Lift yang benar-benar bisa dipakai
+
+**Keluhan Bos:** "lift nya bisa dipakai ya".
+
+**Penyebab:** lift panoramik sebelumnya hanya animasi 20 detik yang berulang sendiri
+(`cycle = t % 20`). Tombol panggil di dinding cuma hiasan, tidak ada hubungan ke kamera
+atau ke lantai mana pun.
+
+**Perbaikan:**
+
+1. `src/lib/office3d/elevator-controller.ts` — state machine murni:
+   `idle → doors_opening → dwell → doors_closing → moving → (arrive)`.
+   Berisi antrean lantai (FIFO, duplikat dibuang), ETA, arah, interpolasi posisi kabin
+   (smoothstep), dan mode ambient yang hanya jalan kalau tidak ada permintaan Bos.
+2. `OfficeArchitecture.tsx` → `PanoramicGlassElevator` sekarang:
+   - membaca permintaan dari `liftRequestRef` (tombol HUD / tombol 3D),
+   - menggerakkan kabin & pintu dari state machine (bukan hitungan detik hard-coded),
+   - saat tiba di lantai tujuan: **kamera ikut pindah lantai** (`setActiveFloor`) dan
+     mencatat aktivitas "Lift tiba di L2",
+   - mempublikasikan status ke HUD ~10×/detik (tidak memicu re-render tiap frame).
+3. Tombol panggil lift di dinding 3D (per lantai) sekarang **bisa diketuk**
+   (`onClick` → `requestFloor`), ukuran panel 0.3 × 0.46 m supaya mudah di HP.
+4. `src/components/office3d/LiftRideHUD.tsx` — panel lift di pojok kiri bawah:
+   tombol L1/L2/L3 (44 px, sesuai audit `ui-ux-pro-max`), indikator arah ▲▼, label status
+   ("Naik ke L3 · 2,4 dtk"), dan tombol nonaktif untuk lantai yang disembunyikan cutaway.
+5. Ambient tetap hidup: kalau tidak ada permintaan, lift naik-turun sendiri seperti dulu
+   (hanya di lantai yang tersedia), lalu berhenti saat Bos menekan tombol.
+
+Dijaga `tests/elevator-controller-v9.test.ts` (11 tes): perjalanan 1 lantai = 2,6 dtk,
+antrean berurutan, pintu 0→1→0 tanpa lompatan, kabin tidak pernah keluar batas lantai,
+ETA menurun saat bergerak, ambient tidak menabrak cutaway, dan dt besar (HP nge-lag)
+tidak merusak state.
+
+---
+
+## v9.4 — Koreksi layout dari 10 screenshot HP
+
+Semua keluhan diambil dari screenshot Bos (22:12–22:14). Prinsip: **kalau objek
+terlihat melayang / berdiri di tengah ruang, objek itu yang dipindah atau dibuang**,
+bukan diberi bantalan baru supaya "kelihatan rapi".
+
+| # | Screenshot | Keluhan | Perbaikan |
+|---|------------|---------|-----------|
+| 1 | 22:12 L1 | Area kebugaran (treadmill, barbell, bench) kosong-melompong | **Dihapus total** dari `InteriorActivityRooms.tsx`. Sayap timur L1 sekarang hanya rig simulator balap, dengan platform + rangka + triple monitor yang menapak lantai |
+| 2 | 22:13 L2 | Meja/tempat ngopi mengambang di tengah ruang | Coffee bar barat & timur digeser dari `x=±12.2` → `x=±17.6` (menempel dinding samping). Zona terlarang `coffee-bar-west/east` ikut dipindah, dan 6 waypoint duduk (`wp-seat-01..03`, `06..08`) + `wp-f2-lounge-w/e` ikut bergeser supaya agen tidak duduk di udara |
+| 3 | 22:13 L2 | Pod ngopi/idle masih di tengah promenade | Pod kolaborasi digeser `±5.4` → `±13.8` (menempel sisi), dan `INTERIOR_SEATS` ikut disesuaikan |
+| 4 | 22:13 L2 | Pot di ujung berpasangan | Pot IndoorPlanter L2: 3 → 1 (dua pot yang tadinya berdiri di area pod dihapus, satu di ujung dipertahankan) |
+| 5 | 22:14 L3 | Kursi dek "kayak mau jatuh" | 6 armchair dengan celah 0,3 m antara base dan dudukan → diganti **pouf modular kuning–abu** yang alasnya menapak lantai. Armchair balkon L2 [-1.6, 4.5] juga disambung tiang penyangga penuh |
+| 6 | 22:14 L3 | Meja lounge diganti model sofa modular (referensi produk) | `LoungeSofaSet` ditulis ulang: sectional bentuk L (3 modul punggung + 2 modul sayap), aksen kuning, **dua meja kopi bulat kecil**, pouf kuning/abu, lampu lantai. Armchair melayang & tanaman sudut dihapus |
+| 7 | 22:14 L3 | Pot di jalur dek | `IndoorPlanter` L3 (2 buah) dihapus; `planter` layout dipindah dari [-17.2, 1.1] ke sudut mati [-17.4, -8.4], pot kedua di [14.2, 3.9] dihapus |
+| 8 | 22:14 Atap | Kursi di atap | Grup lounge atap (sofa + meja) di `CrownSkyDeck.tsx` dihapus; dek hanya helipad, helikopter, lapangan badminton, signage |
+| 9 | 22:12 L1 | Label "Gym & Arcade" | Teleport, nama lokasi, dan narasi agen diganti "Arcade & Racing Sim" |
+
+Dijaga `tests/office-layout-v94.test.ts` (8 tes): grep sumber untuk memastikan geometri gym
+benar-benar hilang, posisi bar/pod/pot/sofa sesuai tabel di atas, dan
+`auditFurnitureLayout` tetap bersih (tidak ada furnitur keluar gedung atau menabrak zona).
+
+Tes total setelah v9.4: **15 suite / 125 tes / 0 gagal**.
+
+Catatan jujur: agent tidak bisa melihat hasil render 3D. Verifikasi visual (warna, proporsi,
+apakah masih ada yang terlihat menggantung dari sudut kamera HP) tetap harus dilakukan Bos
+di preview Vercel.

@@ -303,27 +303,11 @@ export function CrownSkyDeck({
             </group>
           </group>
 
-          {/* Sky lounge sofa + meja (antara helipad & lapangan) */}
-          <group position={[-1.3, 0, 3.4]}>
-            <mesh position={[0, 0.24, 0]} castShadow>
-              <boxGeometry args={[2.9, 0.38, 0.85]} />
-              <meshStandardMaterial color="#f4efe6" roughness={0.86} />
-            </mesh>
-            <mesh position={[0, 0.55, -0.31]} castShadow>
-              <boxGeometry args={[2.9, 0.44, 0.2]} />
-              <meshStandardMaterial color="#e6dfd2" roughness={0.86} />
-            </mesh>
-            <group position={[0, 0, -1.05]}>
-              <mesh position={[0, 0.3, 0]} castShadow>
-                <boxGeometry args={[1.5, 0.07, 0.72]} />
-                <meshStandardMaterial color="#cbd5e1" metalness={0.35} roughness={0.35} />
-              </mesh>
-              <mesh position={[0, 0.15, 0]}>
-                <boxGeometry args={[1.24, 0.3, 0.5]} />
-                <meshStandardMaterial color="#94a3b8" roughness={0.5} />
-              </mesh>
-            </group>
-          </group>
+          {/*
+           * v9.4 — lounge duduk + meja (dulu di [-1.3, 0, 3.4]) DIHAPUS.
+           * Bos: "kursi di atap ilangin" — dek atap dibiarkan bersih, hanya
+           * helipad, lapangan badminton, dan signage.
+           */}
 
           {/* Penerangan atap saat malam */}
           {isNight && (

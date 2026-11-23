@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -10,6 +10,15 @@ import {
   FloorTwoFill,
 } from "@/components/office3d/InteriorFurnishing";
 import { useOffice } from "@/store/OfficeContext";
+import {
+  LIFT_TIMING,
+  createLiftState,
+  liftCabinY,
+  liftStatusSnapshot,
+  requestLiftFloor,
+  stepLift,
+  type LiftFloor,
+} from "@/lib/office3d/elevator-controller";
 import {
   FLOOR_1_Y,
   FLOOR_2_Y,
@@ -314,60 +323,78 @@ function PanoramicGlassElevator({
   const cabinDoorRightRef = useRef<THREE.Mesh>(null);
   const rider1HeadRef = useRef<THREE.Group>(null);
   const rider2HeadRef = useRef<THREE.Group>(null);
+  const liftStateRef = useRef(createLiftState(1));
+  const lastPhaseRef = useRef(liftStateRef.current.phase);
+  const statusTickRef = useRef(0);
+
+  // LIFT BISA DIPAKAI: tombol HUD / tombol 3D menulis ke liftRequestRef,
+  // komponen ini yang menjalankan state machine-nya.
+  const { setActiveFloor, liftRequestRef, liftStatusRef, addActivity } = useOffice();
   const topY = showL3 ? FLOOR_3_Y + 3.65 : showL2 ? FLOOR_2_Y + 3.7 : 3.75;
 
-  useFrame((state) => {
-    if (!cabinRef.current) return;
-    if (!isSimulationRunning) return;
-    const t = state.clock.elapsedTime;
-    const yL1 = FLOOR_1_Y + 0.04;
-    const yL2 = showL2 ? FLOOR_2_Y + 0.04 : yL1;
-    const yL3 = showL3 ? FLOOR_3_Y + 0.04 : yL2;
+  const availableFloors = useMemo<LiftFloor[]>(
+    () => (showL3 ? [1, 2, 3] : showL2 ? [1, 2] : [1]),
+    [showL2, showL3]
+  );
 
-    // 20-second realistic elevator cycle with smooth easing & 2.2s floor stops at L1, L2, L3, L2!
-    const cycle = t % 20;
-    const smooth = (u: number) => {
-      const c = Math.max(0, Math.min(1, u));
-      return c * c * (3 - 2 * c);
-    };
+  const floorY = useMemo<Record<LiftFloor, number>>(
+    () => ({
+      1: FLOOR_1_Y + 0.04,
+      2: showL2 ? FLOOR_2_Y + 0.04 : FLOOR_1_Y + 0.04,
+      3: showL3 ? FLOOR_3_Y + 0.04 : FLOOR_2_Y + 0.04,
+    }),
+    [showL2, showL3]
+  );
 
-    let targetY = yL1;
-    let doorOpen = 0;
+  const requestFloor = useCallback(
+    (floor: LiftFloor) => {
+      liftRequestRef.current = floor;
+    },
+    [liftRequestRef]
+  );
 
-    if (cycle < 2.2) {
-      // Stopped at L1 (doors open smoothly)
-      targetY = yL1;
-      doorOpen = Math.sin((cycle / 2.2) * Math.PI);
-    } else if (cycle < 5.0) {
-      // Riding UP: L1 -> L2
-      targetY = yL1 + (yL2 - yL1) * smooth((cycle - 2.2) / 2.8);
-    } else if (cycle < 7.2) {
-      // Stopped at L2
-      targetY = yL2;
-      doorOpen = Math.sin(((cycle - 5.0) / 2.2) * Math.PI);
-    } else if (cycle < 10.0) {
-      // Riding UP: L2 -> L3
-      targetY = yL2 + (yL3 - yL2) * smooth((cycle - 7.2) / 2.8);
-    } else if (cycle < 12.2) {
-      // Stopped at L3
-      targetY = yL3;
-      doorOpen = Math.sin(((cycle - 10.0) / 2.2) * Math.PI);
-    } else if (cycle < 15.0) {
-      // Riding DOWN: L3 -> L2
-      targetY = yL3 + (yL2 - yL3) * smooth((cycle - 12.2) / 2.8);
-    } else if (cycle < 17.2) {
-      // Stopped at L2
-      targetY = yL2;
-      doorOpen = Math.sin(((cycle - 15.0) / 2.2) * Math.PI);
-    } else {
-      // Riding DOWN: L2 -> L1
-      targetY = yL2 + (yL1 - yL2) * smooth((cycle - 17.2) / 2.8);
+  useFrame((state, delta) => {
+    // 1. Konsumsi permintaan dari HUD / tombol 3D
+    const requested = liftRequestRef.current;
+    if (requested !== null) {
+      liftRequestRef.current = null;
+      liftStateRef.current = requestLiftFloor(liftStateRef.current, requested, {
+        manual: true,
+      });
     }
 
-    cabinRef.current.position.y = targetY;
+    // 2. Langkah state machine (ambient naik-turun hanya kalau simulasi jalan)
+    let lift = stepLift(liftStateRef.current, delta, {
+      autoCycle: isSimulationRunning,
+      availableFloors,
+    });
+    if (!availableFloors.includes(lift.targetFloor)) {
+      lift = { ...lift, targetFloor: lift.floor };
+    }
 
-    // Slide cabin front glass doors open smoothly at every floor stop
-    const slideOffset = doorOpen * 0.34;
+    // 3. Sampai di lantai tujuan → kamera ikut pindah + catat aktivitas
+    const arrived = lift.phase === "dwell" && lastPhaseRef.current !== "dwell";
+    if (arrived && lift.manualRequest) {
+      const floorView: Record<LiftFloor, FloorView> = { 1: "l1", 2: "l2", 3: "l3" };
+      const arrivedFloor = lift.floor;
+      lift = { ...lift, manualRequest: false };
+      setActiveFloor(floorView[arrivedFloor]);
+      addActivity(
+        "Lift Panoramik",
+        "system",
+        `Lift tiba di L${arrivedFloor} — pintu terbuka, kamera ikut naik.`,
+        "success",
+        "lift"
+      );
+    }
+    lastPhaseRef.current = lift.phase;
+    liftStateRef.current = lift;
+
+    // 4. Terapkan ke scene 3D
+    if (cabinRef.current) {
+      cabinRef.current.position.y = liftCabinY(lift, floorY);
+    }
+    const slideOffset = lift.doorOpen * 0.34;
     if (cabinDoorLeftRef.current) {
       cabinDoorLeftRef.current.position.x = -0.39 - slideOffset;
     }
@@ -375,7 +402,8 @@ function PanoramicGlassElevator({
       cabinDoorRightRef.current.position.x = 0.39 + slideOffset;
     }
 
-    // Subtle natural passenger head/look movement inside the lift
+    // 5. Kepala penumpang hidup (deterministik terhadap waktu)
+    const t = state.clock.elapsedTime;
     if (rider1HeadRef.current) {
       rider1HeadRef.current.rotation.y = Math.sin(t * 0.7) * 0.22;
     }
@@ -383,12 +411,23 @@ function PanoramicGlassElevator({
       rider2HeadRef.current.rotation.y = Math.cos(t * 0.65) * 0.2;
       rider2HeadRef.current.rotation.x = 0.08 + Math.sin(t * 1.1) * 0.04;
     }
+
+    // 6. Publish status untuk HUD (~10 Hz, bukan tiap frame)
+    statusTickRef.current += 1;
+    if (statusTickRef.current % 6 === 0) {
+      liftStatusRef.current = liftStatusSnapshot(lift, LIFT_TIMING, availableFloors);
+    }
   });
 
-  const floorLandings = [
-    { label: "L1", y: FLOOR_1_Y, visible: true },
-    { label: "L2", y: FLOOR_2_Y, visible: showL2 },
-    { label: "L3", y: FLOOR_3_Y, visible: showL3 },
+  const floorLandings: Array<{
+    label: string;
+    number: LiftFloor;
+    y: number;
+    visible: boolean;
+  }> = [
+    { label: "L1", number: 1, y: FLOOR_1_Y, visible: true },
+    { label: "L2", number: 2, y: FLOOR_2_Y, visible: showL2 },
+    { label: "L3", number: 3, y: FLOOR_3_Y, visible: showL3 },
   ];
 
   return (
@@ -480,19 +519,48 @@ function PanoramicGlassElevator({
                 />
               </mesh>
             ))}
-            {/* Illuminated Call Button Panel on Right Jamb */}
-            <mesh position={[0.98, 1.18, 0.07]}>
-              <boxGeometry args={[0.1, 0.24, 0.03]} />
-              <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.35} />
-            </mesh>
-            <mesh position={[0.98, 1.22, 0.09]}>
-              <sphereGeometry args={[0.018, 8, 8]} />
-              <meshStandardMaterial
-                color="#38bdf8"
-                emissive="#38bdf8"
-                emissiveIntensity={1.1}
-              />
-            </mesh>
+            {/* Tombol panggil lift yang BISA DIKETUK (target sentuh besar) */}
+            <group
+              position={[1.06, 1.22, 0.12]}
+              onClick={(e) => {
+                e.stopPropagation();
+                requestFloor(fl.number);
+              }}
+              onPointerOver={() => {
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = "auto";
+              }}
+            >
+              <mesh>
+                <boxGeometry args={[0.3, 0.46, 0.06]} />
+                <meshStandardMaterial
+                  color="#0b1220"
+                  emissive="#0ea5e9"
+                  emissiveIntensity={0.28}
+                  metalness={0.5}
+                  roughness={0.35}
+                />
+              </mesh>
+              <mesh position={[0, 0.12, 0.045]}>
+                <sphereGeometry args={[0.036, 12, 12]} />
+                <meshStandardMaterial
+                  color="#38bdf8"
+                  emissive="#38bdf8"
+                  emissiveIntensity={1.8}
+                />
+              </mesh>
+              <Text
+                position={[0, -0.1, 0.045]}
+                fontSize={0.085}
+                color="#e0f2fe"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {fl.label}
+              </Text>
+            </group>
           </group>
         ))}
 
@@ -1266,11 +1334,11 @@ export function OfficeArchitecture({
             <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
+          {/* v9.4 — pot di ujung promenade dikurangi: dari 2 jadi 1 (Bos: "potnya hilangin 1") */}
           <IndoorPlanter position={[-6.4, FLOOR_2_Y, 2.5]} />
-          <IndoorPlanter position={[6.4, FLOOR_2_Y, 2.5]} />
 
           {/* Compact High-Tech Server Cabinet tucked cleanly behind West Coffee Bar */}
-          <group position={[-13.2, FLOOR_2_Y + 1.15, -6.9]}>
+          <group position={[-17.3, FLOOR_2_Y + 1.15, -8.5]}>
             <mesh castShadow>
               <boxGeometry args={[0.72, 2.2, 0.92]} />
               <meshStandardMaterial
@@ -1307,8 +1375,10 @@ export function OfficeArchitecture({
             </group>
           ))}
 
-          {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -12.2) */}
-          <group position={[-12.2, FLOOR_2_Y, -4.6]}>
+          {/* WEST WING (BELAKANG KIRI) ARTISAN COFFEE & LOUNGE BAR (X = -17.6)
+              v9.4 — Bos: "meja/tempat ngopi masih bisa didekatkan ke tembok".
+              Dulunya bar berdiri di tengah ruang (X = -12.2) → sekarang menempel dinding. */}
+          <group position={[-17.6, FLOOR_2_Y, -4.6]}>
             <mesh position={[-0.2, 0.54, 0]} castShadow receiveShadow>
               <boxGeometry args={[1.1, 1.06, 4.8]} />
               <meshStandardMaterial color="#875d39" roughness={0.48} />
@@ -1369,8 +1439,8 @@ export function OfficeArchitecture({
             ))}
           </group>
 
-          {/* East Wing Espresso & Collaboration Bar (X = 12.2) */}
-          <group position={[12.2, FLOOR_2_Y, -4.6]}>
+          {/* East Wing Espresso & Collaboration Bar (X = 17.6) — menempel dinding (v9.4) */}
+          <group position={[17.6, FLOOR_2_Y, -4.6]}>
             <mesh position={[0.2, 0.54, 0]} castShadow receiveShadow>
               <boxGeometry args={[1.1, 1.06, 4.8]} />
               <meshStandardMaterial color="#875d39" roughness={0.48} />
@@ -1588,21 +1658,27 @@ export function OfficeArchitecture({
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>
 
-          <IndoorPlanter position={[-12.6, FLOOR_2_Y, 2.4]} />
-          <IndoorPlanter position={[12.6, FLOOR_2_Y, 2.4]} />
+          {/* v9.4 — 2 pot ini dulu berdiri tepat di area pod yang sekarang digeser
+              ke sisi; dipindah ke ujung lain sudah tidak perlu → dihapus saja. */}
 
-          {/* Balkon Tengah: 1 armchair tambahan (agen duduk ngopi di wp-seat-09) */}
+          {/* Balkon Tengah: 1 armchair (agen duduk ngopi di wp-seat-09).
+              v9.4 — sebelumnya base & dudukan terpisah 0,3 m sehingga kursi tampak
+              melayang/mau jatuh; sekarang disambung tiang penyangga penuh. */}
           <group position={[-1.6, FLOOR_2_Y, 4.5]}>
-            <mesh position={[0, 0.04, 0]}>
-              <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
+            <mesh position={[0, 0.02, 0]} receiveShadow>
+              <cylinderGeometry args={[0.3, 0.32, 0.04, 14]} />
               <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
             </mesh>
-            <mesh position={[0, 0.44, 0]} castShadow>
+            <mesh position={[0, 0.2, 0]} castShadow>
+              <cylinderGeometry args={[0.16, 0.19, 0.36, 12]} />
+              <meshStandardMaterial color="#2b3542" metalness={0.55} roughness={0.42} />
+            </mesh>
+            <mesh position={[0, 0.42, 0]} castShadow>
               <boxGeometry args={[0.52, 0.1, 0.5]} />
               <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
             </mesh>
-            <mesh position={[0, 0.72, -0.22]} castShadow>
-              <boxGeometry args={[0.52, 0.48, 0.09]} />
+            <mesh position={[0, 0.68, -0.22]} castShadow>
+              <boxGeometry args={[0.52, 0.44, 0.09]} />
               <meshStandardMaterial color="#3c4a58" roughness={0.75} />
             </mesh>
           </group>
@@ -1967,46 +2043,52 @@ export function OfficeArchitecture({
             <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
-          <IndoorPlanter position={[-12.4, FLOOR_3_Y, 2.2]} />
-          <IndoorPlanter position={[0.4, FLOOR_3_Y, 2.2]} />
+          {/* v9.4 — pot L3 yang berdiri di jalur dek (lihat screenshot Bos) DIHAPUS */}
 
-          {/* ===== L3 STAFF COFFEE DECK (KIRI) — 6 armchair asli, agen DUDUK saat ngopi ===== */}
-          {[-15.0, -12.5, -10.0, -7.5, -5.0, -2.5].map((sx, si) => (
-            <group key={`l3-staff-seat-${si}`} position={[sx, FLOOR_3_Y, 3.2]}>
-              {/* base */}
-              <mesh position={[0, 0.04, 0]}>
-                <cylinderGeometry args={[0.26, 0.3, 0.05, 10]} />
-                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
-              </mesh>
-              {/* seat */}
-              <mesh position={[0, 0.44, 0]} castShadow>
-                <boxGeometry args={[0.52, 0.1, 0.5]} />
-                <meshStandardMaterial color="#4a5b6b" roughness={0.72} />
-              </mesh>
-              {/* backrest (menghadap -Z) */}
-              <mesh position={[0, 0.72, 0.22]} castShadow>
-                <boxGeometry args={[0.52, 0.48, 0.09]} />
-                <meshStandardMaterial color="#3c4a58" roughness={0.75} />
-              </mesh>
-              {/* sandaran tangan */}
-              {[-0.28, 0.28].map((ax, ai) => (
-                <mesh key={ai} position={[ax, 0.6, 0]}>
-                  <boxGeometry args={[0.07, 0.1, 0.44]} />
-                  <meshStandardMaterial color="#2b3542" roughness={0.65} />
+          {/* ===== L3 STAFF COFFEE DECK (KIRI) — pouf rendah yang menapak lantai =====
+              v9.4: 6 armchair lama punya celah 0,3 m antara base & dudukan sehingga
+              tampak "mau jatuh / melayang". Sekarang diganti pouf modular kuning–abu
+              (referensi sofa modular kantor) yang duduk penuh di lantai. */}
+          {[-15.0, -12.5, -10.0, -7.5, -5.0, -2.5].map((sx, si) => {
+            const accent = si % 2 === 0;
+            return (
+              <group key={`l3-staff-seat-${si}`} position={[sx, FLOOR_3_Y, 3.2]}>
+                {/* alas kayu penuh di lantai */}
+                <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.66, 0.08, 0.62]} />
+                  <meshStandardMaterial color="#2a2f38" roughness={0.7} metalness={0.12} />
                 </mesh>
-              ))}
-            </group>
-          ))}
-          {/* 2 meja kopi rendah */}
+                {/* dudukan empuk — tepat di atas alas, tanpa celah */}
+                <mesh position={[0, 0.22, 0]} castShadow>
+                  <boxGeometry args={[0.62, 0.28, 0.58]} />
+                  <meshStandardMaterial color={accent ? "#e6c34a" : "#5b6472"} roughness={0.86} />
+                </mesh>
+                {/* sandaran rendah */}
+                <mesh position={[0, 0.46, 0.24]} castShadow>
+                  <boxGeometry args={[0.62, 0.2, 0.1]} />
+                  <meshStandardMaterial color={accent ? "#d4b03c" : "#4a5260"} roughness={0.88} />
+                </mesh>
+              </group>
+            );
+          })}
+          {/* 2 meja kopi bulat putih (referensi modular sofa: meja kecil, bukan meja panjang) */}
           {[-13.75, -8.75].map((tx, ti) => (
             <group key={`l3-staff-table-${ti}`} position={[tx, FLOOR_3_Y, 2.1]}>
-              <mesh position={[0, 0.4, 0]} castShadow>
-                <boxGeometry args={[1.9, 0.07, 0.8]} />
-                <meshStandardMaterial color="#8a6a4a" roughness={0.5} />
+              <mesh position={[0, 0.02, 0]}>
+                <cylinderGeometry args={[0.26, 0.28, 0.04, 16]} />
+                <meshStandardMaterial color="#2a2f38" metalness={0.55} roughness={0.4} />
               </mesh>
-              <mesh position={[0, 0.2, 0]}>
-                <boxGeometry args={[0.16, 0.4, 0.16]} />
-                <meshStandardMaterial color="#1f2530" metalness={0.6} roughness={0.4} />
+              <mesh position={[0, 0.22, 0]}>
+                <cylinderGeometry args={[0.035, 0.045, 0.4, 10]} />
+                <meshStandardMaterial color="#2a2f38" metalness={0.55} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0.44, 0]} castShadow receiveShadow>
+                <cylinderGeometry args={[0.46, 0.46, 0.05, 22]} />
+                <meshStandardMaterial color="#f5f3ee" roughness={0.32} />
+              </mesh>
+              <mesh position={[0.22, 0.5, 0.1]}>
+                <cylinderGeometry args={[0.045, 0.04, 0.09, 12]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.28} />
               </mesh>
             </group>
           ))}
