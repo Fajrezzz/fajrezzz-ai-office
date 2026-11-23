@@ -161,7 +161,7 @@ ATURAN INTEGRITAS KETAT (WAJIB):
   "reasoning": "Alasan objektif pemilihan topik berdasarkan nilai edukasi & retensi penonton",
   "viralHookPreview": "Hook 0-2 detik pertama yang langsung menghentikan scrolling tanpa clickbait bohong",
   "contentFormat": "breaking_ai_news | ai_tools_must_know | claude_code_experiment | ai_agent_vs_human | before_after_automation | ai_coding_tutorial | ai_agent_builds_project | myth_vs_reality | surprising_experiment | feature_visual_demo",
-  "visualStyle": "dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
+  "visualStyle": "zine_glitch | dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
   "sourceIndex": 0
 }`;
 

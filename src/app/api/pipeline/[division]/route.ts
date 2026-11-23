@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callFreeTierLLM } from "@/lib/ai/llm-provider";
+import { buildResearchRigorPrompt } from "@/lib/ai/research-rigor";
 import { buildInstalledSkillsPrompt } from "@/lib/ai/github-skills-registry";
 import { fetchLiveAiTrends } from "@/lib/ai/trend-intelligence";
 import {
@@ -346,6 +347,8 @@ export async function POST(
 
 ${researchSkills.promptBlock}
 
+${buildResearchRigorPrompt()}
+
 ATURAN WAJIB:
 - Fokus 100% TikTok Vertical 9:16 (20–60 detik).
 - JANGAN mengarang fitur Claude Code / AI Agent yang tidak nyata.
@@ -367,7 +370,7 @@ Balas HANYA dalam JSON valid:
       "hook3s": "Hook 0-2 detik yang langsung menghentikan scrolling",
       "targetAge": "Developer, Kreator AI & Tech Enthusiast 18-38 tahun",
       "contentFormat": "breaking_ai_news | ai_tools_must_know | claude_code_experiment | ai_agent_vs_human | before_after_automation | ai_coding_tutorial | ai_agent_builds_project | myth_vs_reality | surprising_experiment | feature_visual_demo",
-      "visualStyle": "dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
+      "visualStyle": "zine_glitch | dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
       "whyChosen": "Alasan objektif topik ini kuat untuk retensi penonton",
       "sourceIndex": 0
     }
@@ -641,7 +644,7 @@ Balas HANYA JSON valid:
   "setting": "Gaya visual utama",
   "supportingCharacter": "Studi kasus / contoh teknis",
   "moralLesson": "Kesimpulan payoff utama",
-  "visualStyle": "dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
+  "visualStyle": "zine_glitch | dark_ai_cinematic | tech_documentary | cyberpunk_dev | clean_tutorial | agent_3d_network | minimal_kinetic | high_energy_news",
   "contentFormat": "breaking_ai_news | ai_tools_must_know | claude_code_experiment | ai_agent_vs_human | before_after_automation | ai_coding_tutorial | ai_agent_builds_project | myth_vs_reality | surprising_experiment | feature_visual_demo",
   "scenes": [
     {

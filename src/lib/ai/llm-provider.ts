@@ -231,10 +231,133 @@ export function sanitizeErrorMessage(input: string): string {
     .slice(0, 260);
 }
 
+/**
+ * Ringkasan kegagalan yang bisa ditindaklanjuti: satu baris per provider.
+ * Tanpa ini UI hanya bilang "semua provider gagal" dan Bos tidak tahu sebabnya.
+ */
+export function summarizeProviderFailures(
+  attempts: ProviderAttempt[],
+  maxLength = 460
+): string {
+  if (attempts.length === 0) return "Tidak ada provider yang benar-benar dicoba.";
+  const perProvider = new Map<LlmProviderId, string>();
+  for (const attempt of attempts) {
+    if (attempt.ok) continue;
+    if (perProvider.has(attempt.provider)) continue;
+    const reason =
+      attempt.skippedReason === "CIRCUIT_OPEN"
+        ? "circuit breaker terbuka (cooldown)"
+        : attempt.error ?? "gagal tanpa pesan";
+    perProvider.set(
+      attempt.provider,
+      `${attempt.provider}[${attempt.model}]: ${reason}`
+    );
+  }
+  const joined = [...perProvider.values()].join(" · ");
+  return joined.length > maxLength ? `${joined.slice(0, maxLength - 1)}…` : joined;
+}
+
 /** Enforces that OpenRouter only invokes free models unless explicitly overridden */
 export function isOpenRouterFreeModel(model: string): boolean {
   const clean = model.trim().toLowerCase();
   return clean === "openrouter/free" || clean.endsWith(":free");
+}
+
+/* ============================================================================
+ * LIVE MODEL DISCOVERY — anti "model sudah di-deprecate" (HTTP 404)
+ * ========================================================================== */
+
+interface LiveModelCacheEntry {
+  fetchedAtMs: number;
+  models: string[];
+}
+
+const LIVE_MODEL_CACHE = new Map<LlmProviderId, LiveModelCacheEntry>();
+const LIVE_MODEL_TTL_MS = 10 * 60 * 1000;
+
+const DISCOVERY_ENDPOINTS: Record<LlmProviderId, string> = {
+  gemini: "https://generativelanguage.googleapis.com/v1beta/models",
+  groq: "https://api.groq.com/openai/v1/models",
+  openrouter: "https://openrouter.ai/api/v1/models",
+};
+
+/** Urutan prioritas model murah/cepat per provider saat discovery berhasil. */
+const DISCOVERY_PRIORITY: Record<LlmProviderId, RegExp[]> = {
+  gemini: [/gemini-2\.5-flash-lite/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /flash/i],
+  groq: [/llama-3\.3-70b/i, /gpt-oss-120b/i, /gpt-oss-20b/i, /llama-3\.1-8b/i, /qwen/i, /llama/i],
+  openrouter: [/llama-3\.3-70b[^:]*:free/i, /gemma-3[^:]*:free/i, /qwen[^:]*:free/i, /:free/i],
+};
+
+function scoreDiscoveredModel(provider: LlmProviderId, model: string): number {
+  const list = DISCOVERY_PRIORITY[provider];
+  for (let i = 0; i < list.length; i += 1) {
+    if (list[i].test(model)) return i;
+  }
+  return list.length + 1;
+}
+
+/**
+ * Ambil daftar model yang BENAR-BENAR hidup dari endpoint /models provider.
+ * Soft-fail: kalau gagal, kembalikan [] supaya daftar statis tetap dipakai.
+ */
+export async function discoverLiveModels(
+  provider: LlmProviderId,
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+  nowMs: number = Date.now()
+): Promise<string[]> {
+  const cached = LIVE_MODEL_CACHE.get(provider);
+  if (cached && nowMs - cached.fetchedAtMs < LIVE_MODEL_TTL_MS) {
+    return cached.models;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const url =
+      provider === "gemini" && apiKey
+        ? `${DISCOVERY_ENDPOINTS.gemini}?key=${encodeURIComponent(apiKey)}&pageSize=100`
+        : DISCOVERY_ENDPOINTS[provider];
+    const res = await fetchImpl(url, {
+      method: "GET",
+      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+      signal: controller.signal,
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      data?: { id?: string }[];
+      models?: { name?: string; supportedGenerationMethods?: string[] }[];
+    };
+
+    let models: string[] = [];
+    if (Array.isArray(json.data)) {
+      models = json.data
+        .map((m) => m.id ?? "")
+        .filter(Boolean)
+        .filter((id) => (provider === "openrouter" ? isOpenRouterFreeModel(id) : true));
+    } else if (Array.isArray(json.models)) {
+      models = json.models
+        .filter((m) => m.supportedGenerationMethods?.includes("generateContent") !== false)
+        .map((m) => (m.name ?? "").replace(/^models\//, ""))
+        .filter((id) => /gemini/i.test(id));
+    }
+
+    models = [...new Set(models)]
+      .sort((a, b) => scoreDiscoveredModel(provider, a) - scoreDiscoveredModel(provider, b))
+      .slice(0, 8);
+
+    LIVE_MODEL_CACHE.set(provider, { fetchedAtMs: nowMs, models });
+    return models;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/** Dipakai unit test untuk mengosongkan cache discovery. */
+export function resetLiveModelCache(): void {
+  LIVE_MODEL_CACHE.clear();
 }
 
 /* ============================================================================
@@ -799,6 +922,13 @@ export async function callCentralAIRouter<T = unknown>(
   totalRequests += 1;
   await acquireConcurrencySlot();
 
+  // Vercel Serverless punya batas durasi. Tanpa deadline, rantai 3 provider ×
+  // beberapa model × retry bisa melewati limit fungsi dan berakhir "gagal total"
+  // tanpa pesan jelas. Dengan deadline, kita gagal cepat + pesan actionable.
+  const callStartedAtMs = Date.now();
+  const HARD_DEADLINE_MS = 24_000;
+  let deadlineHit = false;
+
   try {
     for (const target of activeTargets) {
       // Check Circuit Breaker (unless this is the ONLY explicitly targeted provider)
@@ -827,12 +957,35 @@ export async function callCentralAIRouter<T = unknown>(
         modelsToTry = modelsToTry.filter((m) => isOpenRouterFreeModel(m));
       }
 
+      // Model statis bisa sudah di-deprecate. Gabungkan dengan model live dari /models
+      // provider supaya router tidak mati total hanya karena daftar lama (HTTP 404).
+      if (apiKey) {
+        const liveModels = await discoverLiveModels(target.provider, apiKey, fetchImpl);
+        if (liveModels.length > 0) {
+          const merged = [...liveModels, ...modelsToTry];
+          modelsToTry = [...new Set(merged)].slice(0, 6);
+        }
+      }
+
       for (let mIdx = 0; mIdx < modelsToTry.length; mIdx += 1) {
         const model = modelsToTry[mIdx];
-        // 2 retry untuk 5xx/429 (server gratis kadang antre sesaat), 0 untuk error non-transien
-        const maxRetries = 2;
+        // 1 retry untuk 5xx/429 (server gratis kadang antre sesaat), 0 untuk error non-transien.
+        // Dibatasi supaya total waktu tetap di bawah batas fungsi serverless.
+        const maxRetries = 1;
 
         for (let retry = 0; retry <= maxRetries; retry += 1) {
+          if (Date.now() - callStartedAtMs > HARD_DEADLINE_MS) {
+            deadlineHit = true;
+            attempts.push({
+              provider: target.provider,
+              model,
+              ok: false,
+              durationMs: Date.now() - callStartedAtMs,
+              skippedReason: "DEADLINE",
+              error: `Batas waktu ${Math.round(HARD_DEADLINE_MS / 1000)}s tercapai sebelum provider merespons.`,
+            });
+            break;
+          }
           const start = Date.now();
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1062,6 +1215,8 @@ export async function callCentralAIRouter<T = unknown>(
       if (!failedPrimary) {
         failedPrimary = target.provider;
       }
+
+      if (deadlineHit) break;
     }
 
     totalFailures += 1;
@@ -1093,11 +1248,27 @@ export async function callCentralAIRouter<T = unknown>(
       };
     }
 
+    const failureDetail = summarizeProviderFailures(attempts);
+    if (deadlineHit) {
+      return {
+        ok: false,
+        code: "ALL_PROVIDERS_FAILED",
+        error: `Provider AI tidak merespons dalam ${Math.round(HARD_DEADLINE_MS / 1000)} detik. Rincian: ${failureDetail}`,
+        hint:
+          "Coba lagi (server gratis kadang antre), atau cek /api/ai/test-providers untuk melihat provider mana yang lambat.",
+        httpStatus: 504,
+        attempts,
+        taskClassification: classification,
+      };
+    }
     return {
       ok: false,
       code: "ALL_PROVIDERS_FAILED",
-      error: "Semua provider AI gagal merespons permintaan saat ini.",
-      hint: "Periksa status provider pada Dashboard Monitoring dan pastikan API key di Vercel valid.",
+      error: `Semua provider AI gagal. Penyebab: ${failureDetail}`,
+      hint:
+        "Buka /api/ai/test-providers (GET) untuk tes live per provider. " +
+        "Penyebab umum: API key kedaluwarsa/kuota habis, atau nama model sudah di-deprecate — " +
+        "router otomatis mencoba model lain yang tersedia dari /models provider.",
       httpStatus: 502,
       attempts,
       taskClassification: classification,

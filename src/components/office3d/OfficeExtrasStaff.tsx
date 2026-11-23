@@ -67,7 +67,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     variant: "vroid_male",
     hairColor: "#171822",
     floor: 3,
-    position: [-4.5, FLOOR_3_Y, -5.0],
+    // Duduk di kursi boardroom asli (bukan mengambang di lantai kosong)
+    position: [11.2, FLOOR_3_Y, -5.02],
     rotationY: 0,
     pose: "seated",
     suitColor: "#1e3a5f",
@@ -84,7 +85,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     variant: "vroid_female",
     hairColor: "#241916",
     floor: 3,
-    position: [-2.7, FLOOR_3_Y, -5.0],
+    // Kursi boardroom sisi timur, menghadap meja (+Z)
+    position: [14.8, FLOOR_3_Y, -5.02],
     rotationY: 0,
     pose: "seated",
     suitColor: "#f8fafc",
@@ -100,7 +102,8 @@ const EXTRA_STAFF: SeatedOrStandingPerson[] = [
     variant: "vroid_male",
     hairColor: "#1b1920",
     floor: 3,
-    position: [-6.3, FLOOR_3_Y, -2.0],
+    // Kursi boardroom sisi selatan, menghadap meja (-Z)
+    position: [13.0, FLOOR_3_Y, -1.98],
     rotationY: Math.PI,
     pose: "seated",
     suitColor: "#1f2436",

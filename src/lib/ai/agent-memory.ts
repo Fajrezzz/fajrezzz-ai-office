@@ -8,6 +8,11 @@ import { INSTALLED_GITHUB_SKILLS } from "@/lib/ai/github-skills-registry";
  * and `thedotmack/claude-mem` (automatic session capture, compression & context injection).
  */
 
+import {
+  buildMemoryRecallForState,
+  type MemoryRecallEntry,
+} from "@/lib/ai/memory-recall";
+
 const MEMORY_STORAGE_KEY = "fajrezzz_ai_long_term_memory_v1";
 
 export interface MemoryEntry {
@@ -110,6 +115,17 @@ export function buildCompressedMemoryContext(limit = 8): string[] {
   return mem.entries
     .slice(0, limit)
     .map((e) => `[${e.kind}|${e.actor}] ${e.summary}`);
+}
+
+/**
+ * RECALL BERBOBOT (pola `rohitg00/agentmemory`) — lihat `memory-recall.ts`.
+ */
+export function buildMemoryRecall(
+  query: string,
+  limit = 5,
+  state?: AgentLongTermMemoryState
+): MemoryRecallEntry[] {
+  return buildMemoryRecallForState(query, state ?? loadLongTermMemory(), limit);
 }
 
 export function getTotalSkillActivations(): number {

@@ -4,7 +4,9 @@ import {
   classifyAiTask,
   getConfiguredProvidersStatus,
   isProviderConfigured,
+  summarizeProviderFailures,
   type LlmProviderId,
+  type ProviderAttempt,
 } from "@/lib/ai/llm-provider";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +20,7 @@ interface SingleProviderProbeResult {
   durationMs: number;
   replyPreview: string | null;
   error: string | null;
+  attempts?: ProviderAttempt[];
 }
 
 // Guard against excessive quota burn (max 1 full suite test every 10 seconds)
@@ -104,6 +107,7 @@ export async function POST(request: Request) {
         durationMs: Date.now() - start,
         replyPreview: null,
         error: res.error,
+        attempts: res.attempts,
       });
     }
   }
@@ -123,8 +127,21 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     testedAt: new Date().toISOString(),
+    summary: summarizeProviderFailures(results.flatMap((r) => r.attempts ?? [])),
     results,
     routingVerification,
     routerStatus: getConfiguredProvidersStatus(),
   });
+}
+
+/**
+ * GET /api/ai/test-providers — diagnosis cepat yang bisa dibuka langsung dari browser.
+ * Hanya provider yang punya API key yang dites; rahasia selalu disanitasi.
+ */
+export async function GET() {
+  return POST(new Request("https://local/api/ai/test-providers", {
+    method: "POST",
+    body: JSON.stringify({}),
+    headers: { "Content-Type": "application/json" },
+  }));
 }

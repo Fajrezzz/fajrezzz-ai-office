@@ -1,7 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import { FLOOR_1_Y } from "@/lib/data/initial-office-data";
+
+/**
+ * Panel RGB fasad depan — versi terang.
+ * Bos: "bagian depan kantor kurang terang untuk lampu RGB-nya".
+ * Sekarang: strip lebih tebal, tersegmentasi (efek chase), emissive tinggi +
+ * glow halo additive, dan tetap menyala siang hari.
+ */
+const FACADE_BANDS = [
+  { y: 3.88, hue: 0.52 }, // cyan
+  { y: 7.78, hue: 0.75 }, // violet
+  { y: 11.98, hue: 0.9 }, // magenta
+];
+const FACADE_SEGMENTS = 18;
+const FACADE_WIDTH = 38.2;
 
 /**
  * Clean Nanverse-Style Architectural Edge Lighting & L1 East Wellness Wing:
@@ -11,6 +27,119 @@ import { FLOOR_1_Y } from "@/lib/data/initial-office-data";
  * - L3 East Wing: Kept clean & spacious (Billiard table & blue cinema screen removed)
  * - Rooftop: Clean unobstructed deck (Pergola seating removed)
  */
+function FacadeRgbLighting({ isNight }: { isNight: boolean }) {
+  const segmentMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const haloMats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  const colorTmp = useMemo(() => new THREE.Color(), []);
+  const segWidth = FACADE_WIDTH / FACADE_SEGMENTS;
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const intensity = isNight ? 3.4 : 1.15;
+
+    for (let bi = 0; bi < FACADE_BANDS.length; bi += 1) {
+      for (let si = 0; si < FACADE_SEGMENTS; si += 1) {
+        const idx = bi * FACADE_SEGMENTS + si;
+        // chase halus: gelombang hue berjalan dari kiri ke kanan
+        const hue =
+          (FACADE_BANDS[bi].hue + si * 0.028 + t * 0.06) % 1;
+        colorTmp.setHSL(hue, 0.98, 0.58);
+
+        const mat = segmentMats.current[idx];
+        if (mat) {
+          mat.color.copy(colorTmp);
+          mat.emissive.copy(colorTmp);
+          mat.emissiveIntensity = intensity * (0.82 + 0.18 * Math.sin(t * 2.4 + si * 0.5));
+        }
+        const halo = haloMats.current[idx];
+        if (halo) {
+          halo.color.copy(colorTmp);
+          halo.opacity = (isNight ? 0.34 : 0.16) * (0.75 + 0.25 * Math.sin(t * 2 + si * 0.4));
+        }
+      }
+    }
+  });
+
+  return (
+    <group>
+      {FACADE_BANDS.map((band, bi) => (
+        <group key={`facade-band-${bi}`} position={[0, band.y, 0]}>
+          {/* Strip utama tersegmentasi di fasad depan (Z = +4.14) */}
+          {Array.from({ length: FACADE_SEGMENTS }).map((_, si) => {
+            const idx = bi * FACADE_SEGMENTS + si;
+            return (
+              <mesh
+                key={`seg-${si}`}
+                position={[-FACADE_WIDTH / 2 + segWidth * (si + 0.5), 0, 4.14]}
+              >
+                <boxGeometry args={[segWidth - 0.06, 0.17, 0.17]} />
+                <meshStandardMaterial
+                  ref={(m) => {
+                    segmentMats.current[idx] = m;
+                  }}
+                  color="#cffafe"
+                  emissive="#00f0ff"
+                  emissiveIntensity={isNight ? 3.4 : 1.15}
+                  toneMapped={false}
+                />
+              </mesh>
+            );
+          })}
+
+          {/* Halo glow (additive) supaya fasad benar-benar "menyala" dari jauh */}
+          {Array.from({ length: FACADE_SEGMENTS }).map((_, si) => {
+            const idx = bi * FACADE_SEGMENTS + si;
+            return (
+              <mesh
+                key={`halo-${si}`}
+                position={[-FACADE_WIDTH / 2 + segWidth * (si + 0.5), 0, 4.24]}
+              >
+                <planeGeometry args={[segWidth + 0.5, 1.05]} />
+                <meshBasicMaterial
+                  ref={(m) => {
+                    haloMats.current[idx] = m;
+                  }}
+                  color="#00f0ff"
+                  transparent
+                  opacity={isNight ? 0.34 : 0.16}
+                  blending={THREE.AdditiveBlending}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+            );
+          })}
+
+          {/* Strip samping kiri/kanan gedung */}
+          {[-19.1, 19.1].map((sx, si) => (
+            <mesh key={`side-${si}`} position={[sx, 0, -3.0]}>
+              <boxGeometry args={[0.12, 0.12, 14.2]} />
+              <meshStandardMaterial
+                color="#cffafe"
+                emissive={bi === 0 ? "#00f0ff" : bi === 1 ? "#a855f7" : "#ec4899"}
+                emissiveIntensity={isNight ? 2.6 : 0.95}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {/* Wash lampu RGB ke dinding fasad (bukan cuma garis) */}
+      {[-11, 0, 11].map((lx, i) => (
+        <pointLight
+          key={`wash-${i}`}
+          position={[lx, 6.2, 5.4]}
+          color={i % 3 === 0 ? "#22d3ee" : i % 3 === 1 ? "#a855f7" : "#ec4899"}
+          intensity={isNight ? 26 : 5}
+          distance={14}
+          decay={2}
+        />
+      ))}
+    </group>
+  );
+}
+
 export function InteriorActivityRooms({
   showL1,
   showRoof,
@@ -23,39 +152,8 @@ export function InteriorActivityRooms({
 }) {
   return (
     <group>
-      {/* CYBERPUNK RGB / NEON BUILDING EDGE STRIPS (Cyan L1, Violet L2, Magenta Roof) */}
-      {showRoof && (
-        <group>
-          {[
-            { y: 3.88, color: "#cffafe", emissive: "#00f0ff" },
-            { y: 7.78, color: "#f3e8ff", emissive: "#a855f7" },
-            { y: 11.98, color: "#fce7f3", emissive: "#ec4899" },
-          ].map((band, bi) => (
-            <group key={`arch-band-${bi}`} position={[0, band.y, 0]}>
-              {/* Front Facade RGB Neon Strip (38.2m) */}
-              <mesh position={[0, 0, 4.14]}>
-                <boxGeometry args={[38.2, 0.055, 0.055]} />
-                <meshStandardMaterial
-                  color={band.color}
-                  emissive={band.emissive}
-                  emissiveIntensity={isNight ? 2.0 : 0.32}
-                />
-              </mesh>
-              {/* Left & Right Side Edge RGB Neon Strips (X = ±19.1) */}
-              {[-19.1, 19.1].map((sx, si) => (
-                <mesh key={si} position={[sx, 0, -3.0]}>
-                  <boxGeometry args={[0.055, 0.055, 14.2]} />
-                  <meshStandardMaterial
-                    color={band.color}
-                    emissive={band.emissive}
-                    emissiveIntensity={isNight ? 1.85 : 0.28}
-                  />
-                </mesh>
-              ))}
-            </group>
-          ))}
-        </group>
-      )}
+      {/* ===================== RGB FACADE DEPAN (TERANG) ===================== */}
+      {showRoof && <FacadeRgbLighting isNight={isNight} />}
 
       {/* L1 EAST WING (X=+14.2): EXECUTIVE GYM & FITNESS AREA */}
       {showL1 && (
