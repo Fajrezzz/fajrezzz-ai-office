@@ -202,8 +202,10 @@ export function BossPlayer() {
           posRef.current.x = Math.max(-18.2, Math.min(18.2, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(4.8, posRef.current.z));
         } else {
-          posRef.current.x = Math.max(-18.4, Math.min(18.4, posRef.current.x));
-          posRef.current.z = Math.max(-9.5, Math.min(4.8, posRef.current.z));
+          // Atap / Crown Sky Deck (lantai 4 = rooftop, kanvas penuh 39.6 × 16):
+          // tetap di dalam glass balustrade x ±19.4 / z -10.4..5.3
+          posRef.current.x = Math.max(-19.3, Math.min(19.3, posRef.current.x));
+          posRef.current.z = Math.max(-10.3, Math.min(5.3, posRef.current.z));
         }
 
         const targetYaw = Math.atan2(moveDir.x, moveDir.z);

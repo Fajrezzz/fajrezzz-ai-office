@@ -8,6 +8,7 @@ import { OfficeScene } from "@/components/office3d/OfficeScene";
 import { NandaSimulatorHUD } from "@/components/office3d/NandaSimulatorHUD";
 import { SceneControlsHUD } from "@/components/office3d/SceneControlsHUD";
 import { useOffice } from "@/store/OfficeContext";
+import { resolvePixelRatio } from "@/lib/perf/render-telemetry";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -77,13 +78,16 @@ export function VirtualOfficeCanvas({
     setWebglReady(detectWebGLSupport());
   }, []);
 
-  const isEco = performanceMode === "eco";
-  // Tuned DPR per performance tier for smooth >=30fps on mid-range Android
-  const dpr: [number, number] = isEco
-    ? [1.0, 1.35]
-    : performanceMode === "balanced"
-    ? [1.2, 1.75]
-    : [1.4, 2.25];
+  // KETEGASAN GAMBAR:
+  // - Pixel ratio awal mengikuti kemampuan layar (DPR asli perangkat), bukan 1.25x.
+  // - `dpr` sengaja berupa ANGKA tetap (bukan range [min,max]) supaya React Three
+  //   Fiber TIDAK menurunkan resolusi saat kamera bergerak/zoom (penyebab blur
+  //   mendadak). Penyesuaian hanya lewat AdaptivePerformanceController dengan
+  //   lantai mutlak 1.0x (tidak pernah upscaling dari buffer lebih kecil).
+  const initialDpr =
+    typeof window === "undefined"
+      ? 1
+      : resolvePixelRatio(performanceMode, window.devicePixelRatio || 1);
 
   const readyToRender = mounted && performanceReady;
 
@@ -134,15 +138,22 @@ export function VirtualOfficeCanvas({
       ) : (
         <CanvasErrorBoundary>
           <Canvas
-            key={`${canvasKey}-${performanceMode}`}
+            // Key TIDAK memuat performanceMode: pergantian tier adaptif tidak boleh
+            // me-remount canvas/scene (dulu menyebabkan reset kamera & kedip blur).
+            key={canvasKey}
             className="h-full w-full touch-none"
-            shadows={isEco ? false : "percentage"}
-            dpr={dpr}
+            shadows="percentage"
+            dpr={initialDpr}
             camera={{ position: [14, 12.2, 28.5], fov: 45, near: 0.4, far: 360 }}
             gl={{
-              antialias: !isEco,
-              powerPreference: isEco ? "default" : "high-performance",
+              // Anti-aliasing selalu aktif: MSAA murah di GPU modern dan
+              // menghilangkan tepi bergerigi saat zoom (eco dulu mematikannya).
+              antialias: true,
+              powerPreference: "high-performance",
               alpha: false,
+              stencil: false,
+              depth: true,
+              preserveDrawingBuffer: false,
               toneMapping: THREE.ACESFilmicToneMapping,
               toneMappingExposure: 1.04,
             }}

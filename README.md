@@ -26,6 +26,23 @@ Fondasi aplikasi web **Cyberpunk 3D Virtual Office** interaktif yang dibangun me
 
 ---
 
+## Struktur Kantor 3 Lantai + Crown Sky Deck
+
+Kantor 3D kembali ke **3 lantai** (L4 & L5 dihapus total), dengan atap fungsional di puncak L3:
+
+| Lantai | Elevasi | Isi |
+| --- | --- | --- |
+| **L1 — Lobby & Coordination Hub** | `FLOOR_1_Y = 0.18` | Grand reception, hologram arrival portal, gym & arcade, kolam renang, parkir supercar |
+| **L2 — Research, Script, Voice & QC** | `FLOOR_2_Y = 3.9` | 3 meja Research + 2 meja Script + **4 meja Voice/Subtitle/QC** (eks-lantai 5) + coffee bar & balkon |
+| **L3 — Visual, Motion & Video Editing** | `FLOOR_3_Y = 7.8` | 3 meja Motion + **3 pod Editing/Render** (eks-lantai 4) + CEO suite, boardroom, lounge |
+| **Atap — Crown Sky Deck** | `ROOF_Y = 11.8` | Helipad "H" + helikopter, lapangan badminton + 2 pemain, glass balustrade, neon signage, penthouse lift |
+
+**15 karyawan tetap utuh** — semua dipindahkan ke L2 (9 meja) dan L3 (6 meja); tidak ada agen yatim
+atau waypoint menggantung. Verifikasi otomatis: `tests/three-floor-layout.test.ts`
+(cek lantai, kepemilikan meja, tabrakan meja, dan ketinggian atap).
+
+---
+
 ## Optimasi Performa untuk HP Android
 
 - **Low-Poly Procedural Geometry**: Seluruh furniture, arsitektur kaca, dan karakter robot dibuat dengan mesh low-poly ringan (tanpa file model eksternal berkapasitas besar).
@@ -67,9 +84,27 @@ src/
 
 ### Keamanan API Key
 
-- **Tidak ada API key di frontend.**
-- Salin `.env.example` menjadi `.env.local` saat mulai mengintegrasikan Supabase atau AI API di Tahap 2.
-- Variabel sensitif (`SUPABASE_SERVICE_ROLE_KEY`, `AI_PROVIDER_API_KEY`) **tidak boleh** memakai prefix `NEXT_PUBLIC_` dan hanya dibaca pada sisi server (`src/lib/config/env.ts` & Route Handlers).
+- **Tidak ada API key di frontend.** Key hanya dibaca di server (Route Handlers) dan tidak pernah dikirim ke browser.
+- Variabel sensitif (`GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) **tidak boleh** memakai prefix `NEXT_PUBLIC_`.
+- Error/log otomatis di-redaksi (`sanitizeErrorMessage`) supaya key tidak bocor ke telemetri.
+
+### Cara Memasang API Key Central AI Router (Gemini + Groq + OpenRouter)
+
+Ringkasnya (tutorial lengkap: **[`docs/API-KEY-ROUTER.md`](docs/API-KEY-ROUTER.md)**):
+
+1. Ambil key gratis: <https://aistudio.google.com/apikey> · <https://console.groq.com/keys> · <https://openrouter.ai/keys>
+2. Vercel → Project → **Settings → Environment Variables** → tambahkan `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` (centang Production + Preview + Development).
+3. **Redeploy** project (env baru hanya aktif di deployment baru).
+4. Verifikasi: buka `/api/ai/status` atau panel **AI Router** → tombol **Tes Live Provider**.
+
+Lokal: `cp .env.example .env.local`, isi key, lalu `npm run dev`.
+Tanpa key pun aplikasi tetap hidup lewat fallback **Pollinations keyless (Rp 0)**.
+
+### Kualitas Visual & FPS (Target 120 FPS)
+
+- Target render **120 FPS** (panel POCO X8 Pro Max 120 Hz); angka **Aktual** di UI selalu hasil pengukuran frame time nyata, bukan target.
+- Pixel ratio tidak pernah di bawah **1.0x** (tidak ada upscaling blur), anti-aliasing selalu aktif, tekstur memakai mipmap trilinear + anisotropic filtering.
+- Detail penyebab & perubahan: **[`docs/VISUAL-QUALITY-FPS.md`](docs/VISUAL-QUALITY-FPS.md)**.
 
 ---
 
@@ -104,6 +139,7 @@ http://localhost:3000
 
 ```bash
 npm run typecheck
+npm test          # termasuk test kebijakan render/ketajaman (v7)
 npm run build
 npm run start
 ```

@@ -596,3 +596,28 @@ export function getRealisticTextures(): RealisticTextureSet {
   };
   return cachedSet;
 }
+
+/**
+ * KETEGASAN TEKSTUR — dipanggil setelah renderer WebGL siap.
+ *
+ * Semua tekstur sudah dibuat dengan mipmap + `LinearMipmapLinearFilter`
+ * (trilinear). Di sini kita naikkan anisotropic filtering sesuai kemampuan GPU
+ * supaya lantai/plafon/kaca tidak "burik" saat kamera dimiringkan atau di-zoom
+ * jauh (masalah klasik mipmap tanpa anisotropy pada permukaan miring).
+ *
+ * Catatan: TIDAK ada penurunan resolusi tekstur berdasarkan zoom kamera —
+ * tekstur selalu dipakai pada resolusi penuh + mipmap asli.
+ */
+export function applyTextureQuality(maxAnisotropy = 8): void {
+  if (!cachedSet) return;
+  const aniso = Math.max(1, Math.min(8, Math.floor(maxAnisotropy)));
+  (Object.keys(cachedSet) as Array<keyof RealisticTextureSet>).forEach((key) => {
+    const tex = cachedSet?.[key];
+    if (!tex) return;
+    tex.anisotropy = aniso;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
+  });
+}

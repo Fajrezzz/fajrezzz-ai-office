@@ -51,12 +51,10 @@ import type {
 } from "@/types/office";
 
 const FLOOR_OPTIONS: { id: FloorView; label: string }[] = [
-  { id: "all", label: "Full 5L" },
+  { id: "all", label: "Full 3L" },
   { id: "l1", label: "L1 Lobby" },
   { id: "l2", label: "L2 Riset" },
   { id: "l3", label: "L3 Visual" },
-  { id: "l4", label: "L4 Render" },
-  { id: "l5", label: "L5 Audio/QC" },
   { id: "roof", label: "Atap" },
 ];
 
@@ -178,7 +176,8 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     setSelectedAgentId,
     selectedWorkstationId,
     setSelectedWorkstationId,
-    adaptiveFps,
+    renderTelemetry,
+    performanceMode,
     cameraPreset,
     setCameraPreset,
     focusCameraOn,
@@ -258,7 +257,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   };
 
   const cycleFloor = () => {
-    const order: FloorView[] = ["all", "l1", "l2", "l3", "l4", "l5", "roof"];
+    const order: FloorView[] = ["all", "l1", "l2", "l3", "roof"];
     const next = order[(order.indexOf(activeFloor) + 1) % order.length];
     setActiveFloor(next);
   };
@@ -281,7 +280,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const activeLightingShort =
     LIGHTING_OPTIONS.find((o) => o.id === lightingPreset)?.label ?? "Siang";
   const activeFloorShort =
-    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full 5L";
+    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full 3L";
   const activeCameraShort =
     CAMERA_OPTIONS.find((o) => o.id === cameraPreset)?.label ?? "Depan";
 
@@ -339,9 +338,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     { id: 1, label: "L1" },
     { id: 2, label: "L2" },
     { id: 3, label: "L3" },
-    { id: 4, label: "L4" },
-    { id: 5, label: "L5" },
-    { id: 6, label: "Atap" },
+    { id: 4, label: "Atap" },
   ];
 
   return (
@@ -425,7 +422,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setFloorPlanOpen(true)}
-              title="Buka Denah Lantai 2D (5 Lantai & 15 Workstation)"
+              title="Buka Denah Lantai 2D (3 Lantai & 15 Workstation)"
               aria-label="Denah Lantai 2D"
               className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1 rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-2.5 text-[11px] font-bold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/25"
             >
@@ -701,15 +698,48 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               </div>
             )}
 
-            {/* Adaptive Performance Status (Automatic Mobile-First — No Manual Quality Buttons) */}
-            <div className="flex items-center justify-between rounded-xl border border-emerald-400/25 bg-emerald-950/25 px-3 py-2 text-[11px] text-emerald-200">
-              <div className="flex items-center gap-1.5 font-semibold">
-                <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Auto-Adaptive 3D Performance</span>
+            {/* Render Monitor — Target 120 FPS vs FPS AKTUAL (terukur dari frame time) */}
+            <div className="rounded-xl border border-emerald-400/25 bg-emerald-950/25 px-3 py-2 text-[11px] text-emerald-200">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <div className="flex items-center gap-1.5 font-semibold">
+                  <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Render Monitor</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${
+                      renderTelemetry.status === "excellent" || renderTelemetry.status === "good"
+                        ? "bg-emerald-500/25 text-emerald-200"
+                        : renderTelemetry.status === "limited"
+                          ? "bg-amber-500/25 text-amber-200"
+                          : "bg-rose-500/25 text-rose-200"
+                    }`}
+                  >
+                    {renderTelemetry.statusLabel}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] text-emerald-300">
+                  <span className="text-slate-400">Target</span>
+                  <span className="font-bold text-slate-200">{renderTelemetry.targetFps}</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-slate-400">Aktual</span>
+                  <span className="font-bold text-emerald-200">{renderTelemetry.actualFps}</span>
+                  <span>fps</span>
+                  <span className="text-slate-500">·</span>
+                  <span>{renderTelemetry.frameTimeMs.toFixed(1)} ms</span>
+                  <span className="text-slate-500">·</span>
+                  <span>{renderTelemetry.drawingBufferWidth}×{renderTelemetry.drawingBufferHeight}</span>
+                  <span className="text-slate-500">·</span>
+                  <span>DPR {renderTelemetry.pixelRatio.toFixed(2)}x</span>
+                  <span className="text-slate-500">·</span>
+                  <span>{renderTelemetry.drawCalls} calls</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="uppercase">{performanceMode}</span>
+                </div>
               </div>
-              <span className="font-mono text-[10px] text-emerald-300">
-                {adaptiveFps} FPS · Culling Lantai Aktif
-              </span>
+              {renderTelemetry.refreshCapNote && (
+                <div className="mt-1 text-[10px] font-medium text-amber-300/90">
+                  ⚠ {renderTelemetry.refreshCapNote}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -803,7 +833,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-slate-950/88 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-md">
                 <Crown className="h-3.5 w-3.5 text-amber-400" />
                 <span>
-                  L{bossFloor === 4 ? " ATAP" : bossFloor} · {bossActionText}
+                  {bossFloor === 4 ? "ATAP" : `L${bossFloor}`} · {bossActionText}
                 </span>
                 <button
                   type="button"

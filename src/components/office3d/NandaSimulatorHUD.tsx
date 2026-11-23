@@ -16,7 +16,7 @@ import {
   type TimeSpeed,
   type WeatherMode,
 } from "@/store/SimulatorContext";
-import type { PerformanceMode } from "@/types/office";
+import type { BossFloor, FloorView, PerformanceMode } from "@/types/office";
 
 export function NandaSimulatorHUD() {
   const {
@@ -235,7 +235,7 @@ export function NandaSimulatorHUD() {
                     key={loc.id}
                     type="button"
                     onClick={() => {
-                      const fv =
+                      const fv: FloorView =
                         loc.floor === 1
                           ? "l1"
                           : loc.floor === 2
@@ -246,7 +246,9 @@ export function NandaSimulatorHUD() {
                                 ? "roof"
                                 : "all";
                       setActiveFloor(fv);
-                      const targetBossFloor = (loc.floor >= 1 && loc.floor <= 4 ? loc.floor : 1) as 1 | 2 | 3 | 4;
+                      const targetBossFloor: BossFloor = (
+                        loc.floor >= 1 && loc.floor <= 4 ? loc.floor : 1
+                      ) as BossFloor;
                       teleportBoss(loc.position, targetBossFloor, loc.label, loc.yaw);
                       pushSimLog("Teleportasi", `Pindah cepat ke ${loc.label}.`, "system");
                       setActiveSimModal(null);
@@ -267,19 +269,19 @@ export function NandaSimulatorHUD() {
             {activeSimModal === "settings" && (
               <div className="space-y-3 text-xs">
                 <div>
-                  <div className="mb-1 font-bold text-slate-300">Kualitas Grafis (Target 30+ FPS HP)</div>
+                  <div className="mb-1 font-bold text-slate-300">Kualitas Grafis (Target 120 FPS · FPS aktual tetap terukur)</div>
                   <div className="grid grid-cols-3 gap-2">
                     {(
                       [
-                        ["high", "Tinggi (Bloom+Refleksi+Kabut)"],
-                        ["balanced", "Sedang (Bloom)"],
-                        ["eco", "Rendah (Emissive Hemat)"],
+                        ["high", "Tinggi (Bloom+Shadow 2K)"],
+                        ["balanced", "Sedang (Shadow 1K+AA)"],
+                        ["eco", "Rendah (Tanpa Shadow)"],
                       ] as [PerformanceMode, string][]
                     ).map(([id, lbl]) => (
                       <button
                         key={id}
                         type="button"
-                        onClick={() => setPerformanceMode(id)}
+                        onClick={() => setPerformanceMode(id, { persist: true })}
                         className={`rounded-xl border p-2 text-[11px] font-bold ${
                           performanceMode === id
                             ? "border-cyan-400 bg-cyan-500/20 text-cyan-200"

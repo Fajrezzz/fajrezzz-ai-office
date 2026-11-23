@@ -7,7 +7,9 @@ import {
   Bot,
   CheckCircle2,
   Cpu,
+  ExternalLink,
   FlaskConical,
+  KeyRound,
   Loader2,
   Play,
   RefreshCw,
@@ -54,6 +56,180 @@ interface ProviderTestResponse {
     fastTask: { primaryProvider: string; taskType: string; reason: string };
   };
   routerStatus?: AiStatusApiResponse;
+}
+
+const API_KEY_PROVIDERS = [
+  {
+    envVar: "GEMINI_API_KEY",
+    label: "Google Gemini",
+    url: "https://aistudio.google.com/apikey",
+    note: "Reasoning & planning · gratis tanpa kartu kredit",
+  },
+  {
+    envVar: "GROQ_API_KEY",
+    label: "Groq Cloud",
+    url: "https://console.groq.com/keys",
+    note: "Fast task & klasifikasi · gratis tanpa kartu kredit",
+  },
+  {
+    envVar: "OPENROUTER_API_KEY",
+    label: "OpenRouter",
+    url: "https://openrouter.ai/keys",
+    note: "Fallback model :free · gratis tanpa kartu kredit",
+  },
+] as const;
+
+/** Link langsung (deep link) ke halaman yang benar-benar dipakai — tanpa perlu cari menu. */
+export const VERCEL_ENV_VARS_URL =
+  "https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables";
+export const OPENROUTER_KEYS_URL = "https://openrouter.ai/keys";
+export const AI_STATUS_ENDPOINT = "/api/ai/status";
+
+/**
+ * Panduan pasang API key DI DALAM aplikasi (tanpa perlu buka repo).
+ * Catatan: tidak ada input key di UI — key sengaja server-side only.
+ */
+/**
+ * Shortcut bar 2 langkah: (1) bikin key OpenRouter → (2) tempel di Environment
+ * Variables Vercel. Selalu kelihatan (tidak perlu buka tutorial).
+ */
+function ApiKeyQuickLinks() {
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <a
+        href={OPENROUTER_KEYS_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/25 px-3 py-2.5 text-[11px] font-bold text-fuchsia-100 hover:border-fuchsia-300/70 hover:bg-fuchsia-900/30"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-fuchsia-300/80">
+            Langkah 1 · bikin key
+          </span>
+          <span>OpenRouter API Key</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+      <a
+        href={VERCEL_ENV_VARS_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-cyan-400/40 bg-cyan-950/25 px-3 py-2.5 text-[11px] font-bold text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-900/30"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-cyan-300/80">
+            Langkah 2 · pasang key
+          </span>
+          <span>Vercel → Environment Variables</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+      <a
+        href={AI_STATUS_ENDPOINT}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-emerald-400/35 bg-emerald-950/20 px-3 py-2.5 text-[11px] font-bold text-emerald-100 hover:border-emerald-300/70 hover:bg-emerald-900/25"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-300/80">
+            Langkah 3 · cek status
+          </span>
+          <span>/api/ai/status</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+    </div>
+  );
+}
+
+function ApiKeySetupGuide() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-cyan-400/25 bg-slate-950/70">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[11px] font-bold text-cyan-200 hover:bg-cyan-500/10"
+      >
+        <span className="flex items-center gap-1.5">
+          <KeyRound className="h-3.5 w-3.5 text-cyan-300" />
+          Cara Pasang API Key Router (tutorial 5 langkah)
+        </span>
+        <span className="text-[10px] font-mono text-slate-400">
+          {open ? "tutup ▲" : "buka ▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="space-y-2.5 border-t border-cyan-400/20 px-3 py-3 text-[11px] text-slate-300">
+          <p className="rounded-lg border border-amber-400/25 bg-amber-950/30 px-2 py-1.5 text-[10px] text-amber-200">
+            Key TIDAK dimasukkan lewat aplikasi ini. Key disimpan sebagai Environment
+            Variable di Vercel supaya tidak pernah terkirim ke browser (aman).
+          </p>
+
+          <ol className="space-y-1.5">
+            <li>
+              <strong className="text-white">1.</strong> Ambil key gratis (cukup salah satu):
+              <div className="mt-1 space-y-1">
+                {API_KEY_PROVIDERS.map((p) => (
+                  <a
+                    key={p.envVar}
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 hover:border-cyan-400/50"
+                  >
+                    <span>
+                      <span className="font-mono text-[10px] text-cyan-300">{p.envVar}</span>
+                      <span className="ml-1.5 text-[10px] text-slate-400">{p.note}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-cyan-200">
+                      {p.label} <ExternalLink className="h-3 w-3" />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </li>
+            <li>
+              <strong className="text-white">2.</strong> Buka Vercel → Project →{" "}
+              <span className="font-semibold text-cyan-200">Settings → Environment Variables</span>:
+              <a
+                href={VERCEL_ENV_VARS_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-1 inline-flex items-center gap-0.5 font-bold text-cyan-300 hover:underline"
+              >
+                buka <ExternalLink className="h-3 w-3" />
+              </a>
+            </li>
+            <li>
+              <strong className="text-white">3.</strong> Tambahkan nama variabel{" "}
+              <span className="font-mono text-[10px] text-cyan-300">PERSIS</span> seperti di atas, tempel key,
+              centang <strong>Production + Preview + Development</strong>, lalu Save.
+            </li>
+            <li>
+              <strong className="text-white">4.</strong> <strong>Redeploy</strong> (Deployments → ⋯ → Redeploy).
+              Env baru hanya terbaca setelah deployment baru.
+            </li>
+            <li>
+              <strong className="text-white">5.</strong> Verifikasi di panel ini: badge provider berubah dari{" "}
+              <span className="font-mono text-[10px] text-amber-300">ENV BELUM ADA</span> menjadi{" "}
+              <span className="font-mono text-[10px] text-emerald-300">CIRCUIT: CLOSED</span>, lalu tekan{" "}
+              <strong>Tes Live Provider</strong>.
+            </li>
+          </ol>
+
+          <p className="text-[10px] text-slate-400">
+            Lokal: <code className="font-mono text-cyan-300">cp .env.example .env.local</code> lalu{" "}
+            <code className="font-mono text-cyan-300">npm run dev</code>. Tanpa key pun aplikasi tetap jalan
+            lewat fallback Pollinations keyless (Rp 0). Panduan lengkap + troubleshooting:{" "}
+            <code className="font-mono text-cyan-300">docs/API-KEY-ROUTER.md</code>.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -202,6 +378,9 @@ export function AiRouterMonitoringPanel() {
           </div>
         </div>
 
+        {/* Shortcut link langsung: OpenRouter → Vercel Env Vars → status */}
+        <ApiKeyQuickLinks />
+
         {/* Queue & Global Router Metrics */}
         {telemetry && (
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5 text-xs">
@@ -320,6 +499,9 @@ export function AiRouterMonitoringPanel() {
             </div>
           ))}
         </div>
+
+        {/* Panduan pasang API key (in-app tutorial) */}
+        <ApiKeySetupGuide />
 
         {/* Live Provider Test Results */}
         {testResult && (

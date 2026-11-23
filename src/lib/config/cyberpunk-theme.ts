@@ -1,7 +1,8 @@
 /**
  * Central Cyberpunk Neon / RGB Theme Configuration
  * Single source of truth for all emissive neon strips, RGB accents,
- * and graphics-tier postprocessing budgets (High / Medium / Eco 30+ FPS mobile).
+ * and graphics-tier budgets. Target render: 120 FPS (POCO X8 Pro Max 120 Hz);
+ * angka FPS di UI selalu hasil pengukuran frame aktual, bukan target.
  */
 
 import type { PerformanceMode } from "@/types/office";
@@ -34,7 +35,7 @@ export const CYBERPUNK_THEME = {
       maxRealtimePointLights: 8,
     },
     balanced: {
-      enableBloom: true,
+      enableBloom: false,
       enableReflections: false,
       enableFog: false,
       maxRealtimePointLights: 6,

@@ -156,6 +156,10 @@ const STAFF_AVATAR_MAP: Record<string, StaffVisualSpec> = {
   },
 };
 
+// Scratch vectors per-frame (zero allocation -> mengurangi GC pressure di Android)
+const _tmpDest = new THREE.Vector3();
+const _tmpDir = new THREE.Vector3();
+
 export function RobotCharacter({
   agent,
   isSelected,
@@ -269,12 +273,12 @@ export function RobotCharacter({
       const nextWpId = pathQueueRef.current[0];
       const nextWp = OFFICE_WAYPOINTS[nextWpId];
       if (nextWp) {
-        const dest = new THREE.Vector3(
+        const dest = _tmpDest.set(
           nextWp.position[0],
           nextWp.position[1],
           nextWp.position[2]
         );
-        const dir = dest.clone().sub(currentPosRef.current);
+        const dir = _tmpDir.copy(dest).sub(currentPosRef.current);
         const dist = dir.length();
         const speed = 3.2;
 

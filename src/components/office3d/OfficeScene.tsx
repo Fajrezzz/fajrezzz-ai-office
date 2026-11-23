@@ -14,11 +14,16 @@ import { InteriorActivityRooms } from "@/components/office3d/InteriorActivityRoo
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { OfficeExtrasStaff } from "@/components/office3d/OfficeExtrasStaff";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
-import { UpperProductionFloors } from "@/components/office3d/UpperProductionFloors";
+import { CrownSkyDeck } from "@/components/office3d/CrownSkyDeck";
 import { WeatherEffects } from "@/components/office3d/WeatherEffects";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
 import { useSimulator } from "@/store/SimulatorContext";
+import {
+  shadowMapSizeFor,
+  shadowUpdateStrideFor,
+} from "@/lib/perf/render-telemetry";
+import { applyTextureQuality } from "@/components/office3d/realisticTextures";
 import type { CameraPreset, Vector3Tuple } from "@/types/office";
 
 const CAMERA_PRESETS: Record<
@@ -29,7 +34,7 @@ const CAMERA_PRESETS: Record<
   isometric: { pos: [-30, 24.5, 31], target: [0, 8.8, 0.2] },
   interior: { pos: [0, 12.2, 14.5], target: [0, 4.4, -3.2] },
   executive: { pos: [11, 14.2, 14.8], target: [0, 8.6, -3.2] },
-  rooftop: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
+  rooftop: { pos: [24, 20.5, 22.5], target: [0, 11.8, -2.5] },
   pool: { pos: [12.5, 5.2, 22.0], target: [-1.5, 1.5, 10.5] },
   supercar: { pos: [14.8, 3.6, 17.6], target: [9.4, 0.9, 11.3] },
 };
@@ -42,9 +47,7 @@ const FLOOR_CAMERA_VIEWS: Record<
   l1: { pos: [11.5, 5.4, 18.2], target: [0, 1.6, -1.5] },
   l2: { pos: [0.5, 10.4, 14.8], target: [0, 4.4, -3.2] },
   l3: { pos: [0.5, 14.2, 14.8], target: [0, 8.4, -3.2] },
-  l4: { pos: [0.5, 18.0, 14.8], target: [0, 12.2, -3.2] },
-  l5: { pos: [0.5, 21.8, 14.8], target: [0, 16.0, -3.2] },
-  roof: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
+  roof: { pos: [24, 20.5, 22.5], target: [0, 11.8, -2.5] },
 };
 
 function FreeRoamCameraRig() {
@@ -217,10 +220,10 @@ function FreeRoamCameraRig() {
       const [bx, by, bz] = bossPositionRef.current;
       if (activeVehicleId) {
         setCurrentLocationName("Mengemudi · Cyber Avenue");
-      } else if (by > 10.5) {
-        setCurrentLocationName("Rooftop · Helipad & Padel RGB");
+      } else if (by > 10.4) {
+        setCurrentLocationName("Atap · Sky Deck, Helipad & Bulu Tangkis");
       } else if (by > 6.5) {
-        setCurrentLocationName("Lantai 3 · CEO Suite & Biliar");
+        setCurrentLocationName("Lantai 3 · Visual, Motion & Editing");
       } else if (by > 2.8) {
         setCurrentLocationName("Lantai 2 · AI Production Floor");
       } else if (bz > 6.5 && bx > -12 && bx < 4) {
@@ -459,8 +462,40 @@ export function OfficeScene() {
 
   const sunColor = isNight ? "#9ec5f8" : isSunset ? "#ff984c" : "#fff9ef";
   const sunIntensity = isNight ? 0.82 : isSunset ? 2.45 : 2.15;
-  // Performance Tiers: Eco = NO shadows, Bal = low-res 512 shadow, High = sharp 2048 shadow
-  const shadowSize = isHigh ? 2048 : 512;
+  // Shadow budget per tier (Eco = tanpa shadow, Balanced = 1024, High = 2048).
+  // Kualitas tekstur & resolusi render TIDAK ikut turun hanya karena tier/shadow.
+  const shadowSize = shadowMapSizeFor(performanceMode) || 1024;
+  const shadowStride = shadowUpdateStrideFor(performanceMode);
+  // Shadow di-refresh bertahap (bukan tiap frame) agar GPU tidak panas,
+  // tanpa menyentuh resolusi render / ketajaman gambar.
+  const shadowAutoUpdate = shadowStride === 1;
+
+  const sunLightRef = useRef<THREE.DirectionalLight>(null);
+  const shadowFrameRef = useRef(0);
+
+  // Texture sharpness: pakai anisotropic filtering maksimum GPU + mipmap trilinear.
+  // Dijalankan sekali per renderer/tier, bukan per zoom.
+  const { gl } = useThree();
+  useEffect(() => {
+    const maxAniso = Math.min(8, gl.capabilities.getMaxAnisotropy() || 1);
+    applyTextureQuality(maxAniso);
+  }, [gl, performanceMode]);
+
+  // Pastikan shadow map tetap di-render ulang saat tier / preset pencahayaan berubah
+  useEffect(() => {
+    const light = sunLightRef.current;
+    if (light) light.shadow.needsUpdate = true;
+  }, [performanceMode, lightingPreset]);
+
+  useFrame(() => {
+    if (shadowAutoUpdate || isEco) return;
+    const light = sunLightRef.current;
+    if (!light) return;
+    shadowFrameRef.current = (shadowFrameRef.current + 1) % Math.max(1, shadowStride);
+    if (shadowFrameRef.current === 0) {
+      light.shadow.needsUpdate = true;
+    }
+  });
 
   // Per-floor visibility & frustum culling for mobile-first performance
   const visibleAgents = useMemo(() => {
@@ -469,8 +504,6 @@ export function OfficeScene() {
       if (activeFloor === "l1") return a.floor === 1;
       if (activeFloor === "l2") return a.floor === 2;
       if (activeFloor === "l3") return a.floor === 3;
-      if (activeFloor === "l4") return a.floor === 4;
-      if (activeFloor === "l5") return a.floor === 5;
       return true;
     });
   }, [agents, activeFloor]);
@@ -481,8 +514,6 @@ export function OfficeScene() {
       if (activeFloor === "l1") return ws.floor === 1;
       if (activeFloor === "l2") return ws.floor === 2;
       if (activeFloor === "l3") return ws.floor === 3;
-      if (activeFloor === "l4") return ws.floor === 4;
-      if (activeFloor === "l5") return ws.floor === 5;
       return true;
     });
   }, [workstations, activeFloor]);
@@ -497,7 +528,7 @@ export function OfficeScene() {
       {isSunset && <SunsetGoldenHourSkyDome />}
       {!isNight && !isSunset && <ClearDaySkyDome />}
 
-      <Environment resolution={isEco ? 64 : 128} frames={1}>
+      <Environment resolution={isHigh ? 256 : isEco ? 64 : 128} frames={1}>
         <Lightformer
           form="ring"
           intensity={isNight ? 0.28 : isSunset ? 1.1 : 1.35}
@@ -532,10 +563,12 @@ export function OfficeScene() {
         ]}
       />
       <directionalLight
+        ref={sunLightRef}
         position={sunPosition}
         intensity={sunIntensity}
         color={sunColor}
         castShadow={!isEco}
+        shadow-autoUpdate={shadowAutoUpdate}
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-camera-left={-34}
         shadow-camera-right={34}
@@ -577,17 +610,19 @@ export function OfficeScene() {
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
-      {/* Multi-Floor Expansion: Floors 4 & 5 + Panoramic Cyan Elevator + Lobby Hologram Portal + Crown Sky Deck */}
-      <UpperProductionFloors
+      {/* Kantor 3 lantai: L4 & L5 dihapus. Atap Sky Deck (helipad + badminton) + portal L1. */}
+      <CrownSkyDeck
         activeFloor={activeFloor}
         isNight={isNight}
+        isSunset={isSunset}
+        isSimulationRunning={isSimulationRunning}
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
       {/* Stage 2 Interior Activity Rooms */}
       <InteriorActivityRooms
         showL1={true}
-        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "l4" || activeFloor === "l5" || activeFloor === "roof"}
+        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof"}
         showRoof={false}
         isNight={isNight}
       />
@@ -639,8 +674,10 @@ export function OfficeScene() {
       {/* Free-Roam & Third-Person Game Follow Camera Rig */}
       <FreeRoamCameraRig />
 
-      {/* Selective Anti-Glare Emissive Bloom — Subtle & Crisp Without Blinding Reflection Glare */}
-      {!isEco && (
+      {/* Selective Anti-Glare Emissive Bloom — hanya tier High (desktop / GPU kuat).
+          Tier Balanced/Eco sengaja tanpa composer tambahan: render path tetap
+          full-resolution sehingga tepi objek & tekstur tetap tajam saat zoom. */}
+      {isHigh && (
         <EffectComposer multisampling={0}>
           <Bloom
             mipmapBlur

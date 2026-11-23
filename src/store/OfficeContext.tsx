@@ -13,8 +13,6 @@ import {
   FLOOR_1_Y,
   FLOOR_2_Y,
   FLOOR_3_Y,
-  FLOOR_4_Y,
-  FLOOR_5_Y,
   INITIAL_ACTIVITIES,
   INITIAL_AGENTS,
   INITIAL_TASKS,
@@ -27,6 +25,19 @@ import {
   recordMemoryEvent,
 } from "@/lib/ai/agent-memory";
 import type { CreateTaskInput } from "@/lib/services/data-adapter";
+import {
+  INITIAL_RENDER_TELEMETRY,
+  detectDeviceCapability,
+  recommendPerformanceMode,
+  type RenderTelemetry,
+} from "@/lib/perf/render-telemetry";
+
+/**
+ * Key baru (v2). Key lama "fajrezzz_perf_mode" sengaja TIDAK dibaca lagi karena
+ * versi lama menyimpan keputusan otomatis (sering "eco"/DPR 0.82x) sehingga
+ * perangkat kuat bisa terjebak di kualitas rendah/blur.
+ */
+const PERF_MODE_STORAGE_KEY = "fajrezzz_perf_mode_v2";
 import type {
   ActivityEvent,
   ActivitySeverity,
@@ -55,9 +66,7 @@ export const BOSS_FLOOR_ELEVATIONS: Record<BossFloor, number> = {
   1: FLOOR_1_Y,
   2: FLOOR_2_Y,
   3: FLOOR_3_Y,
-  4: FLOOR_4_Y,
-  5: FLOOR_5_Y,
-  6: ROOF_Y,
+  4: ROOF_Y + 0.05, // Atap / Crown Sky Deck (permukaan pelat dek, L4 & L5 dihapus)
 };
 
 function formatClock(date = new Date()): string {
@@ -115,6 +124,9 @@ interface OfficeContextValue {
   focusOnWorkstation: (workstationId: string) => void;
   adaptiveFps: number;
   setAdaptiveFps: (fps: number) => void;
+  /** Telemetri render aktual (FPS terukur, frame time, resolusi, DPR, status). */
+  renderTelemetry: RenderTelemetry;
+  setRenderTelemetry: React.Dispatch<React.SetStateAction<RenderTelemetry>>;
   cameraPreset: CameraPreset;
   cameraResetTick: number;
   setCameraPreset: (preset: CameraPreset) => void;
@@ -130,7 +142,15 @@ interface OfficeContextValue {
   setAutoRotate: (rotate: boolean) => void;
   performanceMode: PerformanceMode;
   performanceReady: boolean;
-  setPerformanceMode: (mode: PerformanceMode) => void;
+  /**
+   * `persist: true` = pilihan manual pengguna (disimpan ke localStorage).
+   * Perubahan otomatis dari AdaptivePerformanceController tidak disimpan,
+   * supaya perangkat flagship tidak "terkunci" di tier rendah selamanya.
+   */
+  setPerformanceMode: (
+    mode: PerformanceMode,
+    options?: { persist?: boolean }
+  ) => void;
   isSimulationRunning: boolean;
   setIsSimulationRunning: (running: boolean) => void;
   showLabelsIn3D: boolean;
@@ -209,11 +229,11 @@ const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
   "staff-04": "wp-ws-06",
   "staff-10": "wp-ws-07",
   "staff-11": "wp-ws-08",
-  // Floor 4 — Video Editing & Rendering (3 staff)
+  // Floor 3 — Video Editing & Rendering (3 staff, digabung dari L4 lama)
   "staff-06": "wp-ws-09",
   "staff-12": "wp-ws-10",
   "staff-13": "wp-ws-11",
-  // Floor 5 — Voice, Subtitle & Quality Control (4 staff)
+  // Floor 2 — Voice, Subtitle & Quality Control (4 staff, digabung dari L5 lama)
   "staff-05": "wp-ws-12",
   "staff-14": "wp-ws-13",
   "staff-07": "wp-ws-14",
@@ -250,7 +270,9 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [selectedWorkstationId, setSelectedWorkstationId] = useState<string | null>(
     null
   );
-  const [adaptiveFps, setAdaptiveFps] = useState<number>(60);
+  const [adaptiveFps, setAdaptiveFps] = useState<number>(0);
+  const [renderTelemetry, setRenderTelemetry] =
+    useState<RenderTelemetry>(INITIAL_RENDER_TELEMETRY);
   const [cameraPreset, setCameraPresetState] =
     useState<CameraPreset>("front");
   const [cameraResetTick, setCameraResetTick] = useState<number>(0);
@@ -285,10 +307,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setActiveFloorState("l2");
     } else if (floor === 3) {
       setActiveFloorState("l3");
-    } else if (floor === 4) {
-      setActiveFloorState("l4");
-    } else if (floor === 5) {
-      setActiveFloorState("l5");
     } else {
       setActiveFloorState("roof");
     }
@@ -331,7 +349,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     setActiveFloorState(floor);
     if (floor === "l2") {
       setCameraPresetState("interior");
-    } else if (floor === "l3" || floor === "l4" || floor === "l5") {
+    } else if (floor === "l3") {
       setCameraPresetState("executive");
     } else if (floor === "roof") {
       setCameraPresetState("rooftop");
@@ -369,8 +387,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         1: "l1",
         2: "l2",
         3: "l3",
-        4: "l4",
-        5: "l5",
       };
       setActiveFloorState(floorViewMap[wp.floor] ?? "all");
 
@@ -392,8 +408,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         1: "l1",
         2: "l2",
         3: "l3",
-        4: "l4",
-        5: "l5",
       };
       setActiveFloorState(floorViewMap[ws.floor] ?? "all");
       focusCameraOn(
@@ -410,20 +424,24 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(true);
   const [showLabelsIn3D, setShowLabelsIn3D] = useState<boolean>(true);
 
-  const setPerformanceMode = useCallback((mode: PerformanceMode) => {
-    setPerformanceModeState(mode);
-    try {
-      window.localStorage.setItem("fajrezzz_perf_mode", mode);
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
+  const setPerformanceMode = useCallback(
+    (mode: PerformanceMode, options?: { persist?: boolean }) => {
+      setPerformanceModeState(mode);
+      if (!options?.persist) return;
+      try {
+        window.localStorage.setItem(PERF_MODE_STORAGE_KEY, mode);
+      } catch {
+        // Ignore storage errors
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
-      const savedPerf = window.localStorage.getItem("fajrezzz_perf_mode");
+      const savedPerf = window.localStorage.getItem(PERF_MODE_STORAGE_KEY);
       if (
         savedPerf === "eco" ||
         savedPerf === "balanced" ||
@@ -431,23 +449,10 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       ) {
         setPerformanceModeState(savedPerf);
       } else {
-        const isMobileViewport = window.innerWidth < 768;
-        const isAndroidUA = /Android/i.test(navigator.userAgent);
-        const isCoarsePointer =
-          typeof window.matchMedia === "function" &&
-          window.matchMedia("(pointer: coarse)").matches;
-        const hasLowHardwareConcurrency =
-          typeof navigator.hardwareConcurrency === "number" &&
-          navigator.hardwareConcurrency <= 4;
-
-        if (
-          isMobileViewport ||
-          isAndroidUA ||
-          isCoarsePointer ||
-          hasLowHardwareConcurrency
-        ) {
-          setPerformanceModeState("eco");
-        }
+        // Capability-based tiering: Android flagship (POCO X8 Pro Max: 8+ core,
+        // RAM >= 6GB) masuk "balanced" dengan tekstur + AA + shadow tetap tajam.
+        // "eco" hanya untuk perangkat benar-benar lemah.
+        setPerformanceModeState(recommendPerformanceMode(detectDeviceCapability()));
       }
 
       const savedTasks = window.localStorage.getItem("fajrezzz_local_tasks_v2");
@@ -533,7 +538,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           "BOS FAJREZ",
           "user",
-          `Berpindah ke ${label} (Lantai ${floor === 4 ? "Atap" : floor}).`,
+          `Berpindah ke ${label} (${floor === 4 ? "Lantai Atap" : `Lantai ${floor}`}).`,
           "success",
           label
         );
@@ -546,10 +551,15 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     (floor: BossFloor) => {
       const cur = bossPositionRef.current;
       // Keep X/Z inside building interior when going up to L2/L3/Roof
-      const clampedX = Math.max(-12.2, Math.min(12.2, cur[0]));
+      const clampedX =
+        floor === 4
+          ? Math.max(-19.0, Math.min(19.0, cur[0])) // Atap Sky Deck kanvas penuh
+          : Math.max(-12.2, Math.min(12.2, cur[0]));
       const clampedZ =
         floor === 1
           ? Math.max(-8.5, Math.min(16.8, cur[2]))
+          : floor === 4
+          ? Math.max(-10.0, Math.min(5.0, cur[2]))
           : Math.max(-8.5, Math.min(4.2, cur[2]));
       const nextY = BOSS_FLOOR_ELEVATIONS[floor];
       const floorName =
@@ -558,12 +568,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           : floor === 2
           ? "Lantai 2 Research & Script"
           : floor === 3
-          ? "Lantai 3 Visual & Motion Design"
-          : floor === 4
-          ? "Lantai 4 Video Editing & Render"
-          : floor === 5
-          ? "Lantai 5 Voice, Subtitle & QC"
-          : "Atap Sky Deck & Helipad";
+          ? "Lantai 3 Visual, Motion & Editing"
+          : "Atap Sky Deck, Helipad & Badminton";
 
       teleportBoss([clampedX, nextY, clampedZ], floor, floorName);
     },
@@ -1238,6 +1244,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       focusOnWorkstation,
       adaptiveFps,
       setAdaptiveFps,
+      renderTelemetry,
+      setRenderTelemetry,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
@@ -1304,6 +1312,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       selectedWorkstationId,
       focusOnWorkstation,
       adaptiveFps,
+      renderTelemetry,
       cameraPreset,
       cameraResetTick,
       setCameraPreset,
