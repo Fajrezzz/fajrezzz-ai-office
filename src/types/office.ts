@@ -17,11 +17,11 @@ export type PerformanceMode = "eco" | "balanced" | "high";
 
 export type LightingPreset = "day" | "sunset" | "night";
 
-export type FloorNumber = 1 | 2 | 3 | 4 | 5;
+export type FloorNumber = 1 | 2 | 3;
 
-export type FloorView = "all" | "l1" | "l2" | "l3" | "l4" | "l5" | "roof";
+export type FloorView = "all" | "l1" | "l2" | "l3" | "roof";
 
-export type BossFloor = 1 | 2 | 3 | 4 | 5 | 6;
+export type BossFloor = 1 | 2 | 3 | 4; // 4 = Atap / Crown Sky Deck
 
 export type TeamDivisionKey =
   | "research_trend"

@@ -14,13 +14,11 @@ const FLOOR_VIEW_MAP: Record<FloorNumber, FloorView> = {
   1: "l1",
   2: "l2",
   3: "l3",
-  4: "l4",
-  5: "l5",
 };
 
 /**
  * Interactive 2D Multi-Floor Blueprint / Floor-Plan View (Section B).
- * Lets the user switch among all 5 floors, inspect active vs idle status on each floor,
+ * Lets the user switch among all 3 floors, inspect active vs idle status on each floor,
  * and click any employee or workstation to jump the 3D camera directly to it.
  */
 export function FloorPlanMiniMap({ onClose }: FloorPlanMiniMapProps) {
@@ -42,10 +40,6 @@ export function FloorPlanMiniMap({ onClose }: FloorPlanMiniMapProps) {
       ? 2
       : activeFloor === "l3"
       ? 3
-      : activeFloor === "l4"
-      ? 4
-      : activeFloor === "l5"
-      ? 5
       : 2;
 
   const floorBlueprint =
@@ -68,7 +62,7 @@ export function FloorPlanMiniMap({ onClose }: FloorPlanMiniMapProps) {
             <Building2 className="h-4 w-4 text-cyan-400" />
             <div>
               <h3 className="text-sm font-black tracking-wide text-white">
-                DENAH LANTAI 2D — FAJREZZZ HQ (5 LANTAI)
+                DENAH LANTAI 2D — FAJREZZZ HQ (3 LANTAI)
               </h3>
               <p className="text-[11px] text-cyan-300/80">
                 Lantai {floorBlueprint.floor}: {floorBlueprint.name} ·{" "}
@@ -245,7 +239,7 @@ export function FloorPlanMiniMap({ onClose }: FloorPlanMiniMapProps) {
               className="flex items-center gap-1 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-[11px] font-bold text-cyan-200 hover:bg-cyan-500/25"
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>Lihat Full 5 Lantai</span>
+              <span>Lihat Full 3 Lantai</span>
             </button>
           </div>
         </div>

@@ -79,10 +79,69 @@ const API_KEY_PROVIDERS = [
   },
 ] as const;
 
+/** Link langsung (deep link) ke halaman yang benar-benar dipakai — tanpa perlu cari menu. */
+export const VERCEL_ENV_VARS_URL =
+  "https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables";
+export const OPENROUTER_KEYS_URL = "https://openrouter.ai/keys";
+export const AI_STATUS_ENDPOINT = "/api/ai/status";
+
 /**
  * Panduan pasang API key DI DALAM aplikasi (tanpa perlu buka repo).
  * Catatan: tidak ada input key di UI — key sengaja server-side only.
  */
+/**
+ * Shortcut bar 2 langkah: (1) bikin key OpenRouter → (2) tempel di Environment
+ * Variables Vercel. Selalu kelihatan (tidak perlu buka tutorial).
+ */
+function ApiKeyQuickLinks() {
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <a
+        href={OPENROUTER_KEYS_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/25 px-3 py-2.5 text-[11px] font-bold text-fuchsia-100 hover:border-fuchsia-300/70 hover:bg-fuchsia-900/30"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-fuchsia-300/80">
+            Langkah 1 · bikin key
+          </span>
+          <span>OpenRouter API Key</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+      <a
+        href={VERCEL_ENV_VARS_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-cyan-400/40 bg-cyan-950/25 px-3 py-2.5 text-[11px] font-bold text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-900/30"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-cyan-300/80">
+            Langkah 2 · pasang key
+          </span>
+          <span>Vercel → Environment Variables</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+      <a
+        href={AI_STATUS_ENDPOINT}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-center justify-between gap-2 rounded-xl border border-emerald-400/35 bg-emerald-950/20 px-3 py-2.5 text-[11px] font-bold text-emerald-100 hover:border-emerald-300/70 hover:bg-emerald-900/25"
+      >
+        <span className="flex flex-col leading-tight">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-300/80">
+            Langkah 3 · cek status
+          </span>
+          <span>/api/ai/status</span>
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+    </div>
+  );
+}
+
 function ApiKeySetupGuide() {
   const [open, setOpen] = React.useState(false);
   return (
@@ -136,7 +195,7 @@ function ApiKeySetupGuide() {
               <strong className="text-white">2.</strong> Buka Vercel → Project →{" "}
               <span className="font-semibold text-cyan-200">Settings → Environment Variables</span>:
               <a
-                href="https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables"
+                href={VERCEL_ENV_VARS_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="ml-1 inline-flex items-center gap-0.5 font-bold text-cyan-300 hover:underline"
@@ -318,6 +377,9 @@ export function AiRouterMonitoringPanel() {
             </button>
           </div>
         </div>
+
+        {/* Shortcut link langsung: OpenRouter → Vercel Env Vars → status */}
+        <ApiKeyQuickLinks />
 
         {/* Queue & Global Router Metrics */}
         {telemetry && (

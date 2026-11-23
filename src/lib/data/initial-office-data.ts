@@ -11,9 +11,12 @@ import { ACTIVE_EMPLOYEE_ROSTER } from "../config/team-roster.ts";
 export const FLOOR_1_Y = 0.18;
 export const FLOOR_2_Y = 3.9;
 export const FLOOR_3_Y = 7.8;
-export const FLOOR_4_Y = 11.6;
-export const FLOOR_5_Y = 15.4;
-export const ROOF_Y = 19.2;
+/**
+ * Kantor kembali 3 lantai: L4 & L5 DIHAPUS.
+ * Atap (helipad + helikopter + lapangan badminton) sekarang langsung di atas L3.
+ * Nilai 11.8 = permukaan pelat atap L3 (sebelumnya 19.2 karena menumpuk di atas L4/L5).
+ */
+export const ROOF_Y = 11.8;
 
 export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
   // ================= FLOOR 1 — LOBBY, HOLOGRAM PORTAL & COORDINATION HUB =================
@@ -135,7 +138,7 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
     floor: 2,
     position: [0.0, FLOOR_2_Y, -3.2],
     facingYaw: 0,
-    neighbors: ["wp-l2-mid-2", "wp-l2-mid-3", "wp-l2-promenade"],
+    neighbors: ["wp-l2-mid-2", "wp-l2-mid-3", "wp-l2-promenade", "wp-f5-hub"],
     zone: "holohub",
   },
   "wp-l2-mid-3": {
@@ -327,7 +330,7 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
     floor: 3,
     position: [0.0, FLOOR_3_Y, -1.8],
     facingYaw: 0,
-    neighbors: ["wp-ws-06", "wp-ws-07", "wp-ws-08", "wp-f3-lounge", "wp-l3-balcony"],
+    neighbors: ["wp-ws-06", "wp-ws-07", "wp-ws-08", "wp-f3-lounge", "wp-l3-balcony", "wp-f4-hub"],
     zone: "corridor",
   },
   "wp-f3-lounge": {
@@ -367,125 +370,126 @@ export const OFFICE_WAYPOINTS: Record<string, WaypointNode> = {
     zone: "executive",
   },
 
-  // ================= FLOOR 4 — VIDEO EDITING & RENDERING (3 WORKSTATIONS) =================
+  // ================= FLOOR 3 (TIMUR) — VIDEO EDITING & RENDERING (3 WORKSTATIONS) =================
+  // Catatan: L4 lama digabung ke L3, L5 lama digabung ke L2. Kantor kini 3 lantai + atap.
   "wp-ws-09": {
     id: "wp-ws-09",
-    label: "L4 • EDT-01 Salsa (Video Editor)",
-    floor: 4,
-    position: [-7.5, FLOOR_4_Y, -5.34],
+    label: "L3 • EDT-01 Salsa (Video Editor)",
+    floor: 3,
+    position: [-9.0, FLOOR_3_Y, 0.26],
     facingYaw: Math.PI,
     neighbors: ["wp-f4-hub"],
     zone: "workstation",
   },
   "wp-ws-10": {
     id: "wp-ws-10",
-    label: "L4 • EDT-02 Kevin (Render Eng)",
-    floor: 4,
-    position: [0.0, FLOOR_4_Y, -5.34],
+    label: "L3 • EDT-02 Kevin (Render Eng)",
+    floor: 3,
+    position: [0.0, FLOOR_3_Y, 0.26],
     facingYaw: Math.PI,
     neighbors: ["wp-f4-hub"],
     zone: "workstation",
   },
   "wp-ws-11": {
     id: "wp-ws-11",
-    label: "L4 • EDT-03 Putri (SFX & Polish)",
-    floor: 4,
-    position: [7.5, FLOOR_4_Y, -5.34],
+    label: "L3 • EDT-03 Putri (SFX & Polish)",
+    floor: 3,
+    position: [9.0, FLOOR_3_Y, 0.26],
     facingYaw: Math.PI,
     neighbors: ["wp-f4-hub"],
     zone: "workstation",
   },
   "wp-f4-hub": {
     id: "wp-f4-hub",
-    label: "L4 • Render Pipeline Corridor",
-    floor: 4,
-    position: [0.0, FLOOR_4_Y, -1.6],
+    label: "L3 • Render Pipeline Corridor",
+    floor: 3,
+    position: [0.0, FLOOR_3_Y, -1.6],
     facingYaw: 0,
-    neighbors: ["wp-ws-09", "wp-ws-10", "wp-ws-11", "wp-f4-lounge", "wp-f4-deck"],
+    neighbors: ["wp-ws-09", "wp-ws-10", "wp-ws-11", "wp-f4-lounge", "wp-f4-deck", "wp-f3-hub"],
     zone: "corridor",
   },
   "wp-f4-lounge": {
     id: "wp-f4-lounge",
-    label: "L4 • Editing Lounge",
-    floor: 4,
-    position: [7.5, FLOOR_4_Y, 1.6],
+    label: "L3 • Editing Lounge",
+    floor: 3,
+    position: [6.0, FLOOR_3_Y, 1.6],
     facingYaw: -Math.PI / 2,
     neighbors: ["wp-f4-hub", "wp-f4-deck"],
     zone: "holohub",
   },
   "wp-f4-deck": {
     id: "wp-f4-deck",
-    label: "L4 • Render Bay Deck",
-    floor: 4,
-    position: [-4.5, FLOOR_4_Y, 1.8],
+    label: "L3 • Render Bay Deck",
+    floor: 3,
+    position: [-4.5, FLOOR_3_Y, 1.6],
     facingYaw: 0,
     neighbors: ["wp-f4-hub", "wp-f4-lounge"],
     zone: "corridor",
   },
 
-  // ================= FLOOR 5 — VOICE, SUBTITLE (2) & QUALITY CONTROL (2) (4 WORKSTATIONS) =================
+  // ================= FLOOR 2 (TIMUR/UTARA) — VOICE, SUBTITLE & QC (4 WORKSTATIONS) =================
   "wp-ws-12": {
     id: "wp-ws-12",
-    label: "L5 • VOX-01 Bima (Voice & Mix)",
-    floor: 5,
-    position: [-9.0, FLOOR_5_Y, -5.34],
+    label: "L2 • VOX-01 Bima (Voice & Mix)",
+    floor: 2,
+    position: [-6.0, FLOOR_2_Y, -5.34],
     facingYaw: Math.PI,
     neighbors: ["wp-f5-hub"],
     zone: "workstation",
   },
   "wp-ws-13": {
     id: "wp-ws-13",
-    label: "L5 • VOX-02 Dewi (Subtitles 0ms)",
-    floor: 5,
-    position: [-3.0, FLOOR_5_Y, -5.34],
+    label: "L2 • VOX-02 Dewi (Subtitles 0ms)",
+    floor: 2,
+    position: [9.0, FLOOR_2_Y, -5.34],
     facingYaw: Math.PI,
     neighbors: ["wp-f5-hub"],
     zone: "workstation",
   },
   "wp-ws-14": {
     id: "wp-ws-14",
-    label: "L5 • QAC-01 Fajar (QC Audit)",
-    floor: 5,
-    position: [3.0, FLOOR_5_Y, -5.34],
+    label: "L2 • QAC-01 Fajar (QC Audit)",
+    floor: 2,
+    position: [-9.0, FLOOR_2_Y, 0.26],
     facingYaw: Math.PI,
     neighbors: ["wp-f5-hub"],
     zone: "workstation",
   },
   "wp-ws-15": {
     id: "wp-ws-15",
-    label: "L5 • QAC-02 Hendra (Mobile QC)",
-    floor: 5,
-    position: [9.0, FLOOR_5_Y, -5.34],
+    label: "L2 • QAC-02 Hendra (Mobile QC)",
+    floor: 2,
+    position: [9.0, FLOOR_2_Y, 0.26],
     facingYaw: Math.PI,
     neighbors: ["wp-f5-hub"],
     zone: "workstation",
   },
   "wp-f5-hub": {
     id: "wp-f5-hub",
-    label: "L5 • Voice & QC Hub",
-    floor: 5,
-    position: [0.0, FLOOR_5_Y, -1.6],
+    label: "L2 • Voice & QC Hub",
+    floor: 2,
+    position: [0.0, FLOOR_2_Y, -1.6],
     facingYaw: 0,
-    neighbors: ["wp-ws-12", "wp-ws-13", "wp-ws-14", "wp-ws-15", "wp-f5-lounge", "wp-f5-deck"],
+    neighbors: ["wp-ws-12", "wp-ws-13", "wp-ws-14", "wp-ws-15", "wp-f5-lounge", "wp-f5-deck", "wp-l2-hub"],
     zone: "corridor",
   },
   "wp-f5-lounge": {
     id: "wp-f5-lounge",
-    label: "L5 • Sound & QC Break Deck",
-    floor: 5,
-    position: [7.5, FLOOR_5_Y, 1.6],
+    label: "L2 • Sound & QC Break Deck",
+    floor: 2,
+    position: [6.0, FLOOR_2_Y, 1.6],
     facingYaw: -Math.PI / 2,
     neighbors: ["wp-f5-hub", "wp-f5-deck"],
     zone: "holohub",
   },
   "wp-f5-deck": {
     id: "wp-f5-deck",
-    label: "L5 • Executive Sky Deck",
-    floor: 5,
-    position: [-4.5, FLOOR_5_Y, 1.8],
+    label: "L2 • Production Deck",
+    floor: 2,
+    position: [-4.5, FLOOR_2_Y, 1.6],
     facingYaw: 0,
     neighbors: ["wp-f5-hub", "wp-f5-lounge"],
-    zone: "executive",
+    zone: "corridor",
   },
 };
 
@@ -634,14 +638,14 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     specs: "4K Vector Canvas • Multi-Agent Graph",
   },
 
-  // Floor 4 — Video Editing & Rendering (3 Workstations)
+  // Floor 3 — Video Editing & Rendering (3 Workstations, digabung dari L4 lama)
   {
     id: "ws-09",
     code: "EDT-01",
     name: "TikTok 9:16 Master Edit Suite",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
-    position: [-7.5, FLOOR_4_Y, -6.2],
+    position: [-9.0, FLOOR_3_Y, -0.6],
     rotationY: 0,
     accentColor: "#a855f7",
     waypointId: "wp-ws-09",
@@ -652,9 +656,9 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     id: "ws-10",
     code: "EDT-02",
     name: "WebCodecs / FFmpeg Render Node",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
-    position: [0.0, FLOOR_4_Y, -6.2],
+    position: [0.0, FLOOR_3_Y, -0.6],
     rotationY: 0,
     accentColor: "#9333ea",
     waypointId: "wp-ws-10",
@@ -665,9 +669,9 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     id: "ws-11",
     code: "EDT-03",
     name: "SFX, Pacing & Polish Desk",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
-    position: [7.5, FLOOR_4_Y, -6.2],
+    position: [9.0, FLOOR_3_Y, -0.6],
     rotationY: 0,
     accentColor: "#c084fc",
     waypointId: "wp-ws-11",
@@ -675,14 +679,14 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     specs: "Whoosh/Click SFX • Cover Thumbnail",
   },
 
-  // Floor 5 — Voice, Subtitle & Quality Control (4 Workstations)
+  // Floor 2 — Voice, Subtitle & Quality Control (4 Workstations, digabung dari L5 lama)
   {
     id: "ws-12",
     code: "VOX-01",
     name: "Neural TTS & Audio Mix Booth",
-    floor: 5,
+    floor: 2,
     divisionTeam: "voice_subtitle",
-    position: [-9.0, FLOOR_5_Y, -6.2],
+    position: [-6.0, FLOOR_2_Y, -6.2],
     rotationY: 0,
     accentColor: "#6366f1",
     waypointId: "wp-ws-12",
@@ -693,9 +697,9 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     id: "ws-13",
     code: "VOX-02",
     name: "0ms-Sync Subtitle Console",
-    floor: 5,
+    floor: 2,
     divisionTeam: "voice_subtitle",
-    position: [-3.0, FLOOR_5_Y, -6.2],
+    position: [9.0, FLOOR_2_Y, -6.2],
     rotationY: 0,
     accentColor: "#818cf8",
     waypointId: "wp-ws-13",
@@ -706,9 +710,9 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     id: "ws-14",
     code: "QAC-01",
     name: "Video Metadata & ffprobe Audit",
-    floor: 5,
+    floor: 2,
     divisionTeam: "quality_control",
-    position: [3.0, FLOOR_5_Y, -6.2],
+    position: [-9.0, FLOOR_2_Y, -0.6],
     rotationY: 0,
     accentColor: "#10b981",
     waypointId: "wp-ws-14",
@@ -719,9 +723,9 @@ export const INITIAL_WORKSTATIONS: Workstation[] = [
     id: "ws-15",
     code: "QAC-02",
     name: "Mobile Safe Zone & Anti-Duplicate",
-    floor: 5,
+    floor: 2,
     divisionTeam: "quality_control",
-    position: [9.0, FLOOR_5_Y, -6.2],
+    position: [9.0, FLOOR_2_Y, -0.6],
     rotationY: 0,
     accentColor: "#34d399",
     waypointId: "wp-ws-15",
@@ -810,10 +814,8 @@ const STAFF_APPEARANCES: Record<string, { accent: string; secondary: string; app
 };
 
 const FLOOR_PATROL: Record<number, string[]> = {
-  2: ["wp-l2-hub", "wp-l2-promenade", "wp-f2-lounge-w", "wp-f2-lounge-e"],
-  3: ["wp-f3-hub", "wp-f3-lounge", "wp-l3-balcony"],
-  4: ["wp-f4-hub", "wp-f4-lounge", "wp-f4-deck"],
-  5: ["wp-f5-hub", "wp-f5-lounge", "wp-f5-deck"],
+  2: ["wp-l2-hub", "wp-l2-promenade", "wp-f2-lounge-w", "wp-f2-lounge-e", "wp-f5-hub"],
+  3: ["wp-f3-hub", "wp-f3-lounge", "wp-l3-balcony", "wp-f4-hub"],
 };
 
 /**
@@ -872,9 +874,9 @@ export const INITIAL_ACTIVITIES: ActivityEvent[] = [
     actor: "SYSTEM",
     actorType: "system",
     message:
-      "FAJREZZZ AI OFFICE 5-Lantai aktif — 15 karyawan (kapasitas s/d 20) standby menunggu tugas produksi TikTok 9:16 nyata.",
+      "FAJREZZZ AI OFFICE 3-Lantai + Atap Sky Deck aktif — 15 karyawan (kapasitas s/d 20) standby menunggu tugas produksi TikTok 9:16 nyata.",
     severity: "system",
-    zone: "L1–L5 HQ",
+    zone: "L1–L3 + Atap",
   },
 ];
 
@@ -883,9 +885,9 @@ export const DESTINATION_PRESETS = [
   { id: "wp-ws-01", label: "L2 Research", floor: 2 },
   { id: "wp-ws-04", label: "L2 Script", floor: 2 },
   { id: "wp-ws-06", label: "L3 Motion", floor: 3 },
-  { id: "wp-ws-09", label: "L4 Editing", floor: 4 },
-  { id: "wp-ws-12", label: "L5 Voice", floor: 5 },
-  { id: "wp-ws-14", label: "L5 QC", floor: 5 },
+  { id: "wp-ws-09", label: "L3 Editing", floor: 3 },
+  { id: "wp-ws-12", label: "L2 Voice", floor: 2 },
+  { id: "wp-ws-14", label: "L2 QC", floor: 2 },
   { id: "wp-pool-deck", label: "Pool Deck", floor: 1 },
   { id: "wp-supercar-bay", label: "Supercar", floor: 1 },
 ] as const;

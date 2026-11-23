@@ -15,8 +15,6 @@ import {
   FLOOR_1_Y,
   FLOOR_2_Y,
   FLOOR_3_Y,
-  FLOOR_4_Y,
-  FLOOR_5_Y,
   INITIAL_AGENTS,
   INITIAL_TASKS,
   INITIAL_WORKSTATIONS,
@@ -55,9 +53,9 @@ test("Section A: 15 active employees + 5 reserve slots = 20 max capacity across 
   }
 });
 
-test("Section A/B: 5-floor office geometry, 15 workstations, honest idle start, valid waypoint paths", () => {
-  assert.equal(OFFICE_FLOORS.length, 5);
-  assert.ok(FLOOR_1_Y < FLOOR_2_Y && FLOOR_2_Y < FLOOR_3_Y && FLOOR_3_Y < FLOOR_4_Y && FLOOR_4_Y < FLOOR_5_Y && FLOOR_5_Y < ROOF_Y);
+test("Section A/B: 3-floor office + rooftop deck, 15 workstations, honest idle start, valid waypoint paths", () => {
+  assert.equal(OFFICE_FLOORS.length, 3);
+  assert.ok(FLOOR_1_Y < FLOOR_2_Y && FLOOR_2_Y < FLOOR_3_Y && FLOOR_3_Y < ROOF_Y);
   assert.equal(INITIAL_WORKSTATIONS.length, 15);
   assert.equal(INITIAL_AGENTS.length, 15);
   assert.equal(INITIAL_TASKS.length, 0);
@@ -67,11 +65,13 @@ test("Section A/B: 5-floor office geometry, 15 workstations, honest idle start, 
     assert.ok(OFFICE_WAYPOINTS[agent.currentWaypointId], `${agent.id} waypoint must exist`);
   }
 
-  // Test real pathfinding on Floor 2 and Floor 5
+  // Test real pathfinding on Floor 2 dan Floor 3 (L4/L5 lama sudah digabung)
   const pathF2 = findWaypointPath("wp-f2-lounge-w", "wp-ws-04");
   assert.ok(pathF2.length >= 2, "Floor 2 waypoint path should connect lounge to desk");
-  const pathF5 = findWaypointPath("wp-f5-lounge", "wp-ws-15");
-  assert.ok(pathF5.length >= 2, "Floor 5 waypoint path should connect lounge to QC desk");
+  const pathF2qc = findWaypointPath("wp-l2-hub", "wp-ws-15");
+  assert.ok(pathF2qc.length >= 2, "L2 hub must reach the QC desk (merged from old L5)");
+  const pathF3edit = findWaypointPath("wp-f3-hub", "wp-ws-11");
+  assert.ok(pathF3edit.length >= 2, "L3 hub must reach the editing desk (merged from old L4)");
 });
 
 test("Section A: distributeDivisionTaskToTeam dispatches real work across all specialists in a division", () => {

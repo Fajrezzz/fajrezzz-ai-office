@@ -82,8 +82,8 @@ export const TEAM_DIVISIONS: TeamDivisionSpec[] = [
     id: "video_editing",
     label: "Video Editing & Rendering",
     shortLabel: "Editing & Render",
-    floor: 4,
-    floorView: "l4",
+    floor: 3,
+    floorView: "l3",
     accentColor: "#a855f7",
     targetHeadcount: 3,
     pipelineDivisions: ["editing"],
@@ -99,8 +99,8 @@ export const TEAM_DIVISIONS: TeamDivisionSpec[] = [
     id: "voice_subtitle",
     label: "Voice & Subtitle",
     shortLabel: "Voice & Sub",
-    floor: 5,
-    floorView: "l5",
+    floor: 2,
+    floorView: "l2",
     accentColor: "#6366f1",
     targetHeadcount: 2,
     pipelineDivisions: ["voice"],
@@ -116,8 +116,8 @@ export const TEAM_DIVISIONS: TeamDivisionSpec[] = [
     id: "quality_control",
     label: "Quality Control",
     shortLabel: "Quality Control",
-    floor: 5,
-    floorView: "l5",
+    floor: 2,
+    floorView: "l2",
     accentColor: "#10b981",
     targetHeadcount: 2,
     pipelineDivisions: ["qc"],
@@ -171,27 +171,7 @@ export const OFFICE_FLOORS: FloorBlueprintSpec[] = [
     elevationY: 7.8,
     accentColor: "#ec4899",
     teams: ["visual_motion"],
-    description: "3 Remotion + GSAP motion graphics workstations + live 9:16 composition monitor wall.",
-  },
-  {
-    floor: 4,
-    viewId: "l4",
-    code: "L4",
-    name: "Video Editing & Rendering",
-    elevationY: 11.6,
-    accentColor: "#a855f7",
-    teams: ["video_editing"],
-    description: "3 Video Editing & Rendering pods + WebCodecs/FFmpeg telemetry console.",
-  },
-  {
-    floor: 5,
-    viewId: "l5",
-    code: "L5",
-    name: "Voice, Subtitle & Quality Control",
-    elevationY: 15.4,
-    accentColor: "#10b981",
-    teams: ["voice_subtitle", "quality_control"],
-    description: "2 Voice & 0ms-Sync Subtitle stations + 2 Quality Control & Metadata Audit stations.",
+    description: "3 Remotion + GSAP workstations + 3 Editing/Render pods + live 9:16 composition wall.",
   },
 ];
 
@@ -352,13 +332,13 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     taskPromptFocus: "Animasi terminal Claude Code, diff editor & node diagram",
   },
 
-  // === 4. VIDEO EDITING & RENDERING (3 karyawan — Floor 4) ===
+  // === 4. VIDEO EDITING & RENDERING (3 karyawan — Floor 3) ===
   {
     id: "staff-06",
     code: "EDT-01",
     name: "Salsa Maharani",
     role: "Lead TikTok 9:16 Video Editor",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
     assignedPipelineDivision: "editing",
     workstationId: "ws-09",
@@ -374,7 +354,7 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     code: "EDT-02",
     name: "Kevin Halim",
     role: "WebCodecs / FFmpeg Render Engineer",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
     assignedPipelineDivision: "editing",
     workstationId: "ws-10",
@@ -390,7 +370,7 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     code: "EDT-03",
     name: "Putri Lestari",
     role: "SFX, Pacing & Final Polish Editor",
-    floor: 4,
+    floor: 3,
     divisionTeam: "video_editing",
     assignedPipelineDivision: "editing",
     workstationId: "ws-11",
@@ -402,13 +382,13 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     taskPromptFocus: "Mastering SFX transisi & ekstraksi cover thumbnail HD",
   },
 
-  // === 5. VOICE & SUBTITLE (2 karyawan — Floor 5) ===
+  // === 5. VOICE & SUBTITLE (2 karyawan — Floor 2) ===
   {
     id: "staff-05",
     code: "VOX-01",
     name: "Bima Kusuma",
     role: "Neural TTS & Audio Mixing Director",
-    floor: 5,
+    floor: 2,
     divisionTeam: "voice_subtitle",
     assignedPipelineDivision: "voice",
     workstationId: "ws-12",
@@ -424,7 +404,7 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     code: "VOX-02",
     name: "Dewi Anggraini",
     role: "0ms-Sync Subtitle & Whisper Specialist",
-    floor: 5,
+    floor: 2,
     divisionTeam: "voice_subtitle",
     assignedPipelineDivision: "voice",
     workstationId: "ws-13",
@@ -436,13 +416,13 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     taskPromptFocus: "Penguncian timestamp kata per kata & highlight keyword",
   },
 
-  // === 6. QUALITY CONTROL (2 karyawan — Floor 5) ===
+  // === 6. QUALITY CONTROL (2 karyawan — Floor 2) ===
   {
     id: "staff-07",
     code: "QAC-01",
     name: "Fajar Nugroho",
     role: "Lead Video QC & Metadata Auditor",
-    floor: 5,
+    floor: 2,
     divisionTeam: "quality_control",
     assignedPipelineDivision: "qc",
     workstationId: "ws-14",
@@ -458,7 +438,7 @@ export const ACTIVE_EMPLOYEE_ROSTER: EmployeeRosterEntry[] = [
     code: "QAC-02",
     name: "Hendra Saputra",
     role: "Mobile Readability & Anti-Duplicate Guard",
-    floor: 5,
+    floor: 2,
     divisionTeam: "quality_control",
     assignedPipelineDivision: "qc",
     workstationId: "ws-15",
@@ -484,8 +464,8 @@ export const RESERVE_EXPANSION_SLOTS: Array<{
   { slotNumber: 16, suggestedCode: "RES-04", suggestedRole: "AI Paper & Benchmark Analyst", divisionTeam: "research_trend", floor: 2 },
   { slotNumber: 17, suggestedCode: "SCR-03", suggestedRole: "Series & Retention Scriptwriter", divisionTeam: "script_story", floor: 2 },
   { slotNumber: 18, suggestedCode: "MOT-04", suggestedRole: "3D Motion & Shader Designer", divisionTeam: "visual_motion", floor: 3 },
-  { slotNumber: 19, suggestedCode: "EDT-04", suggestedRole: "4K Batch Render Specialist", divisionTeam: "video_editing", floor: 4 },
-  { slotNumber: 20, suggestedCode: "QAC-03", suggestedRole: "Compliance & Reference Audit Lead", divisionTeam: "quality_control", floor: 5 },
+  { slotNumber: 19, suggestedCode: "EDT-04", suggestedRole: "4K Batch Render Specialist", divisionTeam: "video_editing", floor: 3 },
+  { slotNumber: 20, suggestedCode: "QAC-03", suggestedRole: "Compliance & Reference Audit Lead", divisionTeam: "quality_control", floor: 2 },
 ];
 
 /**

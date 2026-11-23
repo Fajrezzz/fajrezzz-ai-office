@@ -11,12 +11,27 @@ Dokumen ini menjelaskan **cara memasukkan API key** untuk *Central AI Router* FA
 
 ---
 
+## 0. Link langsung (klik ini, tanpa cari menu)
+
+| Keperluan | Link langsung |
+| --- | --- |
+| Bikin key OpenRouter (gratis, model `:free`) | <https://openrouter.ai/keys> |
+| **Tempel key di Vercel** (project `fajrezzz-ai-office`) | <https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables> |
+| Cek status key di server | `/api/ai/status` (domain Vercel kamu, mis. `https://fajrezzz-ai-office.vercel.app/api/ai/status`) |
+| Bikin key Gemini / Groq / Mistral | <https://aistudio.google.com/apikey> · <https://console.groq.com/keys> · <https://console.mistral.ai/api-keys> |
+
+Urutan cepat: **buka link 1 → copy key → buka link 2 → Add New → Name `OPENROUTER_API_KEY`,
+Value = key → centang Production + Preview + Development → Save → Deployments → ⋯ → Redeploy.**
+Shortcut yang sama juga ada di dalam aplikasi: panel **AI Router** (3 tombol di paling atas).
+
+---
+
 ## 1. Ringkasan singkat (TL;DR)
 
 | Langkah | Yang dilakukan |
 | --- | --- |
 | 1 | Ambil key gratis dari Gemini / Groq / OpenRouter (cukup salah satu untuk mulai) |
-| 2 | Vercel → Project → **Settings → Environment Variables** |
+| 2 | Vercel → Project → **Settings → Environment Variables** (<https://vercel.com/fajrezzz1/fajrezzz-ai-office/settings/environment-variables>) |
 | 3 | Tambahkan nama variabel **persis** seperti tabel di bawah, tempel key, centang **Production + Preview + Development** |
 | 4 | **Redeploy** (env baru hanya terbaca setelah deployment baru) |
 | 5 | Verifikasi: buka `/api/ai/status` atau panel **AI Router** → tombol **Tes Live Provider** |

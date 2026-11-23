@@ -50,8 +50,7 @@ const FLOOR_VIEW_BY_NUM: Record<FloorNumber, FloorView> = {
   1: "l1",
   2: "l2",
   3: "l3",
-  4: "l4",
-  5: "l5",
+
 };
 
 function getEpisodeDisplayStatus(
@@ -75,7 +74,7 @@ function getEpisodeDisplayStatus(
  * Clean operational telemetry with zero dummy metrics:
  * - Total & active employees (15 active / 20 max capacity)
  * - Per-division live status (6 divisions)
- * - Per-floor 3D office status (5 floors)
+ * - Per-floor 3D office status (3 floors)
  * - Running tasks, completed tasks, live render progress, verified MP4 videos
  * - Real runtime skills & integrations probe (`/api/pipeline/capabilities` + `/api/ai/status`)
  */
@@ -281,7 +280,7 @@ export function RealResultsDashboard({ compact = false }: { compact?: boolean })
             <span>FAJREZZZ AI OFFICE · LIVE OPERATIONAL TELEMETRY</span>
           </div>
           <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">
-            Dashboard Status Aktual (15 Karyawan · 6 Divisi · 5 Lantai)
+            Dashboard Status Aktual (15 Karyawan · 6 Divisi · 3 Lantai)
           </h1>
           <p className="mt-1 text-xs text-slate-400">
             100% angka aktual dari state runtime — nol angka dummy, nol simulasi kerja palsu.
@@ -615,14 +614,14 @@ export function RealResultsDashboard({ compact = false }: { compact?: boolean })
         </div>
       </div>
 
-      {/* PER-FLOOR STATUS (5 FLOORS) + SKILLS & INTEGRATIONS STATUS */}
+      {/* PER-FLOOR STATUS (3 FLOORS) + SKILLS & INTEGRATIONS STATUS */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Per-Floor Building Status */}
         <div className="rounded-2xl border border-indigo-400/25 bg-slate-900/80 p-4">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-indigo-400" />
             <h2 className="text-sm font-black tracking-wide text-white uppercase">
-              Status Per Lantai (5 Lantai Kantor 3D)
+              Status Per Lantai (3 Lantai Kantor 3D)
             </h2>
           </div>
           <div className="mt-3 space-y-2">

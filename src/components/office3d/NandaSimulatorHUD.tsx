@@ -243,15 +243,11 @@ export function NandaSimulatorHUD() {
                             : loc.floor === 3
                               ? "l3"
                               : loc.floor === 4
-                                ? "l4"
-                                : loc.floor === 5
-                                  ? "l5"
-                                  : loc.floor === 6
-                                    ? "roof"
-                                    : "all";
+                                ? "roof"
+                                : "all";
                       setActiveFloor(fv);
                       const targetBossFloor: BossFloor = (
-                        loc.floor >= 1 && loc.floor <= 6 ? loc.floor : 1
+                        loc.floor >= 1 && loc.floor <= 4 ? loc.floor : 1
                       ) as BossFloor;
                       teleportBoss(loc.position, targetBossFloor, loc.label, loc.yaw);
                       pushSimLog("Teleportasi", `Pindah cepat ke ${loc.label}.`, "system");

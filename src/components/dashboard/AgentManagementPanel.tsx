@@ -28,7 +28,7 @@ import type { FloorNumber, TeamDivisionKey } from "@/types/office";
 /**
  * Scalable Employee Directory & Task Dispatch Panel (Section A).
  *
- * Displays all 15 active task-capable employees across 6 divisions & 5 floors,
+ * Displays all 15 active task-capable employees across 6 divisions & 3 floors,
  * plus the 5 reserve expansion slots (up to 20 employees without re-architecting).
  */
 export function AgentManagementPanel({ compact = false }: { compact?: boolean }) {
@@ -76,7 +76,7 @@ export function AgentManagementPanel({ compact = false }: { compact?: boolean })
               </span>
             </div>
             <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">
-              Tim Produksi 15 Karyawan Aktif (6 Divisi · 5 Lantai)
+              Tim Produksi 15 Karyawan Aktif (6 Divisi · 3 Lantai)
             </h1>
             <p className="mt-1 text-xs text-slate-400">
               Setiap karyawan punya identitas, workstation, shared skills, dan hanya bekerja saat ada tugas produksi nyata.

@@ -713,8 +713,6 @@ export function OfficeArchitecture({
   const showL3 =
     activeFloor === "all" ||
     activeFloor === "l3" ||
-    activeFloor === "l4" ||
-    activeFloor === "l5" ||
     activeFloor === "roof";
   const handleSurfaceDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -1972,6 +1970,71 @@ export function OfficeArchitecture({
             intensity={isNight ? 18 : isSunset ? 11 : 7}
             distance={24}
           />
+        </group>
+      )}
+
+      {/* ============================================================
+          L3 STRUCTURAL ROOF SLAB — dasar Crown Sky Deck (Y ≈ 11.8)
+          Kantor kini 3 lantai: L4 & L5 sudah dihapus.
+          ============================================================ */}
+      {showL3 && (
+        <group>
+          {/* Pelat atap struktural hanya tampil di view "Full" & "Atap" supaya cutaway L3 tetap terbuka */}
+          {(activeFloor === "all" || activeFloor === "roof") && (
+            <group>
+          <mesh
+            position={[0, 11.58, -2.5]}
+            castShadow
+            receiveShadow
+            onDoubleClick={handleSurfaceDoubleClick}
+          >
+            <boxGeometry args={[39.6, 0.42, 16.0]} />
+            <meshStandardMaterial color="#b9b3a6" roughness={0.8} metalness={0.04} />
+          </mesh>
+
+          {/* Dark matte fascia band keliling (eksoskeleton Nanverse) */}
+          <mesh position={[0, 11.72, 5.58]} castShadow>
+            <boxGeometry args={[39.7, 0.5, 0.22]} />
+            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
+          </mesh>
+          <mesh position={[0, 11.72, -10.58]} castShadow>
+            <boxGeometry args={[39.7, 0.5, 0.22]} />
+            <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
+          </mesh>
+          {[-19.8, 19.8].map((rx, ri) => (
+            <mesh key={`l3-roof-fascia-${ri}`} position={[rx, 11.72, -2.5]} castShadow>
+              <boxGeometry args={[0.22, 0.5, 16.1]} />
+              <meshStandardMaterial color="#1b1f26" metalness={0.58} roughness={0.38} />
+            </mesh>
+          ))}
+
+          {/* Neon rim atap */}
+          <mesh position={[0, 11.94, 5.58]}>
+            <boxGeometry args={[39.5, 0.06, 0.06]} />
+            <meshStandardMaterial
+              color="#cffafe"
+              emissive="#00f0ff"
+              emissiveIntensity={isNight ? 2.1 : isSunset ? 1.1 : 0.35}
+            />
+          </mesh>
+
+            </group>
+          )}
+
+          {/* Vertikal neon edge bar sudut gedung (cyan kiri, magenta kanan) */}
+          {[
+            [-19.12, "#00f0ff"],
+            [19.12, "#ec4899"],
+          ].map(([ex, glow], ei) => (
+            <mesh key={`l3-edge-bar-${ei}`} position={[ex as number, 5.85, 4.4]}>
+              <boxGeometry args={[0.085, 11.1, 0.085]} />
+              <meshStandardMaterial
+                color="#cffafe"
+                emissive={glow as string}
+                emissiveIntensity={isNight ? 2.2 : isSunset ? 1.1 : 0.35}
+              />
+            </mesh>
+          ))}
         </group>
       )}
     </group>

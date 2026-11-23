@@ -14,7 +14,7 @@ import { InteriorActivityRooms } from "@/components/office3d/InteriorActivityRoo
 import { OfficeArchitecture } from "@/components/office3d/OfficeArchitecture";
 import { OfficeExtrasStaff } from "@/components/office3d/OfficeExtrasStaff";
 import { RobotCharacter } from "@/components/office3d/RobotCharacter";
-import { UpperProductionFloors } from "@/components/office3d/UpperProductionFloors";
+import { CrownSkyDeck } from "@/components/office3d/CrownSkyDeck";
 import { WeatherEffects } from "@/components/office3d/WeatherEffects";
 import { WorkstationCluster } from "@/components/office3d/WorkstationCluster";
 import { useOffice } from "@/store/OfficeContext";
@@ -34,7 +34,7 @@ const CAMERA_PRESETS: Record<
   isometric: { pos: [-30, 24.5, 31], target: [0, 8.8, 0.2] },
   interior: { pos: [0, 12.2, 14.5], target: [0, 4.4, -3.2] },
   executive: { pos: [11, 14.2, 14.8], target: [0, 8.6, -3.2] },
-  rooftop: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
+  rooftop: { pos: [24, 20.5, 22.5], target: [0, 11.8, -2.5] },
   pool: { pos: [12.5, 5.2, 22.0], target: [-1.5, 1.5, 10.5] },
   supercar: { pos: [14.8, 3.6, 17.6], target: [9.4, 0.9, 11.3] },
 };
@@ -47,9 +47,7 @@ const FLOOR_CAMERA_VIEWS: Record<
   l1: { pos: [11.5, 5.4, 18.2], target: [0, 1.6, -1.5] },
   l2: { pos: [0.5, 10.4, 14.8], target: [0, 4.4, -3.2] },
   l3: { pos: [0.5, 14.2, 14.8], target: [0, 8.4, -3.2] },
-  l4: { pos: [0.5, 18.0, 14.8], target: [0, 12.2, -3.2] },
-  l5: { pos: [0.5, 21.8, 14.8], target: [0, 16.0, -3.2] },
-  roof: { pos: [19, 28.5, 19.5], target: [0, 19.2, -2.5] },
+  roof: { pos: [24, 20.5, 22.5], target: [0, 11.8, -2.5] },
 };
 
 function FreeRoamCameraRig() {
@@ -222,14 +220,10 @@ function FreeRoamCameraRig() {
       const [bx, by, bz] = bossPositionRef.current;
       if (activeVehicleId) {
         setCurrentLocationName("Mengemudi · Cyber Avenue");
-      } else if (by > 17.6) {
-        setCurrentLocationName("Rooftop · Helipad & Bulu Tangkis");
-      } else if (by > 13.4) {
-        setCurrentLocationName("Lantai 5 · Voice, Subtitle & QC");
-      } else if (by > 10.5) {
-        setCurrentLocationName("Lantai 4 · Video Editing & Render");
+      } else if (by > 10.4) {
+        setCurrentLocationName("Atap · Sky Deck, Helipad & Bulu Tangkis");
       } else if (by > 6.5) {
-        setCurrentLocationName("Lantai 3 · CEO Suite & Biliar");
+        setCurrentLocationName("Lantai 3 · Visual, Motion & Editing");
       } else if (by > 2.8) {
         setCurrentLocationName("Lantai 2 · AI Production Floor");
       } else if (bz > 6.5 && bx > -12 && bx < 4) {
@@ -510,8 +504,6 @@ export function OfficeScene() {
       if (activeFloor === "l1") return a.floor === 1;
       if (activeFloor === "l2") return a.floor === 2;
       if (activeFloor === "l3") return a.floor === 3;
-      if (activeFloor === "l4") return a.floor === 4;
-      if (activeFloor === "l5") return a.floor === 5;
       return true;
     });
   }, [agents, activeFloor]);
@@ -522,8 +514,6 @@ export function OfficeScene() {
       if (activeFloor === "l1") return ws.floor === 1;
       if (activeFloor === "l2") return ws.floor === 2;
       if (activeFloor === "l3") return ws.floor === 3;
-      if (activeFloor === "l4") return ws.floor === 4;
-      if (activeFloor === "l5") return ws.floor === 5;
       return true;
     });
   }, [workstations, activeFloor]);
@@ -620,8 +610,8 @@ export function OfficeScene() {
         onFocusPoint={(pt) => focusCameraOn(pt)}
       />
 
-      {/* Multi-Floor Expansion: Floors 4 & 5 + Panoramic Cyan Elevator + Lobby Hologram Portal + Crown Sky Deck */}
-      <UpperProductionFloors
+      {/* Kantor 3 lantai: L4 & L5 dihapus. Atap Sky Deck (helipad + badminton) + portal L1. */}
+      <CrownSkyDeck
         activeFloor={activeFloor}
         isNight={isNight}
         isSunset={isSunset}
@@ -632,7 +622,7 @@ export function OfficeScene() {
       {/* Stage 2 Interior Activity Rooms */}
       <InteriorActivityRooms
         showL1={true}
-        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "l4" || activeFloor === "l5" || activeFloor === "roof"}
+        showL3={activeFloor === "all" || activeFloor === "l3" || activeFloor === "roof"}
         showRoof={false}
         isNight={isNight}
       />

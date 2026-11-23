@@ -51,12 +51,10 @@ import type {
 } from "@/types/office";
 
 const FLOOR_OPTIONS: { id: FloorView; label: string }[] = [
-  { id: "all", label: "Full 5L" },
+  { id: "all", label: "Full 3L" },
   { id: "l1", label: "L1 Lobby" },
   { id: "l2", label: "L2 Riset" },
   { id: "l3", label: "L3 Visual" },
-  { id: "l4", label: "L4 Render" },
-  { id: "l5", label: "L5 Audio/QC" },
   { id: "roof", label: "Atap" },
 ];
 
@@ -259,7 +257,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   };
 
   const cycleFloor = () => {
-    const order: FloorView[] = ["all", "l1", "l2", "l3", "l4", "l5", "roof"];
+    const order: FloorView[] = ["all", "l1", "l2", "l3", "roof"];
     const next = order[(order.indexOf(activeFloor) + 1) % order.length];
     setActiveFloor(next);
   };
@@ -282,7 +280,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
   const activeLightingShort =
     LIGHTING_OPTIONS.find((o) => o.id === lightingPreset)?.label ?? "Siang";
   const activeFloorShort =
-    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full 5L";
+    FLOOR_OPTIONS.find((o) => o.id === activeFloor)?.label ?? "Full 3L";
   const activeCameraShort =
     CAMERA_OPTIONS.find((o) => o.id === cameraPreset)?.label ?? "Depan";
 
@@ -340,9 +338,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
     { id: 1, label: "L1" },
     { id: 2, label: "L2" },
     { id: 3, label: "L3" },
-    { id: 4, label: "L4" },
-    { id: 5, label: "L5" },
-    { id: 6, label: "Atap" },
+    { id: 4, label: "Atap" },
   ];
 
   return (
@@ -426,7 +422,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
             <button
               type="button"
               onClick={() => setFloorPlanOpen(true)}
-              title="Buka Denah Lantai 2D (5 Lantai & 15 Workstation)"
+              title="Buka Denah Lantai 2D (3 Lantai & 15 Workstation)"
               aria-label="Denah Lantai 2D"
               className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-1 rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-2.5 text-[11px] font-bold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-500/25"
             >
@@ -837,7 +833,7 @@ export function SceneControlsHUD({ compact = false }: { compact?: boolean }) {
               <div className="flex items-center gap-1.5 rounded-xl border border-amber-400/50 bg-slate-950/88 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-md">
                 <Crown className="h-3.5 w-3.5 text-amber-400" />
                 <span>
-                  {bossFloor === 6 ? "ATAP" : `L${bossFloor}`} · {bossActionText}
+                  {bossFloor === 4 ? "ATAP" : `L${bossFloor}`} · {bossActionText}
                 </span>
                 <button
                   type="button"

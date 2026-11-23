@@ -13,8 +13,6 @@ import {
   FLOOR_1_Y,
   FLOOR_2_Y,
   FLOOR_3_Y,
-  FLOOR_4_Y,
-  FLOOR_5_Y,
   INITIAL_ACTIVITIES,
   INITIAL_AGENTS,
   INITIAL_TASKS,
@@ -68,9 +66,7 @@ export const BOSS_FLOOR_ELEVATIONS: Record<BossFloor, number> = {
   1: FLOOR_1_Y,
   2: FLOOR_2_Y,
   3: FLOOR_3_Y,
-  4: FLOOR_4_Y,
-  5: FLOOR_5_Y,
-  6: ROOF_Y,
+  4: ROOF_Y + 0.05, // Atap / Crown Sky Deck (permukaan pelat dek, L4 & L5 dihapus)
 };
 
 function formatClock(date = new Date()): string {
@@ -233,11 +229,11 @@ const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
   "staff-04": "wp-ws-06",
   "staff-10": "wp-ws-07",
   "staff-11": "wp-ws-08",
-  // Floor 4 — Video Editing & Rendering (3 staff)
+  // Floor 3 — Video Editing & Rendering (3 staff, digabung dari L4 lama)
   "staff-06": "wp-ws-09",
   "staff-12": "wp-ws-10",
   "staff-13": "wp-ws-11",
-  // Floor 5 — Voice, Subtitle & Quality Control (4 staff)
+  // Floor 2 — Voice, Subtitle & Quality Control (4 staff, digabung dari L5 lama)
   "staff-05": "wp-ws-12",
   "staff-14": "wp-ws-13",
   "staff-07": "wp-ws-14",
@@ -311,10 +307,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
       setActiveFloorState("l2");
     } else if (floor === 3) {
       setActiveFloorState("l3");
-    } else if (floor === 4) {
-      setActiveFloorState("l4");
-    } else if (floor === 5) {
-      setActiveFloorState("l5");
     } else {
       setActiveFloorState("roof");
     }
@@ -357,7 +349,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     setActiveFloorState(floor);
     if (floor === "l2") {
       setCameraPresetState("interior");
-    } else if (floor === "l3" || floor === "l4" || floor === "l5") {
+    } else if (floor === "l3") {
       setCameraPresetState("executive");
     } else if (floor === "roof") {
       setCameraPresetState("rooftop");
@@ -395,8 +387,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         1: "l1",
         2: "l2",
         3: "l3",
-        4: "l4",
-        5: "l5",
       };
       setActiveFloorState(floorViewMap[wp.floor] ?? "all");
 
@@ -418,8 +408,6 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         1: "l1",
         2: "l2",
         3: "l3",
-        4: "l4",
-        5: "l5",
       };
       setActiveFloorState(floorViewMap[ws.floor] ?? "all");
       focusCameraOn(
@@ -550,7 +538,7 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
         addActivity(
           "BOS FAJREZ",
           "user",
-          `Berpindah ke ${label} (${floor === 6 ? "Lantai Atap" : `Lantai ${floor}`}).`,
+          `Berpindah ke ${label} (${floor === 4 ? "Lantai Atap" : `Lantai ${floor}`}).`,
           "success",
           label
         );
@@ -563,10 +551,15 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
     (floor: BossFloor) => {
       const cur = bossPositionRef.current;
       // Keep X/Z inside building interior when going up to L2/L3/Roof
-      const clampedX = Math.max(-12.2, Math.min(12.2, cur[0]));
+      const clampedX =
+        floor === 4
+          ? Math.max(-19.0, Math.min(19.0, cur[0])) // Atap Sky Deck kanvas penuh
+          : Math.max(-12.2, Math.min(12.2, cur[0]));
       const clampedZ =
         floor === 1
           ? Math.max(-8.5, Math.min(16.8, cur[2]))
+          : floor === 4
+          ? Math.max(-10.0, Math.min(5.0, cur[2]))
           : Math.max(-8.5, Math.min(4.2, cur[2]));
       const nextY = BOSS_FLOOR_ELEVATIONS[floor];
       const floorName =
@@ -575,12 +568,8 @@ export function OfficeProvider({ children }: { children: React.ReactNode }) {
           : floor === 2
           ? "Lantai 2 Research & Script"
           : floor === 3
-          ? "Lantai 3 Visual & Motion Design"
-          : floor === 4
-          ? "Lantai 4 Video Editing & Render"
-          : floor === 5
-          ? "Lantai 5 Voice, Subtitle & QC"
-          : "Atap Sky Deck & Helipad";
+          ? "Lantai 3 Visual, Motion & Editing"
+          : "Atap Sky Deck, Helipad & Badminton";
 
       teleportBoss([clampedX, nextY, clampedZ], floor, floorName);
     },

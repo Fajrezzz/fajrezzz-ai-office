@@ -26,6 +26,23 @@ Fondasi aplikasi web **Cyberpunk 3D Virtual Office** interaktif yang dibangun me
 
 ---
 
+## Struktur Kantor 3 Lantai + Crown Sky Deck
+
+Kantor 3D kembali ke **3 lantai** (L4 & L5 dihapus total), dengan atap fungsional di puncak L3:
+
+| Lantai | Elevasi | Isi |
+| --- | --- | --- |
+| **L1 — Lobby & Coordination Hub** | `FLOOR_1_Y = 0.18` | Grand reception, hologram arrival portal, gym & arcade, kolam renang, parkir supercar |
+| **L2 — Research, Script, Voice & QC** | `FLOOR_2_Y = 3.9` | 3 meja Research + 2 meja Script + **4 meja Voice/Subtitle/QC** (eks-lantai 5) + coffee bar & balkon |
+| **L3 — Visual, Motion & Video Editing** | `FLOOR_3_Y = 7.8` | 3 meja Motion + **3 pod Editing/Render** (eks-lantai 4) + CEO suite, boardroom, lounge |
+| **Atap — Crown Sky Deck** | `ROOF_Y = 11.8` | Helipad "H" + helikopter, lapangan badminton + 2 pemain, glass balustrade, neon signage, penthouse lift |
+
+**15 karyawan tetap utuh** — semua dipindahkan ke L2 (9 meja) dan L3 (6 meja); tidak ada agen yatim
+atau waypoint menggantung. Verifikasi otomatis: `tests/three-floor-layout.test.ts`
+(cek lantai, kepemilikan meja, tabrakan meja, dan ketinggian atap).
+
+---
+
 ## Optimasi Performa untuk HP Android
 
 - **Low-Poly Procedural Geometry**: Seluruh furniture, arsitektur kaca, dan karakter robot dibuat dengan mesh low-poly ringan (tanpa file model eksternal berkapasitas besar).

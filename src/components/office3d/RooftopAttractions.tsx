@@ -12,13 +12,12 @@ interface RooftopAttractionsProps {
 
 /**
  * IMPORTANT — local coordinate space:
- * This module is mounted INSIDE the Crown Sky-Deck group in UpperProductionFloors.tsx,
- * which is already positioned at `ROOF_Y` (19.2). So every Y below is deck-relative
- * (≈ 0 = deck surface). The old absolute Y=11.82 placement was buried inside Floor 4
- * (slab 11.6 → ceiling 15.29), which made the helicopter & badminton court invisible.
+ * This module is mounted INSIDE the Crown Sky Deck group in CrownSkyDeck.tsx,
+ * which is already positioned at `ROOF_Y` (11.8 — atap langsung di atas L3 setelah
+ * L4 & L5 dihapus). So every Y below is deck-relative (≈ 0 = deck surface).
  */
-export const ROOFTOP_HELIPAD_XZ: [number, number] = [-7.4, -2.4];
-export const ROOFTOP_COURT_XZ: [number, number] = [6.6, -2.6];
+export const ROOFTOP_HELIPAD_XZ: [number, number] = [-11.5, -2.5];
+export const ROOFTOP_COURT_XZ: [number, number] = [8.0, -2.6];
 
 /** Circular Concrete Helipad Deck with "H" marking, neon ring & 4 corner beacons */
 function HelipadDeck({ isNight }: { isNight: boolean }) {
