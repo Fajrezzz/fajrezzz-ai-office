@@ -86,71 +86,71 @@ export const DRIVABLE_VEHICLES: DrivableVehicleDef[] = [
   },
   {
     id: "veh-cyber-suv",
-    name: "Cyber G-Class SUV",
+    name: "Range Rover Sport SUV",
     kind: "suv",
     color: "#111827",
     accentColor: "#22d3ee",
-    homePosition: [13.2, 0.18, 8.2],
-    homeYaw: -0.2,
+    homePosition: [15.4, 0.18, 10.8],
+    homeYaw: -0.22,
     maxSpeed: 16,
   },
   {
     id: "veh-exec-sedan",
-    name: "Executive EV Sedan",
+    name: "Mercedes S-Class Sedan",
     kind: "sedan",
     color: "#e2e8f0",
     accentColor: "#38bdf8",
-    homePosition: [-20.5, 0.08, 13.5],
+    homePosition: [-23.5, 0.08, 13.5],
     homeYaw: 0,
     maxSpeed: 18,
   },
   {
     id: "veh-crimson-gt",
-    name: "Crimson GT Coupe",
+    name: "AMG GT Crimson Coupe",
     kind: "supercar",
     color: "#dc2626",
     accentColor: "#fbbf24",
-    homePosition: [-24.2, 0.08, 13.5],
+    homePosition: [-27.2, 0.08, 13.5],
     homeYaw: 0,
     maxSpeed: 23,
   },
   {
     id: "veh-midnight-ev",
-    name: "Midnight EV Sport",
+    name: "Porsche Taycan Midnight",
     kind: "sedan",
     color: "#1e3a8a",
     accentColor: "#a855f7",
-    homePosition: [-27.9, 0.08, 13.5],
+    homePosition: [-30.9, 0.08, 13.5],
     homeYaw: 0,
     maxSpeed: 19,
   },
   {
     id: "veh-luxury-van",
-    name: "VIP Lounge Shuttle",
+    name: "Luxury Executive SUV",
     kind: "van",
     color: "#94a3b8",
     accentColor: "#22d3ee",
-    homePosition: [21.0, 0.08, 13.5],
+    homePosition: [23.9, 0.08, 13.5],
     homeYaw: 0,
-    maxSpeed: 14,
+    maxSpeed: 16,
   },
   {
     id: "veh-neon-hyper",
-    name: "Cyber Hypercar Neon",
+    name: "Obsidian GT Supercar",
     kind: "hypercar",
     color: "#0f172a",
     accentColor: "#e879f9",
-    homePosition: [24.8, 0.08, 13.5],
+    homePosition: [27.6, 0.08, 13.5],
     homeYaw: 0,
     maxSpeed: 25,
   },
   {
     id: "veh-gold-coupe",
-    name: "Gold Edition Coupe",
+    name: "Champagne GT Coupe",
     kind: "supercar",
     color: "#b45309",
     accentColor: "#fde047",
-    homePosition: [28.6, 0.08, 13.5],
+    homePosition: [31.3, 0.08, 13.5],
     homeYaw: 0,
     maxSpeed: 21,
   },
@@ -174,16 +174,15 @@ export const TELEPORT_LOCATIONS: {
   position: [number, number, number];
   yaw: number;
 }[] = [
-  { id: "tp-lobi", label: "Lobi & Resepsionis (L1)", zone: "Lobi Utama L1", floor: 1, position: [0, 0.18, 1.8], yaw: Math.PI },
-  { id: "tp-mt5", label: "Ruang Kontrol MT5 (L1)", zone: "Ruang Kontrol MT5", floor: 1, position: [-8.6, 0.18, -3.5], yaw: Math.PI },
-  { id: "tp-gym", label: "Gym & Arcade (L1)", zone: "Gym & Arcade L1", floor: 1, position: [9.2, 0.18, -3.2], yaw: Math.PI },
+  { id: "tp-lobi", label: "Lobi Utama & Resepsionis (L1)", zone: "Lobi Utama L1", floor: 1, position: [0, 0.18, 1.8], yaw: Math.PI },
+  { id: "tp-gym", label: "Gym & Arcade (L1 Kanan)", zone: "Gym & Arcade L1", floor: 1, position: [14.2, 0.18, -3.2], yaw: Math.PI },
   { id: "tp-ops", label: "Ruang Operasional AI (L2)", zone: "Operasional 7 Divisi L2", floor: 2, position: [0, 3.9, 2.2], yaw: Math.PI },
   { id: "tp-balcony", label: "Balkon & Kafe Santai (L2)", zone: "Balkon Lantai 2", floor: 2, position: [0, 3.9, 5.2], yaw: 0 },
   { id: "tp-ceo", label: "Kamar CEO & Lounge (L3)", zone: "Kamar CEO & Lounge L3", floor: 3, position: [0, 7.8, 1.5], yaw: Math.PI },
-  { id: "tp-billiard", label: "Biliar & Bioskop (L3)", zone: "Lounge Biliar & Bioskop L3", floor: 3, position: [8.8, 7.8, -1.8], yaw: Math.PI },
+  { id: "tp-billiard", label: "Biliar & Bioskop (L3 Kanan)", zone: "Lounge Biliar & Bioskop L3", floor: 3, position: [13.6, 7.8, -1.8], yaw: Math.PI },
   { id: "tp-pool", label: "Kolam Renang & Bot Trading", zone: "Dek Kolam Renang", floor: 0, position: [-10.8, 0.18, 10.7], yaw: -Math.PI / 2 },
   { id: "tp-parking", label: "Parkiran & Porsche 911", zone: "Area Parkir & Mobil", floor: 0, position: [7.2, 0.18, 11.3], yaw: Math.PI / 2 },
-  { id: "tp-rooftop", label: "Rooftop Padel/Badminton & Helipad", zone: "Rooftop Sky Deck", floor: 4, position: [0, 11.82, 0], yaw: Math.PI },
+  { id: "tp-rooftop", label: "Rooftop Badminton & Helipad", zone: "Rooftop Sky Deck", floor: 4, position: [0, 11.82, 0], yaw: Math.PI },
 ];
 
 const INITIAL_MT5_ACCOUNTS: Mt5Account[] = Array.from({ length: 18 }).map(
@@ -222,16 +221,18 @@ const INITIAL_MT5_ACCOUNTS: Mt5Account[] = Array.from({ length: 18 }).map(
 );
 
 const EXTRA_STAFF_ROSTER: { id: string; name: string; role: string; floor: number }[] = [
-  { id: "ext-nabila", name: "Nabila Sari", role: "Resepsionis L1", floor: 1 },
-  { id: "ext-arif", name: "Arif Hidayat", role: "Admin Lobby L1", floor: 1 },
-  { id: "ext-bambang", name: "Bambang Suryo", role: "Security Pintu Utama", floor: 1 },
-  { id: "ext-eko", name: "Eko Prasetyo", role: "Security Pintu Utama", floor: 1 },
-  { id: "ext-dina", name: "Dina Kartika", role: "Analis MT5 L1", floor: 1 },
-  { id: "ext-rehan", name: "Rehan Saputra", role: "Quant Trader L1", floor: 1 },
-  { id: "ext-gilang", name: "Gilang Ramadhan", role: "Staf Admin L1", floor: 1 },
-  { id: "ext-putri", name: "Putri Maharani", role: "HR & Wellness L2", floor: 2 },
-  { id: "ext-kevin", name: "Kevin Pratama", role: "Pelatih Gym & Arcade", floor: 1 },
-  { id: "ext-sinta", name: "Sinta Wulandari", role: "Asisten Eksekutif L3", floor: 3 },
+  { id: "vip-ceo", name: "Hendra Wijaya", role: "CEO Eksekutif (L3)", floor: 3 },
+  { id: "vip-manager", name: "Bagas Prakoso", role: "Manajer Senior (L3)", floor: 3 },
+  { id: "vip-secretary", name: "Putri Larasati", role: "Sekretaris Eksekutif (L3)", floor: 3 },
+  { id: "vip-cfo", name: "Arman Santika", role: "Direktur Keuangan (L3)", floor: 3 },
+  { id: "l1-security-1", name: "Bambang Suryo", role: "Security Pintu Utama (L1)", floor: 1 },
+  { id: "l1-security-2", name: "Hendro Wibowo", role: "Security Lobby (L1)", floor: 1 },
+  { id: "l1-recep-1", name: "Nabila Sari", role: "Resepsionis Lobi Utama (L1)", floor: 1 },
+  { id: "l1-recep-2", name: "Arif Hidayat", role: "Admin Lobby Utama (L1)", floor: 1 },
+  { id: "l1-sofa-w1", name: "Dina Oktavia", role: "Staf CS Lobi (L1)", floor: 1 },
+  { id: "l1-sofa-w2", name: "Gilang Ramadhan", role: "Staf Admin Lobi (L1)", floor: 1 },
+  { id: "l1-sofa-e1", name: "Maya Kusuma", role: "Staf Kreatif Lobi (L1)", floor: 1 },
+  { id: "l1-sofa-e2", name: "Hendra Saputra", role: "Staf Media Lobi (L1)", floor: 1 },
 ];
 
 const SIM_STORAGE_KEY = "fajrezzz-nanda-sim-v2";
@@ -354,7 +355,7 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     null | "mt5" | "directory" | "map" | "settings" | "help" | "lounge"
   >(null);
 
-  const [mt5Accounts, setMt5Accounts] = useState<Mt5Account[]>(INITIAL_MT5_ACCOUNTS);
+  const [mt5Accounts] = useState<Mt5Account[]>(INITIAL_MT5_ACCOUNTS);
   const [invitedLoungeIds, setInvitedLoungeIds] = useState<string[]>([]);
   const [activeVehicleId, setActiveVehicleId] = useState<string | null>(null);
   const [vehicleSpeedKmh, setVehicleSpeedKmh] = useState<number>(0);
@@ -366,15 +367,8 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
       id: "log-init-1",
       time: "08:00",
       actor: "Sistem Kantor",
-      text: "Hari 1 dimulai · 20 staf & 9 kendaraan siap digunakan.",
+      text: "Hari 1 dimulai · 22 karyawan kantor & 9 mobil realistis siap digunakan.",
       category: "system",
-    },
-    {
-      id: "log-init-2",
-      time: "08:00",
-      actor: "MT5 Monitor",
-      text: "18 akun simulasi terhubung (mode SIMULASI aktif).",
-      category: "mt5",
     },
   ]);
 
@@ -460,41 +454,19 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     }
   }, [autoDayNight, gameMinutes, lightingPreset, setLightingPreset]);
 
-  // Live gentle tick for 18 simulated MT5 accounts (clearly labeled SIMULASI!)
-  useEffect(() => {
-    const iv = window.setInterval(() => {
-      setMt5Accounts((prev) =>
-        prev.map((acc, idx) => {
-          if (acc.status === "STANDBY") return acc;
-          const delta = Number(
-            (Math.sin(Date.now() * 0.0007 + idx * 1.9) * 14.5).toFixed(2)
-          );
-          const nextFloat = Number((acc.floatingPnl + delta * 0.15).toFixed(2));
-          return {
-            ...acc,
-            floatingPnl: Math.max(-450, Math.min(850, nextFloat)),
-            equity: Number((acc.balance + nextFloat).toFixed(2)),
-          };
-        })
-      );
-    }, 3500);
-    return () => window.clearInterval(iv);
-  }, []);
-
   // Live location name detector based on Boss world position
   useEffect(() => {
     const iv = window.setInterval(() => {
       const [bx, by, bz] = bossPositionRef.current;
       if (by > 10.5) {
-        setCurrentLocationName(bx < 0 ? "Rooftop · Helipad H" : "Rooftop · Padel & Pergola");
+        setCurrentLocationName(bx < 0 ? "Rooftop · Helipad H" : "Rooftop · Badminton & Pergola");
       } else if (by > 6.5) {
-        setCurrentLocationName(bx > 5 ? "L3 · Lounge Biliar & Bioskop" : "L3 · Kamar CEO & Lounge");
+        setCurrentLocationName(bx > 10 ? "L3 · Lounge Biliar & Bioskop" : "L3 · Kamar CEO & Lounge");
       } else if (by > 2.8) {
         setCurrentLocationName(bz > 4.2 ? "L2 · Balkon Cyberpunk" : "L2 · Ruang Operasional AI");
       } else if (bz < 4.0) {
-        if (bx < -5) setCurrentLocationName("L1 · Ruang Kontrol MT5");
-        else if (bx > 5) setCurrentLocationName("L1 · Gym & Arcade");
-        else setCurrentLocationName("L1 · Lobi & Resepsionis");
+        if (bx > 11) setCurrentLocationName("L1 · Gym & Arcade");
+        else setCurrentLocationName("L1 · Lobi Utama");
       } else if (bz < 18.5) {
         setCurrentLocationName(bx < 3 ? "Halaman · Kolam & Bot Trading" : "Halaman · Parkir Porsche & Air Mancur");
       } else {
@@ -752,8 +724,6 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
         setActiveSimModal((prev) => (prev === "directory" ? null : "directory"));
       } else if (k === "m") {
         setActiveSimModal((prev) => (prev === "map" ? null : "map"));
-      } else if (k === "l") {
-        setActiveSimModal((prev) => (prev === "mt5" ? null : "mt5"));
       } else if (k === "n") {
         cycleWeather();
       } else if (k === "t") {
@@ -802,10 +772,10 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
           setActiveVehicleId(null);
           setVehicleSpeedKmh(0);
         } else {
-          // Esc returns Boss to MT5 Control Room
+          // Esc returns Boss to Grand Main Lobby L1
           setActiveFloor("l1");
-          teleportBoss([-8.6, 0.18, -3.5], 1, "Ruang Kontrol MT5", Math.PI);
-          pushSimLog("Bos Fajrez", "Kembali ke Ruang Kontrol MT5 (L1).", "system");
+          teleportBoss([0, 0.18, 1.8], 1, "Lobi Utama L1", Math.PI);
+          pushSimLog("Bos Fajrez", "Kembali ke Lobi Utama (L1).", "system");
         }
       }
     };

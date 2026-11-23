@@ -724,8 +724,8 @@ export function OfficeArchitecture({
     }
   };
 
-  const frontColumnsX = [-13.7, -6.9, 0, 6.9, 13.7];
-  const timberFins = [-13.2, -12.6, -12.0, -11.4, 11.4, 12.0, 12.6, 13.2];
+  const frontColumnsX = [-18.7, -12.6, -6.5, 0, 6.5, 12.6, 18.7];
+  const timberFins = [-18.2, -17.6, -17.0, -16.4, 16.4, 17.0, 17.6, 18.2];
 
   return (
     <group>
@@ -774,14 +774,14 @@ export function OfficeArchitecture({
           FLOOR 1 — GRAND LOBBY, RECEPTION & ARRIVAL PAVILION (Y=0.18)
           ============================================================ */}
       <group>
-        {/* Polished Travertine Marble Floor Slab (28.4m x 14.4m) */}
+        {/* Polished Travertine Marble Floor Slab (38.4m x 14.4m) */}
         <mesh
           position={[0, FLOOR_1_Y - 0.09, -3]}
           receiveShadow
           castShadow
           onDoubleClick={handleSurfaceDoubleClick}
         >
-          <boxGeometry args={[28.4, 0.18, 14.4]} />
+          <boxGeometry args={[38.4, 0.18, 14.4]} />
           <meshStandardMaterial
             map={textures.marbleTile}
             bumpMap={textures.marbleBump}
@@ -793,7 +793,7 @@ export function OfficeArchitecture({
 
         {/* Rear Architectural White Stucco Wall (Z = -10) */}
         <mesh position={[0, 2.02, -10]} castShadow receiveShadow>
-          <boxGeometry args={[28.2, 3.7, 0.34]} />
+          <boxGeometry args={[38.2, 3.7, 0.34]} />
           <meshStandardMaterial
             map={textures.stuccoWall}
             bumpMap={textures.stuccoBump}
@@ -803,7 +803,7 @@ export function OfficeArchitecture({
         </mesh>
 
         {/* Side Architectural Walls + Full-Height Framed Glass Curtain Panels (L1 — ZERO Gaps!) */}
-        {[-14, 14].map((x, idx) => (
+        {[-19, 19].map((x, idx) => (
           <group key={idx}>
             <mesh position={[x, 2.02, -5.2]} castShadow receiveShadow>
               <boxGeometry args={[0.34, 3.7, 9.6]} />
@@ -835,9 +835,9 @@ export function OfficeArchitecture({
         ))}
 
         {/* Front Grand Glass Curtain Wall + REAL FRAMELESS DOUBLE GLASS SLIDING ENTRANCE DOOR */}
-        {[-9.8, 9.8].map((x, idx) => (
+        {[-12.3, 12.3].map((x, idx) => (
           <mesh key={idx} position={[x, 2.02, 4.0]}>
-            <boxGeometry args={[8.4, 3.55, 0.08]} />
+            <boxGeometry args={[13.4, 3.55, 0.08]} />
             <meshPhysicalMaterial
               color="#d8edf8"
               transparent
@@ -1080,7 +1080,7 @@ export function OfficeArchitecture({
         </group>
 
         {/* L1 Warm Wood Architectural Slat Accent Panels on West & East Walls */}
-        {[-13.76, 13.76].map((wx, i) => (
+        {[-18.76, 18.76].map((wx, i) => (
           <mesh key={`l1-wood-${i}`} position={[wx, 2.0, -5.2]}>
             <boxGeometry args={[0.1, 3.2, 6.4]} />
             <meshStandardMaterial color="#7a5130" roughness={0.6} />
@@ -1088,9 +1088,9 @@ export function OfficeArchitecture({
         ))}
 
         {/* L1 Warm-Gold Linear Ceiling Light Strips */}
-        {[-8.4, 0, 8.4].map((lx, i) => (
+        {[-12.4, -4.4, 4.4, 12.4].map((lx, i) => (
           <mesh key={`l1-ceil-${i}`} position={[lx, 3.6, -2.0]}>
-            <boxGeometry args={[4.8, 0.05, 0.16]} />
+            <boxGeometry args={[5.2, 0.05, 0.16]} />
             <meshStandardMaterial
               color="#fff6e0"
               emissive="#ffcf82"
@@ -1101,9 +1101,9 @@ export function OfficeArchitecture({
         ))}
 
         {/* L1 Curtain Wall Horizontal Transom Bar */}
-        {[-9.8, 9.8].map((tx, i) => (
+        {[-12.3, 12.3].map((tx, i) => (
           <mesh key={`l1-transom-${i}`} position={[tx, 2.38, 4.04]}>
-            <boxGeometry args={[8.4, 0.06, 0.08]} />
+            <boxGeometry args={[13.4, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
         ))}
@@ -1134,7 +1134,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[28.8, 0.28, 16.6]} />
+            <boxGeometry args={[38.8, 0.28, 16.6]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -1148,7 +1148,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[27.8, 0.04, 13.8]} />
+            <boxGeometry args={[37.8, 0.04, 13.8]} />
             <meshStandardMaterial
               map={textures.officeOak}
               bumpMap={textures.officeOakBump}
@@ -1163,7 +1163,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[28.2, 0.036, 2.04]} />
+            <boxGeometry args={[38.2, 0.036, 2.04]} />
             <meshStandardMaterial
               map={textures.woodDeck}
               bumpMap={textures.woodDeckBump}
@@ -1174,7 +1174,7 @@ export function OfficeArchitecture({
 
           {/* Cyberpunk Cyan Neon Trim Line along L2 Balcony Edge */}
           <mesh position={[0, FLOOR_2_Y - 0.25, 6.2]}>
-            <boxGeometry args={[28.6, 0.075, 0.09]} />
+            <boxGeometry args={[38.6, 0.075, 0.09]} />
             <meshStandardMaterial
               color="#22d3ee"
               emissive="#22d3ee"
@@ -1184,7 +1184,7 @@ export function OfficeArchitecture({
           </mesh>
 
           <mesh position={[0, FLOOR_2_Y + 1.9, -10]} castShadow receiveShadow>
-            <boxGeometry args={[28.2, 3.82, 0.34]} />
+            <boxGeometry args={[38.2, 3.82, 0.34]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -1232,7 +1232,7 @@ export function OfficeArchitecture({
 
           {/* L2 Curtain Wall Fine Horizontal Transom + Extra Planters */}
           <mesh position={[0, FLOOR_2_Y + 2.25, 4.04]}>
-            <boxGeometry args={[27.2, 0.06, 0.08]} />
+            <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
           <IndoorPlanter position={[-6.4, FLOOR_2_Y, 2.5]} />
@@ -1261,7 +1261,7 @@ export function OfficeArchitecture({
           </group>
 
           {/* Warm Vertical Oak Slat Acoustic Side Accent Panels (L2 — GenRoom / Paintit.ai Style) */}
-          {[-13.76, 13.76].map((wx, wi) => (
+          {[-18.76, 18.76].map((wx, wi) => (
             <group key={`l2-wood-slats-${wi}`}>
               {Array.from({ length: 10 }).map((_, si) => (
                 <mesh
@@ -1458,7 +1458,7 @@ export function OfficeArchitecture({
           ))}
 
           {/* Side Walls + Full-Height Framed Panoramic Glass Side Walls (L2 — Closes Z=-2.4..+4.0 completely, ZERO bolong!) */}
-          {[-14, 14].map((x, idx) => (
+          {[-19, 19].map((x, idx) => (
             <group key={idx}>
               <mesh position={[x, FLOOR_2_Y + 1.9, -6.2]} castShadow receiveShadow>
                 <boxGeometry args={[0.34, 3.82, 7.6]} />
@@ -1511,9 +1511,9 @@ export function OfficeArchitecture({
           {/* Segmented L2 Front Glass Curtain Wall leaving 2 REAL SLIDING GLASS BALCONY DOORS at X=-5.5 and X=+5.5 */}
           {activeFloor !== "l2" && (
             <group>
-              {/* Far-left glass curtain (-13.6 to -6.9) */}
-              <mesh position={[-10.25, FLOOR_2_Y + 1.9, 4.0]}>
-                <boxGeometry args={[6.7, 3.62, 0.07]} />
+              {/* Far-left glass curtain (-18.7 to -6.9) */}
+              <mesh position={[-12.8, FLOOR_2_Y + 1.9, 4.0]}>
+                <boxGeometry args={[11.8, 3.62, 0.07]} />
                 <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
               {/* Center panoramic glass curtain (-4.1 to +4.1) */}
@@ -1521,9 +1521,9 @@ export function OfficeArchitecture({
                 <boxGeometry args={[8.2, 3.62, 0.07]} />
                 <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
-              {/* Far-right glass curtain (+6.9 to +13.6) */}
-              <mesh position={[10.25, FLOOR_2_Y + 1.9, 4.0]}>
-                <boxGeometry args={[6.7, 3.62, 0.07]} />
+              {/* Far-right glass curtain (+6.9 to +18.7) */}
+              <mesh position={[12.8, FLOOR_2_Y + 1.9, 4.0]}>
+                <boxGeometry args={[11.8, 3.62, 0.07]} />
                 <meshPhysicalMaterial color="#d8eef8" transparent opacity={0.16} roughness={0.34} metalness={0.04} />
               </mesh>
             </group>
@@ -1544,7 +1544,7 @@ export function OfficeArchitecture({
 
           {/* Cantilevered Front Glass Balcony Railing (at outer balcony edge Z = 6.12) */}
           <mesh position={[0, FLOOR_2_Y + 0.56, 6.12]}>
-            <boxGeometry args={[28.4, 1.06, 0.06]} />
+            <boxGeometry args={[38.4, 1.06, 0.06]} />
             <meshPhysicalMaterial
               color="#d6eaf8"
               transparent
@@ -1553,7 +1553,7 @@ export function OfficeArchitecture({
             />
           </mesh>
           <mesh position={[0, FLOOR_2_Y + 1.1, 6.12]}>
-            <boxGeometry args={[28.5, 0.06, 0.1]} />
+            <boxGeometry args={[38.5, 0.06, 0.1]} />
             <meshStandardMaterial color="#2b313a" metalness={0.75} roughness={0.28} />
           </mesh>
 
@@ -1612,7 +1612,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[28.4, 0.28, 14.3]} />
+            <boxGeometry args={[38.4, 0.28, 14.3]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -1626,7 +1626,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[27.8, 0.04, 13.8]} />
+            <boxGeometry args={[37.8, 0.04, 13.8]} />
             <meshStandardMaterial
               map={textures.marbleTile}
               bumpMap={textures.marbleBump}
@@ -1637,7 +1637,7 @@ export function OfficeArchitecture({
 
           {/* Cyberpunk Magenta Neon Trim Line along L3 Flush Facade Edge */}
           <mesh position={[0, FLOOR_3_Y - 0.25, 4.18]}>
-            <boxGeometry args={[28.4, 0.075, 0.09]} />
+            <boxGeometry args={[38.4, 0.075, 0.09]} />
             <meshStandardMaterial
               color="#e879f9"
               emissive="#e879f9"
@@ -1647,7 +1647,7 @@ export function OfficeArchitecture({
           </mesh>
 
           <mesh position={[0, FLOOR_3_Y + 1.85, -10]} castShadow receiveShadow>
-            <boxGeometry args={[28.2, 3.72, 0.34]} />
+            <boxGeometry args={[38.2, 3.72, 0.34]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -1656,7 +1656,7 @@ export function OfficeArchitecture({
             />
           </mesh>
           {/* Side Walls + Full-Height Framed Panoramic Glass Side Walls (L3 — Closes Z=-3.0..+4.0 completely, ZERO bolong!) */}
-          {[-14, 14].map((x, idx) => (
+          {[-19, 19].map((x, idx) => (
             <group key={idx}>
               <mesh position={[x, FLOOR_3_Y + 1.85, -6.5]} castShadow receiveShadow>
                 <boxGeometry args={[0.34, 3.72, 7.0]} />
@@ -1890,7 +1890,7 @@ export function OfficeArchitecture({
           ))}
           {activeFloor !== "l3" && (
             <mesh position={[0, FLOOR_3_Y + 1.85, 4.0]}>
-              <boxGeometry args={[27.8, 3.68, 0.07]} />
+              <boxGeometry args={[37.8, 3.68, 0.07]} />
               <meshPhysicalMaterial
                 color="#d8eef8"
                 transparent
@@ -1914,7 +1914,7 @@ export function OfficeArchitecture({
             </mesh>
           ))}
           <mesh position={[0, FLOOR_3_Y + 2.2, 4.04]}>
-            <boxGeometry args={[27.2, 0.06, 0.08]} />
+            <boxGeometry args={[37.2, 0.06, 0.08]} />
             <meshStandardMaterial color="#252c36" metalness={0.75} roughness={0.3} />
           </mesh>
           <IndoorPlanter position={[-12.4, FLOOR_3_Y, 2.2]} />
@@ -1949,7 +1949,7 @@ export function OfficeArchitecture({
       {showRoof && (
         <group>
           {/* Vertical Corner Neon Edge Bars spanning Full Building Height (West Cyan, East Magenta) */}
-          <mesh position={[-14.12, 6.0, 4.2]}>
+          <mesh position={[-19.12, 6.0, 4.2]}>
             <boxGeometry args={[0.09, 11.4, 0.09]} />
             <meshStandardMaterial
               color="#22d3ee"
@@ -1958,7 +1958,7 @@ export function OfficeArchitecture({
               toneMapped={!(isNight || isSunset)}
             />
           </mesh>
-          <mesh position={[14.12, 6.0, 4.2]}>
+          <mesh position={[19.12, 6.0, 4.2]}>
             <boxGeometry args={[0.09, 11.4, 0.09]} />
             <meshStandardMaterial
               color="#e879f9"
@@ -1974,7 +1974,7 @@ export function OfficeArchitecture({
             receiveShadow
             onDoubleClick={handleSurfaceDoubleClick}
           >
-            <boxGeometry args={[29.4, 0.42, 16.0]} />
+            <boxGeometry args={[39.4, 0.42, 16.0]} />
             <meshStandardMaterial
               map={textures.stuccoWall}
               bumpMap={textures.stuccoBump}
@@ -1984,13 +1984,13 @@ export function OfficeArchitecture({
           </mesh>
 
           <mesh position={[0, 11.78, 5.56]} castShadow>
-            <boxGeometry args={[29.5, 0.56, 0.18]} />
+            <boxGeometry args={[39.5, 0.56, 0.18]} />
             <meshStandardMaterial color="#161c28" metalness={0.72} roughness={0.3} />
           </mesh>
 
           {/* Rooftop Full-Width Cyberpunk Cyan/Magenta Neon Perimeter Trim */}
           <mesh position={[0, 11.52, 5.64]}>
-            <boxGeometry args={[29.6, 0.08, 0.08]} />
+            <boxGeometry args={[39.6, 0.08, 0.08]} />
             <meshStandardMaterial
               color="#22d3ee"
               emissive="#22d3ee"
@@ -1999,7 +1999,7 @@ export function OfficeArchitecture({
             />
           </mesh>
           <mesh position={[0, 12.06, 5.64]}>
-            <boxGeometry args={[29.6, 0.06, 0.08]} />
+            <boxGeometry args={[39.6, 0.06, 0.08]} />
             <meshStandardMaterial
               color="#e879f9"
               emissive="#e879f9"
@@ -2054,7 +2054,7 @@ export function OfficeArchitecture({
           </group>
 
           <mesh position={[0, 12.34, 5.38]}>
-            <boxGeometry args={[28.8, 1.05, 0.06]} />
+            <boxGeometry args={[38.8, 1.05, 0.06]} />
             <meshPhysicalMaterial
               color="#d6eaf8"
               transparent

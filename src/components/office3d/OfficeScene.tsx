@@ -207,9 +207,7 @@ function FreeRoamCameraRig() {
         setCurrentLocationName("Kolam Renang & Sun Deck");
       } else if (bz > 6.5) {
         setCurrentLocationName("Halaman Depan & Parkir VIP");
-      } else if (bx < -5) {
-        setCurrentLocationName("Lantai 1 · Ruang Kontrol MT5");
-      } else if (bx > 5) {
+      } else if (bx > 11) {
         setCurrentLocationName("Lantai 1 · Gym & Arcade");
       } else {
         setCurrentLocationName("Lantai 1 · Lobi Utama");

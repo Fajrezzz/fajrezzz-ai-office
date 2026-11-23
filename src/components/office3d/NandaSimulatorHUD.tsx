@@ -3,7 +3,6 @@
 import React from "react";
 import {
   Activity,
-  BarChart3,
   Car,
   Cloud,
   CloudFog,
@@ -31,16 +30,6 @@ import {
   type WeatherMode,
 } from "@/store/SimulatorContext";
 import type { PerformanceMode } from "@/types/office";
-
-function fmtUsd(n: number, signed = false) {
-  const abs = Math.abs(n);
-  const str =
-    abs >= 1000
-      ? `$${(abs / 1000).toFixed(1)}k`
-      : `$${abs.toFixed(0)}`;
-  if (!signed) return str;
-  return n >= 0 ? `+${str}` : `-${str}`;
-}
 
 export function NandaSimulatorHUD() {
   const {
@@ -78,8 +67,6 @@ export function NandaSimulatorHUD() {
     currentLocationName,
     activeSimModal,
     setActiveSimModal,
-    mt5Accounts,
-    mt5Summary,
     staffVitals,
     invitedLoungeIds,
     toggleInviteLounge,
@@ -132,79 +119,40 @@ export function NandaSimulatorHUD() {
 
   return (
     <>
-      {/* TOP CYBERPUNK TELEMETRY BAR (FUND · DD · HARI · MINGGU · BULAN · FLOATING · CLOCK · WEATHER) */}
-      <div className="pointer-events-none absolute inset-x-2 top-14 z-20 flex flex-col gap-1.5 sm:inset-x-3">
-        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto rounded-xl border border-cyan-400/30 bg-slate-950/82 px-2.5 py-1.5 text-[10px] shadow-xl backdrop-blur-md">
-          <span className="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 font-extrabold tracking-wider text-amber-300 border border-amber-400/40">
-            SIMULASI
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setActiveSimModal("mt5")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-900/90 px-2 py-0.5 hover:bg-slate-800"
-            title="Klik untuk buka MT5 Monitor 18 Akun (L)"
-          >
-            <span className="text-slate-400">FUND <b className="text-white">{fmtUsd(mt5Summary.fund)}</b></span>
-            <span className="text-slate-400">DD <b className="text-rose-400">{mt5Summary.drawdownPct}%</b></span>
-            <span className="text-slate-400">HARI <b className="text-emerald-400">{fmtUsd(mt5Summary.dailyPnl, true)}</b></span>
-            <span className="hidden sm:inline text-slate-400">MINGGU <b className="text-emerald-300">{fmtUsd(mt5Summary.weeklyPnl, true)}</b></span>
-            <span className="hidden md:inline text-slate-400">BULAN <b className="text-cyan-300">{fmtUsd(mt5Summary.monthlyPnl, true)}</b></span>
-            <span className="text-slate-400">
-              FLT{" "}
-              <b className={mt5Summary.floatingPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {fmtUsd(mt5Summary.floatingPnl, true)}
-              </b>
-            </span>
-          </button>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            <span className="flex items-center gap-1 rounded-lg bg-slate-900/90 px-2 py-0.5 font-mono text-cyan-200">
-              <Clock className="h-3 w-3 text-cyan-400" />
-              {formattedTime} · H{gameDay}
-            </span>
-            <button
-              type="button"
-              onClick={cycleWeather}
-              className="flex items-center gap-1 rounded-lg bg-slate-900/90 px-2 py-0.5 text-sky-200 hover:bg-slate-800"
-              title="Ganti Cuaca (N)"
-            >
-              <WeatherIcon className="h-3 w-3 text-sky-400" />
-              <span>{weatherLabel[resolvedWeather]}</span>
-            </button>
-            <span className="hidden lg:flex items-center gap-1 rounded-lg bg-slate-900/90 px-2 py-0.5 text-slate-300">
-              <Compass className="h-3 w-3 text-fuchsia-400" />
-              {Math.round(compassDeg)}° · {zoomPct}%
-            </span>
-          </div>
-        </div>
-
-        {/* SECOND MICRO BAR: LOCATION + QUICK SIMULATOR TOOLS */}
-        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto">
-          <span className="shrink-0 rounded-full border border-fuchsia-400/35 bg-slate-950/80 px-2.5 py-1 text-[10px] font-semibold text-fuchsia-200 backdrop-blur">
+      {/* SINGLE CLEAN CALM ACTION BAR (No Flashing SIMULASI Numbers & No MT5!) */}
+      <div className="pointer-events-none absolute inset-x-2 top-14 z-20 sm:inset-x-3">
+        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto pb-1">
+          <span className="shrink-0 rounded-full border border-fuchsia-400/35 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-fuchsia-200 backdrop-blur">
             📍 {currentLocationName}
           </span>
 
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-slate-700/80 bg-slate-950/82 px-2.5 py-1 font-mono text-[10px] text-cyan-200 backdrop-blur">
+            <Clock className="h-3 w-3 text-cyan-400" />
+            {formattedTime} · H{gameDay}
+          </span>
+
           <button
             type="button"
-            onClick={() => setActiveSimModal("mt5")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/40 bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-950/70"
+            onClick={cycleWeather}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-700/80 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-sky-200 hover:bg-slate-800"
+            title="Ganti Cuaca (N)"
           >
-            <BarChart3 className="h-3 w-3" /> MT5 · 18
+            <WeatherIcon className="h-3 w-3 text-sky-400" />
+            <span>{weatherLabel[resolvedWeather]}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSimModal("directory")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-400/40 bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-950/70"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-950/70"
           >
-            <Users className="h-3 w-3" /> Staf (20)
+            <Users className="h-3 w-3" /> Staf ({staffVitals.length})
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSimModal("lounge")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/40 bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold text-amber-200 hover:bg-amber-950/70"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-amber-200 hover:bg-amber-950/70"
           >
             <Coffee className="h-3 w-3" /> Undang Ngobrol
           </button>
@@ -212,7 +160,7 @@ export function NandaSimulatorHUD() {
           <button
             type="button"
             onClick={() => setActiveSimModal("map")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-violet-400/40 bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold text-violet-200 hover:bg-violet-950/70"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-violet-400/40 bg-slate-950/82 px-2.5 py-1 text-[10px] font-bold text-violet-200 hover:bg-violet-950/70"
           >
             <MapPin className="h-3 w-3" /> Peta (M)
           </button>
@@ -245,7 +193,7 @@ export function NandaSimulatorHUD() {
             className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
               activeVehicleId
                 ? "border-rose-400 bg-rose-500/25 text-rose-200"
-                : "border-sky-400/40 bg-slate-950/80 text-sky-200 hover:bg-sky-950/70"
+                : "border-sky-400/40 bg-slate-950/82 text-sky-200 hover:bg-sky-950/70"
             }`}
           >
             <Car className="h-3 w-3" /> {activeVehicleId ? "Turun (F)" : "Kemudi (9)"}
@@ -254,7 +202,7 @@ export function NandaSimulatorHUD() {
           <button
             type="button"
             onClick={cycleSimCameraMode}
-            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/80 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
+            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
             title="Mode Kamera (O)"
           >
             🎥 {simCameraMode === "orbit" ? "Orbit" : simCameraMode === "drone" ? "Drone" : "Atas"}
@@ -263,16 +211,21 @@ export function NandaSimulatorHUD() {
           <button
             type="button"
             onClick={toggleViewPerspective}
-            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
+            className="shrink-0 rounded-full border border-slate-600 bg-slate-950/82 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
             title="Sudut Pandang 1/3 Orang (V)"
           >
             {viewPerspective === "first" ? "1st" : "3rd"}
           </button>
 
+          <span className="hidden lg:flex shrink-0 items-center gap-1 rounded-full border border-slate-700 bg-slate-950/82 px-2 py-1 text-[10px] text-slate-300">
+            <Compass className="h-3 w-3 text-fuchsia-400" />
+            {Math.round(compassDeg)}° · {zoomPct}%
+          </span>
+
           <button
             type="button"
             onClick={() => setActiveSimModal("settings")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/80 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/82 px-2.5 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
           >
             <Settings className="h-3 w-3" /> Setelan
           </button>
@@ -280,7 +233,7 @@ export function NandaSimulatorHUD() {
           <button
             type="button"
             onClick={() => setActiveSimModal("help")}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
+            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-600 bg-slate-950/82 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-800"
             title="Bantuan Tombol"
           >
             <HelpCircle className="h-3 w-3" />
@@ -288,7 +241,7 @@ export function NandaSimulatorHUD() {
         </div>
       </div>
 
-      {/* DRIVING SPEEDOMETER & CONTROLS BANNER WHEN DRIVING ANY OF THE 9 VEHICLES */}
+      {/* DRIVING SPEEDOMETER & CONTROLS BANNER WHEN DRIVING ANY OF THE 9 REALISTIC VEHICLES */}
       {activeVehicleId && (
         <div className="pointer-events-auto absolute bottom-28 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-cyan-400/50 bg-slate-950/90 px-4 py-2 text-xs text-white shadow-2xl backdrop-blur-md">
           <span className="font-mono text-base font-black text-cyan-300">
@@ -320,20 +273,17 @@ export function NandaSimulatorHUD() {
       )}
 
       {/* MODAL OVERLAY CONTAINER */}
-      {activeSimModal && (
+      {activeSimModal && activeSimModal !== "mt5" && (
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm">
           <div className="max-h-[84vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-cyan-400/35 bg-slate-950/95 p-4 text-slate-100 shadow-2xl">
             <div className="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-black tracking-wide text-cyan-200">
-                  {activeSimModal === "mt5" && "📊 MT5 MONITOR · 18 AKUN (SIMULASI)"}
-                  {activeSimModal === "directory" && "👥 DIREKTORI 20 STAF · ENERGI & AKTIVITAS"}
-                  {activeSimModal === "lounge" && "☕ UNDANG NGOBROL SANTAI (LOUNGE CEO L3)"}
-                  {activeSimModal === "map" && "🗺️ PETA KANTOR & TELEPORTASI CEPAT"}
-                  {activeSimModal === "settings" && "⚙️ PENGATURAN SIMULATOR & SIMPAN CLOUD"}
-                  {activeSimModal === "help" && "🎮 PANDUAN KONTROL KANTOR DUNIA TERBUKA"}
-                </h3>
-              </div>
+              <h3 className="text-sm font-black tracking-wide text-cyan-200">
+                {activeSimModal === "directory" && `👥 DIREKTORI ${staffVitals.length} KARYAWAN KANTOR`}
+                {activeSimModal === "lounge" && "☕ UNDANG NGOBROL SANTAI (LOUNGE CEO L3)"}
+                {activeSimModal === "map" && "🗺️ PETA KANTOR & TELEPORTASI CEPAT"}
+                {activeSimModal === "settings" && "⚙️ PENGATURAN KANTOR & SIMPAN CLOUD"}
+                {activeSimModal === "help" && "🎮 PANDUAN KONTROL KANTOR 3D"}
+              </h3>
               <button
                 type="button"
                 onClick={() => setActiveSimModal(null)}
@@ -343,56 +293,7 @@ export function NandaSimulatorHUD() {
               </button>
             </div>
 
-            {/* 1. MT5 MONITOR · 18 AKUN MODAL */}
-            {activeSimModal === "mt5" && (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-2.5 text-[11px] text-amber-200">
-                  ⚠️ <b>Mode SIMULASI:</b> Data 18 akun MT5 di bawah adalah data simulasi visual untuk monitoring ruang kontrol.
-                </div>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                  {[
-                    ["FUND", fmtUsd(mt5Summary.fund), "text-white"],
-                    ["DD", `${mt5Summary.drawdownPct}%`, "text-rose-400"],
-                    ["HARI", fmtUsd(mt5Summary.dailyPnl, true), "text-emerald-400"],
-                    ["MINGGU", fmtUsd(mt5Summary.weeklyPnl, true), "text-emerald-300"],
-                    ["BULAN", fmtUsd(mt5Summary.monthlyPnl, true), "text-cyan-300"],
-                    [
-                      "FLOATING",
-                      fmtUsd(mt5Summary.floatingPnl, true),
-                      mt5Summary.floatingPnl >= 0 ? "text-emerald-400" : "text-rose-400",
-                    ],
-                  ].map(([k, v, cls]) => (
-                    <div key={k} className="rounded-xl border border-slate-800 bg-slate-900/90 p-2 text-center">
-                      <div className="text-[9px] font-bold text-slate-400">{k}</div>
-                      <div className={`font-mono text-xs font-black ${cls}`}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                  {mt5Accounts.map((acc) => (
-                    <div
-                      key={acc.id}
-                      className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/75 px-3 py-2 text-[11px]"
-                    >
-                      <div>
-                        <div className="font-bold text-white">
-                          {acc.name} <span className="font-mono text-[10px] text-slate-400">#{acc.login}</span>
-                        </div>
-                        <div className="text-[10px] text-cyan-300">{acc.strategy} · {acc.openTrades} pos</div>
-                      </div>
-                      <div className="text-right font-mono">
-                        <div className="font-bold text-slate-100">${acc.balance.toLocaleString()}</div>
-                        <div className={acc.floatingPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                          {acc.floatingPnl >= 0 ? "+" : ""}${acc.floatingPnl.toFixed(0)} · DD {acc.drawdownPct}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 2. 20 STAFF DIRECTORY + ENERGY/FITNESS + RECENT ACTIVITY */}
+            {/* 1. 22 STAFF DIRECTORY + ENERGY/FITNESS + RECENT ACTIVITY */}
             {activeSimModal === "directory" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -446,11 +347,11 @@ export function NandaSimulatorHUD() {
               </div>
             )}
 
-            {/* 3. UNDANG NGOBROL SANTAI (1-4 KARYAWAN KE LOUNGE CEO) */}
+            {/* 2. UNDANG NGOBROL SANTAI (1-4 KARYAWAN KE LOUNGE CEO) */}
             {activeSimModal === "lounge" && (
               <div className="space-y-3">
                 <p className="text-xs text-slate-300">
-                  Pilih <b>1–4 karyawan</b> untuk diundang ngobrol santai bersama Bos di <b>Lounge Kamar CEO Lantai 3</b>. Karyawan lain tetap menjalankan jadwal normalnya.
+                  Pilih <b>1–4 karyawan</b> untuk diundang ngobrol santai bersama Bos di <b>Lounge Kamar CEO Lantai 3</b>.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {agents.map((ag) => {
@@ -483,7 +384,7 @@ export function NandaSimulatorHUD() {
               </div>
             )}
 
-            {/* 4. PETA & TELEPORTASI CEPAT */}
+            {/* 3. PETA & TELEPORTASI CEPAT */}
             {activeSimModal === "map" && (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {TELEPORT_LOCATIONS.map((loc) => (
@@ -519,7 +420,7 @@ export function NandaSimulatorHUD() {
               </div>
             )}
 
-            {/* 5. PENGATURAN LENGKAP + SIMPAN CLOUD */}
+            {/* 4. PENGATURAN LENGKAP + SIMPAN CLOUD */}
             {activeSimModal === "settings" && (
               <div className="space-y-3 text-xs">
                 <div>
@@ -663,7 +564,7 @@ export function NandaSimulatorHUD() {
               </div>
             )}
 
-            {/* 6. BANTUAN KONTROL LENGKAP */}
+            {/* 5. BANTUAN KONTROL LENGKAP */}
             {activeSimModal === "help" && (
               <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-3">
                 {[
@@ -675,12 +576,11 @@ export function NandaSimulatorHUD() {
                   ["Q / C", "Klakson / Kamera mobil"],
                   ["V", "Kamera 1st / 3rd Person"],
                   ["O", "Mode Orbit / Drone / Atas"],
-                  ["Tab", "Direktori 20 Staf"],
+                  ["Tab", "Direktori 22 Karyawan"],
                   ["M", "Peta & Teleportasi"],
-                  ["L", "Laporan MT5 (18 Akun)"],
                   ["N / T", "Cuaca / Kecepatan Waktu"],
                   ["H", "Sembunyikan HUD"],
-                  ["Esc", "Kembali ke Ruang Kontrol"],
+                  ["Esc", "Kembali ke Lobi Utama"],
                 ].map(([k, d]) => (
                   <div key={k} className="rounded-lg border border-slate-800 bg-slate-900/80 p-2">
                     <div className="font-mono font-black text-cyan-300">{k}</div>

@@ -193,12 +193,12 @@ export function BossPlayer() {
           posRef.current.x = Math.max(-34.0, Math.min(34.0, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(24.0, posRef.current.z));
         } else if (bossFloor === 2 || bossFloor === 3) {
-          // Full L2 / L3 interior + cantilevered front glass balcony!
-          posRef.current.x = Math.max(-13.4, Math.min(13.4, posRef.current.x));
+          // Full L2 / L3 interior (widened 38m HQ) + cantilevered front glass balcony!
+          posRef.current.x = Math.max(-18.2, Math.min(18.2, posRef.current.x));
           posRef.current.z = Math.max(-9.3, Math.min(4.8, posRef.current.z));
         } else {
           // Rooftop Helipad + Padel Court + Sky Terrace
-          posRef.current.x = Math.max(-13.8, Math.min(13.8, posRef.current.x));
+          posRef.current.x = Math.max(-18.4, Math.min(18.4, posRef.current.x));
           posRef.current.z = Math.max(-9.5, Math.min(4.8, posRef.current.z));
         }
 

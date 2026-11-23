@@ -5,11 +5,12 @@ import { CYBERPUNK_THEME } from "@/lib/config/cyberpunk-theme";
 import { FLOOR_1_Y, FLOOR_3_Y } from "@/lib/data/initial-office-data";
 
 /**
- * Stage 2 Interior Activity Rooms & Cyberpunk Architectural Accents:
- * - L1 West: MT5 Control Room (18 Accounts Wall + Curved Trading Consoles)
- * - L1 East: Executive Gym + Retro-Cyber Arcade + F1 Racing Simulator
- * - L3 East: Executive Billiard/Pool Table + Chess Lounge + Mini Cinema Wall
- * - Rooftop: Wood-Slat Pergola Lounge + Glowing Neon Helipad "H"
+ * Architectural Cyberpunk Accents & Interior Activity Wings (Sized for Widened 38m HQ):
+ * - Cyberpunk neon edge strips spanning 38.2m (L1–L3 & Rooftop, 0 extra point lights)
+ * - L1 West/Center: Kept completely open as Grand Main Lobby (MT5 Control Room removed)
+ * - L1 East Wing (X=+14.2): Executive Gym + Retro-Cyber Arcade + F1 Racing Simulator
+ * - L3 East Wing (X=+13.6): Executive Billiard/Pool Table + Mini Cinema Wall
+ * - Rooftop: Pergola Wood-Slat Lounge + Glowing Neon Helipad "H"
  */
 export function InteriorActivityRooms({
   showL1,
@@ -28,7 +29,7 @@ export function InteriorActivityRooms({
 
   return (
     <group>
-      {/* CYBERPUNK ARCHITECTURAL NEON EDGE STRIPS (Building Floors L1–L3 & Rooftop Perimeter — 0 extra lights!) */}
+      {/* CYBERPUNK ARCHITECTURAL NEON EDGE STRIPS (Widened 38.2m Building Perimeter — 0 extra lights!) */}
       {showRoof && (
         <group>
           {[
@@ -37,17 +38,17 @@ export function InteriorActivityRooms({
             { y: 11.76, color: CYBERPUNK_THEME.neon.purple, emissive: CYBERPUNK_THEME.neon.purpleEmissive },
           ].map((band, bi) => (
             <group key={`neon-band-${bi}`} position={[0, band.y, 0]}>
-              {/* Front Facade Neon Edge */}
+              {/* Front Facade Neon Edge (38.2m) */}
               <mesh position={[0, 0, 4.12]}>
-                <boxGeometry args={[28.2, 0.06, 0.06]} />
+                <boxGeometry args={[38.2, 0.06, 0.06]} />
                 <meshStandardMaterial
                   color={band.color}
                   emissive={band.emissive}
                   emissiveIntensity={neonGlow}
                 />
               </mesh>
-              {/* Left & Right Side Neon Edges */}
-              {[-14.1, 14.1].map((sx, si) => (
+              {/* Left & Right Side Neon Edges (X = ±19.1) */}
+              {[-19.1, 19.1].map((sx, si) => (
                 <mesh key={si} position={[sx, 0, -3.0]}>
                   <boxGeometry args={[0.06, 0.06, 14.2]} />
                   <meshStandardMaterial
@@ -61,7 +62,7 @@ export function InteriorActivityRooms({
           ))}
 
           {/* Vertical Backlit Wood-Fin Cyber Strips (Alternating Cyan & Magenta at Night) */}
-          {[-12.8, -9.2, -5.6, 5.6, 9.2, 12.8].map((fx, fi) => (
+          {[-17.8, -13.4, -9.0, 9.0, 13.4, 17.8].map((fx, fi) => (
             <mesh key={`vfin-${fi}`} position={[fx, 6.0, 4.08]}>
               <boxGeometry args={[0.05, 11.4, 0.05]} />
               <meshStandardMaterial
@@ -78,46 +79,9 @@ export function InteriorActivityRooms({
         </group>
       )}
 
-      {/* L1 WEST WING: RUANG KONTROL MT5 (18 AKUN TRADING WALL) */}
+      {/* L1 EAST WING (X=+14.2): EXECUTIVE GYM + ARCADE + RACING SIMULATOR (L1 Center & West = Grand Main Lobby!) */}
       {showL1 && (
-        <group position={[-9.2, FLOOR_1_Y, -4.6]}>
-          {/* Curved Multi-Monitor MT5 Desk */}
-          <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
-            <boxGeometry args={[4.4, 0.84, 0.95]} />
-            <meshStandardMaterial color="#111827" roughness={0.42} metalness={0.4} />
-          </mesh>
-          {/* 3 Glowing Live MT5 Monitors */}
-          {[-1.35, 0, 1.35].map((mx, i) => (
-            <group key={`mt5m-${i}`} position={[mx, 1.24, -0.22]} rotation={[0, mx * -0.1, 0]}>
-              <mesh castShadow>
-                <boxGeometry args={[1.18, 0.68, 0.05]} />
-                <meshStandardMaterial color="#0b1019" roughness={0.3} />
-              </mesh>
-              <mesh position={[0, 0, 0.03]}>
-                <planeGeometry args={[1.1, 0.58]} />
-                <meshStandardMaterial
-                  color="#052e16"
-                  emissive={i === 1 ? "#22d3ee" : "#10b981"}
-                  emissiveIntensity={isNight ? 1.25 : 0.6}
-                />
-              </mesh>
-            </group>
-          ))}
-          {/* Overhead RGB Neon Strip */}
-          <mesh position={[0, 3.25, 0]}>
-            <boxGeometry args={[4.6, 0.05, 0.08]} />
-            <meshStandardMaterial
-              color={CYBERPUNK_THEME.neon.cyan}
-              emissive={CYBERPUNK_THEME.neon.cyanEmissive}
-              emissiveIntensity={neonGlow}
-            />
-          </mesh>
-        </group>
-      )}
-
-      {/* L1 EAST WING: EXECUTIVE GYM + ARCADE + RACING SIMULATOR */}
-      {showL1 && (
-        <group position={[9.2, FLOOR_1_Y, -4.2]}>
+        <group position={[14.2, FLOOR_1_Y, -4.2]}>
           {/* Treadmill */}
           <group position={[-1.4, 0, 0.4]}>
             <mesh position={[0, 0.1, 0]} castShadow>
@@ -194,10 +158,10 @@ export function InteriorActivityRooms({
         </group>
       )}
 
-      {/* L3 EAST WING: BILLIARD TABLE + CHESS TABLE + EXECUTIVE CINEMA WALL */}
+      {/* L3 EAST WING (X=+13.6): BILLIARD TABLE + EXECUTIVE CINEMA WALL */}
       {showL3 && (
-        <group position={[8.6, FLOOR_3_Y, -2.0]}>
-          {/* Real Pro Emerald-Felt Billiard / Pool Table */}
+        <group position={[13.6, FLOOR_3_Y, -2.0]}>
+          {/* Emerald-Felt Billiard / Pool Table */}
           <group position={[0, 0, 0.4]}>
             <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
               <boxGeometry args={[2.5, 0.18, 1.4]} />
@@ -207,12 +171,10 @@ export function InteriorActivityRooms({
               <boxGeometry args={[2.56, 0.14, 1.46]} />
               <meshStandardMaterial color="#4a2e19" roughness={0.48} />
             </mesh>
-            {/* Emerald Felt Surface */}
             <mesh position={[0, 0.9, 0]}>
               <boxGeometry args={[2.28, 0.02, 1.18]} />
               <meshStandardMaterial color="#15803d" roughness={0.85} />
             </mesh>
-            {/* Colorful Billiard Balls + Cue Stick */}
             {[
               [-0.45, "#f8fafc"],
               [0.32, "#facc15"],
@@ -232,7 +194,6 @@ export function InteriorActivityRooms({
                 <meshStandardMaterial color={col as string} roughness={0.2} metalness={0.15} />
               </mesh>
             ))}
-            {/* Table Legs */}
             {[
               [-1.08, -0.56],
               [1.08, -0.56],
@@ -246,7 +207,7 @@ export function InteriorActivityRooms({
             ))}
           </group>
 
-          {/* Mini Cinema Screening Wall behind Lounge */}
+          {/* Mini Cinema Screening Wall */}
           <group position={[0, 1.75, -2.55]}>
             <mesh castShadow>
               <boxGeometry args={[3.6, 1.85, 0.08]} />
@@ -262,7 +223,6 @@ export function InteriorActivityRooms({
             </mesh>
           </group>
 
-          {/* Overhead Purple RGB Strip */}
           <mesh position={[0, 3.3, 0]}>
             <boxGeometry args={[3.8, 0.05, 0.08]} />
             <meshStandardMaterial
@@ -324,7 +284,6 @@ export function InteriorActivityRooms({
                 <meshStandardMaterial color="#8d5e37" roughness={0.62} />
               </mesh>
             ))}
-            {/* Pergola Neon Accent Trim */}
             <mesh position={[0, 2.66, 1.16]}>
               <boxGeometry args={[3.5, 0.04, 0.05]} />
               <meshStandardMaterial
@@ -333,7 +292,6 @@ export function InteriorActivityRooms({
                 emissiveIntensity={neonGlow}
               />
             </mesh>
-            {/* Lounge Sofa & Low Table under Pergola */}
             <mesh position={[0, 0.28, -0.5]} castShadow>
               <boxGeometry args={[2.4, 0.42, 0.8]} />
               <meshStandardMaterial color="#f1ece3" roughness={0.85} />
