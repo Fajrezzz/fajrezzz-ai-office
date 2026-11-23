@@ -38,3 +38,9 @@ next-env.d.ts
 
 # Studio v10 render workdir (per-scene clips)
 /.studio-render
+
+# Video contoh phone cooler (workdir render)
+/.video-work
+
+# Musik latar: sumber WAV dibuat script, yang di-commit versi terkompresi
+/assets/music/*.wav

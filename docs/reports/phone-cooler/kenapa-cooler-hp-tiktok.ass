@@ -1,0 +1,37 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1440
+PlayResY: 2560
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Inter,69,&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,493,1
+Style: Accent,Inter,69,&H00FFE035,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,493,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.06,0:00:02.81,Default,,0,0,0,,Cooler HP keluar {\rAccent}air,{\rDefault} bahkan {\rAccent}es.{\rDefault}
+Dialogue: 0,0:00:02.81,0:00:06.59,Default,,0,0,0,,Padahal isinya cuma kipas dan lempeng logam.
+Dialogue: 0,0:00:06.59,0:00:08.05,Default,,0,0,0,,{\rAccent}Airnya{\rDefault} dari mana?
+Dialogue: 0,0:00:08.69,0:00:10.89,Default,,0,0,0,,Di dalamnya ada chip {\rAccent}Peltier.{\rDefault}
+Dialogue: 0,0:00:10.89,0:00:14.01,Default,,0,0,0,,Arus listrik memompa panas dari satu sisi
+Dialogue: 0,0:00:14.01,0:00:14.99,Default,,0,0,0,,ke sisi lain.
+Dialogue: 0,0:00:14.99,0:00:17.65,Default,,0,0,0,,Sisi yang nempel di HP jadi dingin,
+Dialogue: 0,0:00:17.65,0:00:19.78,Default,,0,0,0,,sisi belakangnya jadi panas.
+Dialogue: 0,0:00:20.43,0:00:23.96,Default,,0,0,0,,Dan udara di sekitar kamu itu penuh uap {\rAccent}air.{\rDefault}
+Dialogue: 0,0:00:23.96,0:00:28.69,Default,,0,0,0,,Begitu ketemu permukaan yang lebih dingin dari titik {\rAccent}embun,{\rDefault}
+Dialogue: 0,0:00:28.69,0:00:31.17,Default,,0,0,0,,uap itu berubah jadi {\rAccent}tetes{\rDefault} {\rAccent}air.{\rDefault}
+Dialogue: 0,0:00:31.83,0:00:34.18,Default,,0,0,0,,Contoh: ruangan {\rAccent}25{\rDefault} derajat,
+Dialogue: 0,0:00:34.18,0:00:36.02,Default,,0,0,0,,kelembapan {\rAccent}60{\rDefault} persen,
+Dialogue: 0,0:00:36.02,0:00:38.98,Default,,0,0,0,,titik {\rAccent}embunnya{\rDefault} sekitar {\rAccent}17{\rDefault} derajat.
+Dialogue: 0,0:00:38.98,0:00:40.12,Default,,0,0,0,,Di bawah itu,
+Dialogue: 0,0:00:40.12,0:00:41.78,Default,,0,0,0,,{\rAccent}air{\rDefault} mulai menempel.
+Dialogue: 0,0:00:41.78,0:00:43.87,Default,,0,0,0,,Belum perlu {\rAccent}nol{\rDefault} derajat.
+Dialogue: 0,0:00:44.53,0:00:48.67,Default,,0,0,0,,{\rAccent}Es{\rDefault} baru terbentuk kalau permukaannya di bawah {\rAccent}nol{\rDefault} derajat.
+Dialogue: 0,0:00:49.33,0:00:53.16,Default,,0,0,0,,Dan angka {\rAccent}30{\rDefault} {\rAccent}watt{\rDefault} itu daya listrik yang dimakan,
+Dialogue: 0,0:00:53.16,0:00:55.15,Default,,0,0,0,,bukan panas yang dibuang.
+Dialogue: 0,0:00:55.79,0:00:58.12,Default,,0,0,0,,Jadi {\rAccent}airnya{\rDefault} bukan dari cooler,
+Dialogue: 0,0:00:58.12,0:00:59.37,Default,,0,0,0,,tapi dari udara.
+Dialogue: 0,0:00:59.37,0:01:02.32,Default,,0,0,0,,Sama kayak gelas {\rAccent}es{\rDefault} teh yang {\rAccent}berembun.{\rDefault}

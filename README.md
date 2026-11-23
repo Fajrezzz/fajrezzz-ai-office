@@ -146,6 +146,30 @@ npm run start
 
 ---
 
+## Video Contoh (Pipeline Render di Repo)
+
+Repo ini menyimpan satu pipeline video edukasi vertikal yang **benar-benar dirender di sini**, bukan storyboard atau mockup. Semua angkanya dibaca dari file hasil render, bukan diketik manual.
+
+| Berkas | Isi |
+|---|---|
+| `scripts/phone-cooler/scenes.ts` | naskah 10 scene versi panjang + data audio narasi |
+| `scripts/phone-cooler/scenes-tiktok.ts` | naskah 7 scene cut TikTok (layout aman UI TikTok) |
+| `scripts/phone-cooler/visuals.ts` | renderer visual prosedural (embun, bunga es, termometer, partikel panas) — digambar per frame, kanvas supersample 1440×2560 |
+| `scripts/phone-cooler/render.ts` | timeline dari durasi audio, teks beranimasi, subtitle ter-burn, mix musik, verifikasi `ffprobe` |
+| `scripts/phone-cooler/music.ts` | sintesis musik latar sendiri (tanpa sampel pihak ketiga) |
+| `docs/reports/phone-cooler/` | MP4 hasil render (**1440×2560 / 2K vertikal**, plus mode 1080), subtitle `.ass`, laporan `render-report.json` & `tiktok-report.json`, README rinci |
+
+```bash
+# butuh ffmpeg + ffprobe di mesin sendiri (tidak jalan di serverless Vercel)
+FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:phone-cooler   # 1440x2560
+FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:tiktok         # cut 62,9 s + musik
+npm run video:phone-cooler:1080   # varian 1080x1920 (FHD) dari naskah yang sama
+```
+
+Detail alur, sumber klaim fisika, dan batasan (narasi TTS, visual prosedural, musik disintesis, publikasi masih manual) ada di [`docs/reports/phone-cooler/README.md`](docs/reports/phone-cooler/README.md).
+
+---
+
 ## Roadmap Tahap Selanjutnya
 
 - [ ] Hubungkan `SupabaseOfficeAdapter` ke database PostgreSQL & Supabase Realtime.
