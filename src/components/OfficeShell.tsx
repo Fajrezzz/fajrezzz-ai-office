@@ -3,15 +3,12 @@
 import React, { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
-import { AgentManagementPanel } from "@/components/dashboard/AgentManagementPanel";
-import { LiveActivityPanel } from "@/components/dashboard/LiveActivityPanel";
 import { DynamicVirtualOffice } from "@/components/office3d/DynamicVirtualOffice";
-import { OfficeProvider, useOffice } from "@/store/OfficeContext";
+import { OfficeProvider } from "@/store/OfficeContext";
 import { SimulatorProvider } from "@/store/SimulatorContext";
 import { AgencyProvider } from "@/store/AgencyContext";
 
 function OfficeWorkspace() {
-  const { activeSection } = useOffice();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -28,20 +25,15 @@ function OfficeWorkspace() {
         <TopHeader onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-3 pb-24 sm:p-6 lg:pb-8">
-          {activeSection === "office" && (
-            <div className="space-y-3">
-              <DynamicVirtualOffice className="h-[calc(100vh-145px)] min-h-[520px] lg:h-[calc(100vh-110px)]" />
-            </div>
-          )}
-
-          {(activeSection === "agents" ||
-            activeSection === "tasks" ||
-            activeSection === "activity") && (
-            <div className="mx-auto max-w-5xl space-y-6">
-              <AgentManagementPanel />
-              <LiveActivityPanel />
-            </div>
-          )}
+          {/*
+            Cuma satu tampilan: Kantor 3D. Section lain (dashboard/studio/tim)
+            sudah dihapus, jadi apa pun nilai activeSection dari dalam scene
+            (mis. tombol "Detail" di SceneControlsHUD) tetap menampilkan kantor
+            dan tidak pernah jadi layar kosong.
+          */}
+          <div className="space-y-3">
+            <DynamicVirtualOffice className="h-[calc(100vh-145px)] min-h-[520px] lg:h-[calc(100vh-110px)]" />
+          </div>
         </main>
       </div>
     </div>

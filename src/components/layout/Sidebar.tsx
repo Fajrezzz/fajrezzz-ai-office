@@ -7,7 +7,6 @@ import {
   Film,
   ChevronRight,
   Sparkles,
-  Users,
   X,
 } from "lucide-react";
 import { useOffice } from "@/store/OfficeContext";
@@ -31,12 +30,6 @@ const NAV_ITEMS: {
     label: "Kantor 3D + Bos",
     shortLabel: "Kantor 3D",
     icon: Box,
-  },
-  {
-    id: "agents",
-    label: "Tim 15 Karyawan",
-    shortLabel: "Tim 15",
-    icon: Users,
   },
 ];
 
