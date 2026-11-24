@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-11-24T04:06:06.847Z",
+  "master": {
+    "file": "fajrezzz-office-tiktok-master-2k120.mp4",
+    "sizeMB": 90.8,
+    "durationSec": 30,
+    "width": 1440,
+    "height": 2560,
+    "fps": 120,
+    "videoCodec": "h264",
+    "profile": "High",
+    "pixFmt": "yuv420p",
+    "bitrateKbps": 25398,
+    "audioCodec": "aac",
+    "audioSampleRate": 48000,
+    "audioChannels": 2
+  },
+  "tiktok": {
+    "file": "fajrezzz-office-tiktok-1080p60.mp4",
+    "sizeMB": 43,
+    "durationSec": 30,
+    "width": 1080,
+    "height": 1920,
+    "fps": 60,
+    "videoCodec": "h264",
+    "profile": "High",
+    "pixFmt": "yuv420p",
+    "bitrateKbps": 12015,
+    "audioCodec": "aac",
+    "audioSampleRate": 48000,
+    "audioChannels": 2
+  },
+  "honesty": {
+    "screenshots": "Bagian 'web' memakai tangkapan layar asli aplikasi fajrezzz-ai-office.vercel.app (di-crop ke area aplikasi, tanpa address bar). Tidak ada UI, angka, atau fitur yang digambar ulang.",
+    "motion": "Tidak ada rekaman gerak asli: sandbox ini tidak punya browser/GPU dan tidak bisa mengakses *.vercel.app, jadi gerakan kamera (zoom/pan/punch-in) dan animasi teks dibuat di post, frame-per-frame 120fps.",
+    "voice": "Narasi = suara TTS Arena (voice-00), satu klip per bagian di assets/voice/office-tiktok/.",
+    "music": "Musik lo-fi/cyber, klik keyboard, dan whoosh disintesis sendiri di scripts/office-video/audio.mjs — tanpa sampel/lagu pihak ketiga.",
+    "label": "Label \"dibuat dengan AI\" tampil permanen di kanan atas dan di CTA (aturan TikTok).",
+    "publish": "Belum diunggah ke TikTok/IG; menunggu persetujuan manual."
+  }
+}
