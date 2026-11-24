@@ -954,6 +954,298 @@ function outro(f: Frame, t: number): void {
   f.glow(180, 350, 120, CYAN, 0.14);
 }
 
+
+/* ------------------------- visual edisi AI agent -------------------------- */
+
+/** Kantor agent: grid kartu agent, satu kartu disorot bergiliran. */
+function agentgrid(f: Frame, t: number): void {
+  f.background(rgb("#04060c"), rgb("#08111a"), { x: 180, y: 350, r: 300, color: rgb("#0e3b4d"), strength: 0.5 });
+
+  const cols = 3;
+  const rows = 3;
+  const cw = 86;
+  const ch = 62;
+  const gx = 41;
+  const gy = 252;
+  const gapX = 13;
+  const gapY = 15;
+  const highlight = Math.floor((t / 1.5) % (cols * rows));
+  const nudge = easeOut(clamp01(t / 0.9));
+
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const idx = r * cols + c;
+      const x = gx + c * (cw + gapX);
+      const y = gy + r * (ch + gapY);
+      const on = idx === highlight;
+      const appear = clamp01((nudge - idx * 0.05) / 0.35);
+      if (appear <= 0) continue;
+
+      f.roundRect(x, y, cw, ch, 8, rgb("#0b141d"), 0.92 * appear);
+      f.roundRect(x, y, cw, ch, 8, on ? CYAN : rgb("#26343f"), (on ? 0.6 : 0.3) * appear);
+      f.roundRect(x + 7, y + 9, cw - 32, ch - 26, 3, rgb("#131e2a"), 0.9 * appear);
+
+      for (let i = 0; i < 3; i += 1) {
+        const w = (cw - 36) * (i === 0 ? 0.95 : i === 1 ? 0.75 : 0.45);
+        f.rect(x + 11, y + 15 + i * 9, w, 2.1, on ? ICE : rgb("#3a4a59"), (on ? 0.55 : 0.32) * appear);
+      }
+
+      const blink = 0.45 + 0.55 * Math.sin(t * 3 + idx * 0.8);
+      f.disc(x + cw - 14, y + ch - 17, 3.6, on ? CYAN : rgb("#455767"), 0.85, 0.3, 5);
+      f.glow(x + cw - 14, y + ch - 17, 13, on ? CYAN : rgb("#1b2833"), (on ? 0.32 : 0.12) * blink);
+    }
+  }
+
+  // garis penghubung tipis antar kartu (orkestrasi)
+  for (let i = 0; i < 6; i += 1) {
+    const phase = (t * 0.4 + i / 6) % 1;
+    const x = 41 + phase * (cols * (cw + gapX) - gapX);
+    f.rect(x, gy + rows * (ch + gapY) - gapY + 14, 14, 1.2, CYAN, 0.22);
+  }
+  f.glow(180, gy + rows * (ch + gapY) + 6, 120, CYAN, 0.1);
+}
+
+/** Rantai keputusan agent: node berurutan + pulsa yang berjalan. */
+function drawChain(f: Frame, t: number, opts: { accent: RGB; failAt: number; reroute: boolean }): void {
+  const nodes = [
+    { x: 70, y: 300 },
+    { x: 180, y: 246 },
+    { x: 288, y: 300 },
+    { x: 180, y: 392 },
+  ];
+
+  // garis antar node
+  for (let i = 0; i < nodes.length; i += 1) {
+    const a = nodes[i];
+    const b = nodes[(i + 1) % nodes.length];
+    const failing = opts.failAt === i;
+    f.line(a.x, a.y, b.x, b.y, failing ? ORANGE : rgb("#2b3a48"), 0.55, 2);
+  }
+
+  // pulsa berjalan sepanjang rantai
+  const total = nodes.length;
+  const travel = (t * 0.42) % total;
+  const seg = Math.floor(travel);
+  const frac = travel - seg;
+  const a = nodes[seg];
+  const b = nodes[(seg + 1) % total];
+  const px = a.x + (b.x - a.x) * frac;
+  const py = a.y + (b.y - a.y) * frac;
+  f.glow(px, py, 16, opts.accent, 0.5);
+  f.blend(px, py, ICE, 0.95);
+
+  // node
+  nodes.forEach((n, i) => {
+    const failing = opts.failAt === i;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 2.4 + i);
+    const ring = failing ? ORANGE : opts.accent;
+    f.glow(n.x, n.y, 34, ring, (failing ? 0.34 : 0.22) * (0.7 + 0.3 * pulse));
+    f.roundRect(n.x - 23, n.y - 18, 46, 36, 10, rgb("#0b141d"), 0.95);
+    f.roundRect(n.x - 23, n.y - 18, 46, 36, 10, ring, 0.28);
+    f.roundRect(n.x - 19, n.y - 14, 38, 28, 8, rgb("#101d28"), 0.9);
+    // isi node: tiga titik kecil
+    for (let k = 0; k < 3; k += 1) {
+      f.disc(n.x - 9 + k * 9, n.y, 2.6, failing && k === 2 ? ORANGE : ICE, 0.8, 0.3, 5);
+    }
+  });
+
+  if (opts.reroute) {
+    const from = nodes[opts.failAt];
+    const to = { x: 292, y: 430 };
+    const dash = 6;
+    for (let i = 0; i < 14; i += 1) {
+      const k0 = i / 14;
+      const k1 = (i + 0.5) / 14;
+      const x0 = from.x + (to.x - from.x) * k0;
+      const y0 = from.y + (to.y - from.y) * k0;
+      const x1 = from.x + (to.x - from.x) * k1;
+      const y1 = from.y + (to.y - from.y) * k1;
+      f.line(x0, y0, x1, y1, rgb("#7b8b9a"), 0.5, dash * 0.1);
+    }
+    const backupPulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 3));
+    f.roundRect(to.x - 24, to.y - 18, 48, 36, 9, rgb("#0b141d"), 0.95);
+    f.roundRect(to.x - 24, to.y - 18, 48, 36, 9, rgb("#7bd88f"), 0.5 * backupPulse);
+    f.glow(to.x, to.y, 30, rgb("#7bd88f"), 0.2 * backupPulse);
+    for (let k = 0; k < 2; k += 1) {
+      f.disc(to.x - 6 + k * 12, to.y, 2.6, rgb("#9ef0b4"), 0.75, 0.3, 5);
+    }
+  }
+}
+
+function chain(f: Frame, t: number): void {
+  f.background(rgb("#04070d"), rgb("#081421"), { x: 180, y: 330, r: 300, color: rgb("#0d3542"), strength: 0.5 });
+  drawChain(f, t, { accent: CYAN, failAt: -1, reroute: false });
+}
+
+function fallback(f: Frame, t: number): void {
+  f.background(rgb("#07060a"), rgb("#0f1017"), { x: 180, y: 330, r: 300, color: rgb("#3a1d08"), strength: 0.4 });
+  drawChain(f, t, { accent: CYAN, failAt: 1, reroute: true });
+}
+
+/** Brankas kunci API: tiga kunci, satu dipindai. */
+function vault(f: Frame, t: number): void {
+  f.background(rgb("#05070c"), rgb("#0a1119"), { x: 180, y: 330, r: 300, color: rgb("#123244"), strength: 0.45 });
+
+  // badan brankas
+  const bx = 118;
+  const by = 268;
+  const bw = 124;
+  const bh = 132;
+  f.glow(180, by + bh / 2, 130, CYAN, 0.16);
+  f.roundRect(bx, by, bw, bh, 12, rgb("#0c151e"), 0.96);
+  f.roundRect(bx, by, bw, bh, 12, rgb("#31414f"), 0.85);
+  f.roundRect(bx + 4, by + 4, bw - 8, bh - 8, 10, rgb("#101a24"), 0.95);
+
+  // gagang kunci (shackle)
+  const cxc = bx + bw / 2;
+  const arcY = by + 2;
+  for (let ang = Math.PI * 1.08; ang <= Math.PI * 1.92; ang += 0.06) {
+    f.roundRect(cxc + Math.cos(ang) * 26 - 2, arcY + Math.sin(ang) * 26 - 2, 4.4, 4.4, 2, rgb("#8494a3"), 0.9);
+  }
+
+  // lubang kunci
+  f.disc(cxc, by + bh * 0.52, 13, rgb("#1b2836"), 0.95, 0.6, 4);
+  f.disc(cxc, by + bh * 0.52, 6.5, CYAN, 0.55, 0.25, 4);
+  f.glow(cxc, by + bh * 0.52, 26, CYAN, 0.3);
+  f.rect(cxc - 1.6, by + bh * 0.52 + 4, 3.2, 20, rgb("#8494a3"), 0.75);
+
+  // garis pindai naik-turun (menunjukkan pengecekan)
+  const scan = 0.5 + 0.5 * Math.sin(t * 1.6);
+  const scanY = by + 10 + scan * (bh - 20);
+  f.rect(bx + 6, scanY, bw - 12, 1.6, CYAN, 0.5);
+  f.glow(180, scanY, 60, CYAN, 0.18);
+
+  // tiga kartu kunci (disamarkan)
+  const keys = ["#7bd88f", "#ffd166", "#ff8a4c"];
+  keys.forEach((color, i) => {
+    const kx = 54;
+    const ky = 286 + i * 44;
+    const active = i === Math.floor((t / 1.8) % 3);
+    f.roundRect(kx, ky, 46, 30, 5, rgb("#0b1319"), 0.95);
+    f.roundRect(kx, ky, 46, 30, 5, rgb(color.replace("#", "#")), active ? 0.75 : 0.3);
+    for (let k = 0; k < 4; k += 1) f.disc(kx + 10 + k * 9, ky + 15, 2.4, rgb(color), active ? 0.85 : 0.35, 0.25, 5);
+    f.glow(kx + 23, ky + 15, 20, rgb(color), active ? 0.22 : 0.08);
+  });
+
+  // partikel "kebocoran" yang ditahan
+  for (let i = 0; i < 10; i += 1) {
+    const ph = (t * 0.5 + i / 10) % 1;
+    f.disc(bx - 8 - ph * 26, by + 20 + ((i * 31) % (bh - 30)), 1.4, ORANGE, 0.5 * (1 - ph), 0.1, 3);
+  }
+}
+
+/** Meter kuota/biaya: batang terisi, garis ambang, sisa jatah. */
+function meter(f: Frame, t: number): void {
+  f.background(rgb("#06080c"), rgb("#0c1118"), { x: 180, y: 330, r: 290, color: rgb("#12323f"), strength: 0.42 });
+
+  const x0 = 54;
+  const x1 = 306;
+  const y = 316;
+  const h = 22;
+  const limitK = 0.7;
+
+  // rel
+  f.roundRect(x0 - 6, y - 8, x1 - x0 + 12, h + 16, 8, rgb("#0b131b"), 0.95);
+  f.roundRect(x0 - 6, y - 8, x1 - x0 + 12, h + 16, 8, rgb("#28363f"), 0.6);
+  f.roundRect(x0, y, x1 - x0, h, 5, rgb("#131d26"), 0.95);
+
+  // isi meter tumbuh lalu ditahan di ambang
+  const grow = easeOut(clamp01(t / 2.2));
+  const fillK = Math.min(limitK, grow * limitK);
+  const fillW = (x1 - x0) * fillK;
+  for (let i = 0; i < 40; i += 1) {
+    const k = i / 40;
+    if (k > fillK) break;
+    const cx = x0 + (x1 - x0) * k;
+    const color = mix(CYAN, ORANGE, Math.pow(k / limitK, 2));
+    f.roundRect(cx, y + 2, (x1 - x0) / 40 + 1, h - 4, 3, color, 0.85);
+  }
+  f.glow(x0 + fillW, y + h / 2, 26, mix(CYAN, ORANGE, Math.pow(fillK / limitK, 2)), 0.32);
+
+  // garis ambang (batas aman)
+  const limitX = x0 + (x1 - x0) * limitK;
+  for (let yy = y - 26; yy < y + h + 20; yy += 6) {
+    f.rect(limitX, yy, 1.6, 3.2, rgb("#ffd166"), 0.85);
+  }
+  f.glow(limitX, y + h / 2, 40, rgb("#ffd166"), 0.14);
+
+  // tick skala
+  for (let i = 0; i <= 10; i += 1) {
+    const x = x0 + ((x1 - x0) * i) / 10;
+    f.rect(x, y + h + 10, 1.2, i % 5 === 0 ? 8 : 4, rgb("#6c7d8c"), 0.5);
+  }
+
+  // batang rincian pemakaian di bawah
+  const bars = [0.22, 0.5, 0.34, 0.75, 0.4];
+  bars.forEach((v, i) => {
+    const bx = 74 + i * 46;
+    const bh = 84 * v;
+    const grow2 = easeOut(clamp01((t - 0.3 - i * 0.12) / 0.8));
+    f.roundRect(bx, 470 - bh, 20, bh * grow2, 4, mix(rgb("#1d5f74"), CYAN, v), 0.75);
+    f.roundRect(bx, 470, 20, 3, 1.5, rgb("#3d4f5e"), 0.7);
+  });
+  f.rect(60, 470, 240, 1.4, rgb("#2d3d4a"), 0.8);
+
+  // denyut biaya
+  const pulse = (t * 1.2) % 1;
+  f.glow(x0 + (x1 - x0) * limitK * pulse, y - 30, 18, ORANGE, 0.16 * (1 - pulse));
+}
+
+/** Jendela terminal: baris keluaran muncul, lalu tanda centang. */
+function verify(f: Frame, t: number): void {
+  f.background(rgb("#04070c"), rgb("#08111a"), { x: 180, y: 330, r: 290, color: rgb("#0e3540"), strength: 0.45 });
+
+  const wx = 44;
+  const wy = 250;
+  const ww = 272;
+  const wh = 176;
+
+  f.glow(180, wy + wh / 2, 150, CYAN, 0.12);
+  f.roundRect(wx, wy, ww, wh, 10, rgb("#0a1219"), 0.96);
+  f.roundRect(wx, wy, ww, wh, 10, rgb("#2b3945"), 0.85);
+  f.roundRect(wx + 3, wy + 18, ww - 6, wh - 21, 6, rgb("#0c141c"), 0.98);
+
+  // judul jendela + tiga tombol
+  for (let i = 0; i < 3; i += 1) f.disc(wx + 14 + i * 12, wy + 9, 3.2, i === 0 ? ORANGE : i === 1 ? rgb("#ffd166") : rgb("#7bd88f"), 0.85, 0.4, 4);
+
+  const rows = [
+    { w: 0.78, at: 0.15 },
+    { w: 0.62, at: 0.8 },
+    { w: 0.86, at: 1.45 },
+    { w: 0.5, at: 2.1 },
+  ];
+  rows.forEach((row, i) => {
+    const local = clamp01((t - row.at) / 0.5);
+    if (local <= 0) return;
+    const ry = wy + 36 + i * 30;
+    const typed = (ww - 60) * row.w * local;
+    // prompt "›"
+    f.rect(wx + 16, ry + 2, 6, 7, CYAN, 0.7 * local);
+    f.rect(wx + 16, ry + 11, 4, 3, CYAN, 0.55 * local);
+    f.rect(wx + 30, ry + 3, typed, 5, rgb("#7d93a6"), 0.75 * local);
+
+    // centang muncul setelah baris selesai
+    const done = clamp01((t - row.at - 0.55) / 0.35);
+    if (done > 0) {
+      const cx = wx + ww - 34;
+      const cy = ry + 6;
+      f.line(cx - 7, cy, cx - 2, cy + 5, rgb("#7bd88f"), 0.95 * done, 1.8);
+      f.line(cx - 2, cy + 5, cx + 8, cy - 7, rgb("#7bd88f"), 0.95 * done, 1.8);
+      f.glow(cx, cy, 16, rgb("#7bd88f"), 0.25 * done);
+    }
+  });
+
+  // kursor berkedip
+  const cursorY = wy + 36 + rows.length * 30;
+  if (Math.floor(t * 2.5) % 2 === 0) f.rect(wx + 30, cursorY + 3, 12, 5, ICE, 0.8);
+
+  // meter progres verifikasi di bawah jendela
+  const prog = clamp01(t / 3.2);
+  f.roundRect(wx, wy + wh + 16, ww, 6, 3, rgb("#16212b"), 0.9);
+  f.roundRect(wx, wy + wh + 16, ww * prog, 6, 3, CYAN, 0.7);
+  f.glow(wx + ww * prog, wy + wh + 19, 22, CYAN, 0.25);
+}
+
 const VISUALS: Record<string, (f: Frame, t: number, d: number) => void> = {
   hook,
   peltier,
@@ -965,6 +1257,12 @@ const VISUALS: Record<string, (f: Frame, t: number, d: number) => void> = {
   risk,
   tips,
   outro,
+  agentgrid,
+  chain,
+  fallback,
+  vault,
+  meter,
+  verify,
 };
 
 export function drawScene(f: Frame, visual: string, t: number, duration: number): void {

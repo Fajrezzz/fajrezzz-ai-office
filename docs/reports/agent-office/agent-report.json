@@ -1,0 +1,145 @@
+{
+  "video": "docs/reports/agent-office/kenapa-gua-capek-untuk-ai-agent.mp4",
+  "generatedAt": "2026-11-24T03:22:07.571Z",
+  "subtitleFile": "docs/reports/agent-office/kenapa-gua-capek-untuk-ai-agent.ass",
+  "probe": {
+    "width": 1440,
+    "height": 2560,
+    "fps": 30,
+    "videoCodec": "h264",
+    "pixFmt": "yuv420p",
+    "audioCodec": "aac",
+    "audioChannels": 2,
+    "audioSampleRate": 48000,
+    "durationSec": 83.93,
+    "bitrateKbps": 2523,
+    "sizeMB": 25.2,
+    "formatName": "mov,mp4,m4a,3gp,3g2,mj2"
+  },
+  "audioLevel": {
+    "meanDb": -19.7,
+    "maxDb": -1.5
+  },
+  "decodeCheck": {
+    "ok": true,
+    "detail": "decode bersih tanpa error"
+  },
+  "renderMs": {
+    "total": 116109,
+    "perScene": [
+      {
+        "id": "hook",
+        "frames": 282,
+        "durationSec": 9.4
+      },
+      {
+        "id": "chain",
+        "frames": 341,
+        "durationSec": 11.37
+      },
+      {
+        "id": "keys",
+        "frames": 359,
+        "durationSec": 11.97
+      },
+      {
+        "id": "cost",
+        "frames": 280,
+        "durationSec": 9.33
+      },
+      {
+        "id": "fallback",
+        "frames": 353,
+        "durationSec": 11.77
+      },
+      {
+        "id": "verify",
+        "frames": 284,
+        "durationSec": 9.47
+      },
+      {
+        "id": "why",
+        "frames": 299,
+        "durationSec": 9.97
+      },
+      {
+        "id": "outro",
+        "frames": 320,
+        "durationSec": 10.67
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "index": 1,
+      "id": "hook",
+      "startSec": 0,
+      "durationSec": 9.4,
+      "narrationSec": 8.86
+    },
+    {
+      "index": 2,
+      "id": "chain",
+      "startSec": 9.4,
+      "durationSec": 11.37,
+      "narrationSec": 10.82
+    },
+    {
+      "index": 3,
+      "id": "keys",
+      "startSec": 20.77,
+      "durationSec": 11.97,
+      "narrationSec": 11.42
+    },
+    {
+      "index": 4,
+      "id": "cost",
+      "startSec": 32.73,
+      "durationSec": 9.33,
+      "narrationSec": 8.78
+    },
+    {
+      "index": 5,
+      "id": "fallback",
+      "startSec": 42.07,
+      "durationSec": 11.77,
+      "narrationSec": 11.21
+    },
+    {
+      "index": 6,
+      "id": "verify",
+      "startSec": 53.83,
+      "durationSec": 9.47,
+      "narrationSec": 8.9
+    },
+    {
+      "index": 7,
+      "id": "why",
+      "startSec": 63.3,
+      "durationSec": 9.97,
+      "narrationSec": 9.41
+    },
+    {
+      "index": 8,
+      "id": "outro",
+      "startSec": 73.27,
+      "durationSec": 10.67,
+      "narrationSec": 10.1
+    }
+  ],
+  "subtitleCues": 27,
+  "frames": [
+    "docs/reports/agent-office/frames/frame-2s.png",
+    "docs/reports/agent-office/frames/frame-15s.png",
+    "docs/reports/agent-office/frames/frame-32s.png",
+    "docs/reports/agent-office/frames/frame-46s.png",
+    "docs/reports/agent-office/frames/frame-63s.png",
+    "docs/reports/agent-office/frames/frame-79s.png"
+  ],
+  "honesty": {
+    "narration": "Narasi = suara TTS yang dihasilkan di sesi ini (Arena voice), satu klip per scene; durasi scene diukur dari file audio, bukan diperkirakan.",
+    "visuals": "Visual digambar prosedural di Node (grid kartu agent, rantai keputusan, brankas kunci, meter kuota, jendela verifikasi) di kanvas 2K; tidak memakai stok footage atau B-roll AI.",
+    "music": "Tanpa musik latar. Hanya narasi + whoosh tipis yang disintesis ffmpeg di setiap potongan.",
+    "sources": "Isi video merujuk ke repo ini sendiri: tiga provider + fallback (src/lib/ai), penjaga /api/* (src/middleware.ts — 20 req/menit endpoint mahal, 120/menit ringan, blokir tulis lintas-situs), secret scan (src/lib/security/secret-scan.ts), dan verifikasi render lewat ffprobe + report + tes."
+  }
+}

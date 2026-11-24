@@ -26,9 +26,18 @@ const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH ?? "ffprobe";
 
 const root = process.cwd();
-const MODE = process.argv.includes("--tiktok") ? "tiktok" : "long";
-const SLUG = MODE === "tiktok" ? "kenapa-cooler-hp-tiktok" : "kenapa-cooler-hp-keluarkan-air";
-const REPORT_SLUG = MODE === "tiktok" ? "tiktok-report" : "render-report";
+const MODE = process.argv.includes("--tiktok")
+  ? "tiktok"
+  : process.argv.includes("--agent")
+    ? "agent"
+    : "long";
+const SLUG =
+  MODE === "tiktok"
+    ? "kenapa-cooler-hp-tiktok"
+    : MODE === "agent"
+      ? "kenapa-gua-capek-untuk-ai-agent"
+      : "kenapa-cooler-hp-keluarkan-air";
+const REPORT_SLUG = MODE === "tiktok" ? "tiktok-report" : MODE === "agent" ? "agent-report" : "render-report";
 const SUB_MARGIN_V = MODE === "tiktok" ? 370 : 300;
 const PROGRESS_Y = MODE === "tiktok" ? 1738 : 1836;
 
@@ -38,8 +47,12 @@ const OUT_H = Math.round((OUT_W * 16) / 9);
 const U = OUT_W / WIDTH;
 const MUSIC_PATH = MODE === "tiktok" ? path.join(root, "assets/music/tiktok-bed.mp3") : null;
 
-const outDir = path.join(root, "docs/reports/phone-cooler");
-const workDir = path.join(root, ".video-work", MODE === "tiktok" ? "phone-cooler-tiktok" : "phone-cooler");
+const outDir = path.join(root, MODE === "agent" ? "docs/reports/agent-office" : "docs/reports/phone-cooler");
+const workDir = path.join(
+  root,
+  ".video-work",
+  MODE === "tiktok" ? "phone-cooler-tiktok" : MODE === "agent" ? "agent-office" : "phone-cooler"
+);
 const framesDir = path.join(outDir, "frames");
 const txtDir = path.join(workDir, "txt");
 
@@ -505,9 +518,10 @@ function buildAudioFilter(
 /* ---------------------------------- main ---------------------------------- */
 
 async function main(): Promise<void> {
-  const { SCENES: sceneList } = (await import(MODE === "tiktok" ? "./scenes-tiktok.ts" : "./scenes.ts")) as {
-    SCENES: SceneSpec[];
-  };
+  const sceneModule = await import(
+    MODE === "tiktok" ? "./scenes-tiktok.ts" : MODE === "agent" ? "./scenes-agent.ts" : "./scenes.ts"
+  );
+  const sceneList = sceneModule.SCENES as unknown as SceneSpec[];
   const { timings, totalSec } = buildTimeline(sceneList);
   const totalFrames = timings.reduce((sum, t) => sum + t.frames, 0);
   console.log(
@@ -691,19 +705,25 @@ async function main(): Promise<void> {
       narration:
         "Narasi = suara TTS yang dihasilkan di sesi ini (Arena voice), satu klip per scene; durasi scene diukur dari file audio, bukan diperkirakan.",
       visuals:
-        "Visual digambar prosedural di Node (gradien, embun, kristal, partikel) lalu di-upscale ffmpeg; tidak memakai stok footage atau B-roll AI.",
+        MODE === "agent"
+          ? "Visual digambar prosedural di Node (grid kartu agent, rantai keputusan, brankas kunci, meter kuota, jendela verifikasi) di kanvas 2K; tidak memakai stok footage atau B-roll AI."
+          : "Visual digambar prosedural di Node (gradien, embun, kristal, partikel) di kanvas 2K; tidak memakai stok footage atau B-roll AI.",
       music:
         MODE === "tiktok"
           ? "Musik latar disintesis sendiri di Node (scripts/phone-cooler/music.ts, 84 BPM, progresi Am-F-C-G) lalu di-encode ke mp3 — bebas klaim lisensi pihak ketiga. Volume musik ±0,35 relatif suara, di-fade in/out."
           : "Tanpa musik latar. Hanya narasi + whoosh tipis yang disintesis ffmpeg di setiap potongan.",
       sources:
-        "Titik embun: rumus Magnus/Tetens (25°C/60% ≈ 16,7°C). Tetesan air: FAQ resmi ASUS AeroActive Cooler 6. Daya & sisi panas: datasheet TEC1-12706.",
+        MODE === "agent"
+          ? "Isi video merujuk ke repo ini sendiri: tiga provider + fallback (src/lib/ai), penjaga /api/* (src/middleware.ts — 20 req/menit endpoint mahal, 120/menit ringan, blokir tulis lintas-situs), secret scan (src/lib/security/secret-scan.ts), dan verifikasi render lewat ffprobe + report + tes."
+          : "Titik embun: rumus Magnus/Tetens (25°C/60% ≈ 16,7°C). Tetesan air: FAQ resmi ASUS AeroActive Cooler 6. Daya & sisi panas: datasheet TEC1-12706.",
     },
   };
 
   fs.writeFileSync(path.join(outDir, `${REPORT_SLUG}.json`), JSON.stringify(report, null, 2), "utf8");
   const md = [
-    "# Video contoh — kenapa cooler HP bisa mengeluarkan air atau es",
+    MODE === "agent"
+      ? "# Video — kenapa gua harus capek buat AI agent di Fajrezzz AI Office"
+      : "# Video contoh — kenapa cooler HP bisa mengeluarkan air atau es",
     "",
     `File: \`${report.video}\``,
     `Dibuat: ${report.generatedAt}`,
