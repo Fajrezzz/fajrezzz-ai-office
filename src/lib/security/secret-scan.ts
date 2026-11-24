@@ -3,7 +3,7 @@
  * `mukul975/Anthropic-Cybersecurity-Skills`).
  *
  * Tujuan: mencegah API key / token berakhir di source code, log, atau response.
- * Dipakai oleh unit test (`tests/security-scan-v9.test.ts`) sebagai gerbang
+ * Dipakai oleh unit test (`tests/ai-resilience-v9.test.ts`) sebagai gerbang
  * sebelum commit, sehingga kebocoran terdeteksi otomatis.
  */
 

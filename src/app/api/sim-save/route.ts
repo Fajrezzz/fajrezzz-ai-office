@@ -41,9 +41,28 @@ export async function GET() {
   });
 }
 
+/** Batas ukuran simpanan (karakter). Mencegah penimpaan data dengan payload raksasa. */
+const MAX_SAVE_CHARS = 512_000;
+
 export async function POST(req: Request) {
   try {
-    const payload = (await req.json()) as Record<string, unknown>;
+    const raw = await req.text();
+    if (raw.length > MAX_SAVE_CHARS) {
+      return NextResponse.json(
+        { ok: false, error: "Payload terlalu besar (maks 500 KB)." },
+        { status: 413 }
+      );
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return NextResponse.json(
+        { ok: false, error: "Payload harus berupa objek JSON." },
+        { status: 400 }
+      );
+    }
+
+    const payload = parsed as Record<string, unknown>;
     latestServerSave = payload;
 
     const supaUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
