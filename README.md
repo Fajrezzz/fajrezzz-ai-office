@@ -173,6 +173,8 @@ Repo ini menyimpan pipeline video vertikal yang **benar-benar dirender di sini**
 | `scripts/phone-cooler/music.ts` | sintesis musik latar sendiri (tanpa sampel pihak ketiga) |
 | `docs/reports/phone-cooler/` | MP4 seri sains (**1440×2560 / 2K vertikal**), subtitle `.ass`, `render-report.json` & `tiktok-report.json`, README rinci |
 | `docs/reports/agent-office/` | MP4 "kenapa gua harus capek buat AI agent" (2K) + `agent-report.json` |
+| `scripts/office-video/` | pipeline TikTok gaya terminal untuk web office: renderer 2K **120 fps**, musik + SFX sintesis, mix VO, build 1080p60, verifikasi `ffprobe` |
+| `docs/reports/office-tiktok/` | video TikTok 30 s (**1440×2560 @120 fps** master + **1080×1920 @60 fps**), caption, laporan |
 
 ```bash
 # butuh ffmpeg + ffprobe di mesin sendiri (tidak jalan di serverless Vercel)
@@ -180,9 +182,10 @@ FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:phone-cooler  
 FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:tiktok         # cut 62,9 s + musik
 FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:agent           # video AI agent
 npm run video:phone-cooler:1080   # varian 1080x1920 (FHD) dari naskah yang sama
+FFMPEG_PATH=/path/ffmpeg FFPROBE_PATH=/path/ffprobe npm run video:office-tiktok  # TikTok office 2K/120fps + 1080p60
 ```
 
-Detail alur, sumber klaim, dan batasan (narasi TTS, visual prosedural, musik disintesis, publikasi masih manual) ada di [`docs/reports/phone-cooler/README.md`](docs/reports/phone-cooler/README.md) dan [`docs/reports/agent-office/README.md`](docs/reports/agent-office/README.md).
+Detail alur, sumber klaim, dan batasan (narasi TTS, visual prosedural, musik disintesis, publikasi masih manual) ada di [`docs/reports/phone-cooler/README.md`](docs/reports/phone-cooler/README.md) dan [`docs/reports/agent-office/README.md`](docs/reports/agent-office/README.md), plus [`docs/reports/office-tiktok/README.md`](docs/reports/office-tiktok/README.md) untuk video TikTok office (sumber visual = tangkapan layar asli, gerakan kamera dibuat di post).
 
 ## Roadmap Tahap Selanjutnya
 
