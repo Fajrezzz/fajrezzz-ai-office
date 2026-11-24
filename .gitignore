@@ -48,3 +48,6 @@ next-env.d.ts
 # Video TikTok office: master 113 MB + WAV musik dibuat script (regenerate: npm run video:office-tiktok)
 /docs/reports/office-tiktok/fajrezzz-office-tiktok-master-2k120.mp4
 /docs/reports/office-tiktok/*.wav
+
+# Unduhan konektor Google Drive (video/foto pihak lain — jangan pernah di-commit)
+/google_drive/
