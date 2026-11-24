@@ -30,21 +30,5 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Dev preview frames (npm run preview:zine)
-/.zine-preview
-
-# Studio v10 runtime history (dev/CLI only, not durable in serverless)
-/.studio-data
-
-# Studio v10 render workdir (per-scene clips)
-/.studio-render
-
-# Video contoh phone cooler (workdir render)
-/.video-work
-
-# Musik latar: sumber WAV dibuat script, yang di-commit versi terkompresi
-/assets/music/*.wav
-
-# Video TikTok office: master 113 MB + WAV musik dibuat script (regenerate: npm run video:office-tiktok)
-/docs/reports/office-tiktok/fajrezzz-office-tiktok-master-2k120.mp4
-/docs/reports/office-tiktok/*.wav
+# Unduhan konektor Google Drive (file pihak lain — jangan pernah di-commit)
+/google_drive/

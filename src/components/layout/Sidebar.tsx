@@ -2,11 +2,10 @@
 
 import React from "react";
 import {
-  BarChart3,
   Box,
   ChevronLeft,
-  ChevronRight,
   Film,
+  ChevronRight,
   Sparkles,
   Users,
   X,
@@ -28,22 +27,10 @@ const NAV_ITEMS: {
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
   {
-    id: "dashboard",
-    label: "Komando Bos",
-    shortLabel: "Komando",
-    icon: Film,
-  },
-  {
     id: "office",
     label: "Kantor 3D + Bos",
     shortLabel: "Kantor 3D",
     icon: Box,
-  },
-  {
-    id: "studio",
-    label: "Telemetry & KPI",
-    shortLabel: "Telemetry",
-    icon: BarChart3,
   },
   {
     id: "agents",

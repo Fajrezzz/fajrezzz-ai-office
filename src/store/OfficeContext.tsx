@@ -252,7 +252,7 @@ const IDLE_LOUNGE_WAYPOINTS: Record<string, string> = {
 };
 
 export function OfficeProvider({ children }: { children: React.ReactNode }) {
-  const [activeSection, setActiveSection] = useState<NavSection>("dashboard");
+  const [activeSection, setActiveSection] = useState<NavSection>("office");
   // All agents start genuinely IDLE (ngopi/santai) until a real division runs!
   const [agents, setAgents] = useState<OfficeAgent[]>(() =>
     INITIAL_AGENTS.map((a) => {
