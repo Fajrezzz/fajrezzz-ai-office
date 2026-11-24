@@ -5,6 +5,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
+import { CozyBalcony } from "@/components/office3d/CozyBalcony";
 import {
   FloorThreeFill,
   FloorTwoFill,
@@ -1557,6 +1558,12 @@ export function OfficeArchitecture({
               </mesh>
             </group>
           ))}
+
+          {/* COZY BALCONY — sudut santai estetik di BALKON LANTAI 2 (sisi timur):
+              lantai dek teak L2 + karpet jute, sofa rendah bambu, 2 beanbag krem,
+              meja kopi kayu, kursi rotan gantung, tanaman pot, panel bata putih
+              + macrame, fairy lights, pagar kaca & pemandangan hijau. */}
+          <CozyBalcony position={[12.4, FLOOR_2_Y + 0.03, 5.1]} isNight={isNight} />
 
           {/* Side Walls + Full-Height Framed Panoramic Glass Side Walls (L2 — Closes Z=-2.4..+4.0 completely, ZERO bolong!) */}
           {[-19, 19].map((x, idx) => (

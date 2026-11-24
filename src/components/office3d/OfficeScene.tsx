@@ -342,14 +342,16 @@ function FreeRoamCameraRig() {
       ref={controlsRef}
       makeDefault
       enableDamping
-      dampingFactor={0.075}
+      /* Gerak kamera dibikin lebih "berat" & mulus (damping kecil), zoom bebas
+         dari dekat sampai seluruh kampus, dan pan tanpa batas layar. */
+      dampingFactor={0.055}
       enablePan
-      screenSpacePanning={false}
-      panSpeed={1.25}
-      zoomSpeed={1.15}
-      rotateSpeed={0.85}
-      minDistance={1.4}
-      maxDistance={85}
+      screenSpacePanning
+      panSpeed={1.05}
+      zoomSpeed={0.9}
+      rotateSpeed={0.7}
+      minDistance={1.0}
+      maxDistance={220}
       maxPolarAngle={Math.PI * 0.492}
       autoRotate={autoRotate && !isBossMode}
       autoRotateSpeed={0.55}

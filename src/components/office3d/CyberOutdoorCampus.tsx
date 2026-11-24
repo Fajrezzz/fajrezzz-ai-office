@@ -2,10 +2,14 @@
 
 import React, { useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { Html, Text } from "@react-three/drei";
+import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { getRealisticTextures } from "@/components/office3d/realisticTextures";
 import { CyberpunkSkyline } from "@/components/office3d/CyberpunkSkyline";
+import {
+  RealisticHumanAvatar,
+  type HumanAvatarVariant,
+} from "@/components/office3d/RealisticHumanAvatar";
 import { useOffice } from "@/store/OfficeContext";
 import type {
   LightingPreset,
@@ -260,6 +264,234 @@ function SunLounger({
   );
 }
 
+/** ==========================================================================
+ *  POOL LIFE — orang beneran berenang di kolam + santai di tepi kolam.
+ *  Semua avatar memakai pose `swimming` / `seated` dari RealisticHumanAvatar.
+ *  Koordinat dunia: air kolam di Y ≈ 0.165, dek kayu di Y ≈ 0.18.
+ *  ========================================================================== */
+const POOL_WATER_Y = 0.165;
+
+function WaterRipple({
+  position,
+  phase = 0,
+  color = "#e6f9ff",
+}: {
+  position: [number, number, number];
+  phase?: number;
+  color?: string;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame((state) => {
+    if (!ref.current) return;
+    const k = ((state.clock.elapsedTime + phase) % 2.6) / 2.6;
+    ref.current.scale.setScalar(0.55 + k * 1.75);
+    const mat = ref.current.material as THREE.MeshBasicMaterial;
+    mat.opacity = 0.5 * (1 - k);
+  });
+  return (
+    <mesh ref={ref} position={position} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.3, 0.4, 32]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.45}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+function PoolSwimmer({
+  position,
+  rotationY = 0,
+  variant,
+  topColor,
+  pantsColor,
+  hairColor,
+  targetHeight = 1.72,
+  prone = false,
+  phaseOffset = 0,
+}: {
+  position: [number, number, number];
+  rotationY?: number;
+  variant: HumanAvatarVariant;
+  topColor: string;
+  pantsColor: string;
+  hairColor?: string;
+  targetHeight?: number;
+  prone?: boolean;
+  phaseOffset?: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    const g = groupRef.current;
+    if (!g) return;
+    const t = state.clock.elapsedTime + phaseOffset;
+    g.position.y = position[1] + Math.sin(t * 0.95) * 0.05;
+    if (!prone) {
+      g.rotation.y = rotationY + Math.sin(t * 0.32) * 0.3;
+      g.rotation.z = Math.sin(t * 0.72) * 0.05;
+    } else {
+      g.rotation.z = Math.sin(t * 0.7) * 0.04;
+    }
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={position}
+      rotation={[prone ? 1.18 : 0, rotationY, 0]}
+    >
+      <RealisticHumanAvatar
+        variant={variant}
+        pose="swimming"
+        topColor={topColor}
+        pantsColor={pantsColor}
+        hairColor={hairColor}
+        keepOriginalOutfit={false}
+        targetHeight={targetHeight}
+        phaseOffset={phaseOffset}
+      />
+    </group>
+  );
+}
+
+function PoolsideRelaxer({
+  position,
+  rotationY = 0,
+  variant,
+  topColor,
+  pantsColor,
+  hairColor,
+  hasHijab = false,
+  hasGlasses = false,
+  targetHeight = 1.7,
+  phaseOffset = 0,
+}: {
+  position: [number, number, number];
+  rotationY?: number;
+  variant: HumanAvatarVariant;
+  topColor: string;
+  pantsColor: string;
+  hairColor?: string;
+  hasHijab?: boolean;
+  hasGlasses?: boolean;
+  targetHeight?: number;
+  phaseOffset?: number;
+}) {
+  /**
+   * REBAHAN di lounger pinggir kolam.
+   * `position` = titik lounger (permukaan dek). Badan diputar horizontal
+   * (rotasi X -90°) supaya benar-benar tergeletak di matras, bukan duduk
+   * mengambang. Kepala mengarah ke sandaran lounger (sisi -Z lokal).
+   */
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <group position={[0, 0.72, 0.98]} rotation={[-Math.PI / 2, 0, 0]}>
+        <RealisticHumanAvatar
+          variant={variant}
+          pose="lying"
+          topColor={topColor}
+          pantsColor={pantsColor}
+          hairColor={hairColor}
+          hasHijab={hasHijab}
+          hasGlasses={hasGlasses}
+          targetHeight={targetHeight}
+          phaseOffset={phaseOffset}
+        />
+      </group>
+      {/* Handuk pantai tergelar di ujung kaki */}
+      <mesh position={[0, 0.44, 0.92]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[0.62, 0.42]} />
+        <meshStandardMaterial color="#7dd3fc" roughness={0.94} />
+      </mesh>
+      {/* Es kelapa di dek sebelah lounger */}
+      <group position={[0.62, 0, 0.2]}>
+        <mesh position={[0, 0.07, 0]} castShadow>
+          <cylinderGeometry args={[0.075, 0.065, 0.14, 12]} />
+          <meshStandardMaterial color="#f5efe2" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.2, 8]} />
+          <meshStandardMaterial color="#f472b6" roughness={0.5} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function PoolLife() {
+  return (
+    <group>
+      {/* ---------- 3 orang BERENANG di dalam air kolam ---------- */}
+      <PoolSwimmer
+        position={[-7.7, -0.86, 10.15]}
+        rotationY={0.7}
+        variant="rpm_female"
+        topColor="#f472b6"
+        pantsColor="#0f172a"
+        targetHeight={1.66}
+        phaseOffset={0}
+      />
+      <PoolSwimmer
+        position={[-1.5, -0.88, 12.95]}
+        rotationY={2.3}
+        variant="rb_male_a"
+        topColor="#22d3ee"
+        pantsColor="#1e293b"
+        targetHeight={1.72}
+        phaseOffset={1.9}
+      />
+      <PoolSwimmer
+        position={[-4.7, -0.5, 9.4]}
+        rotationY={-2.2}
+        variant="rpm_male"
+        topColor="#fbbf24"
+        pantsColor="#111827"
+        targetHeight={1.74}
+        prone
+        phaseOffset={3.4}
+      />
+
+      {/* Riak air mengelilingi perenang */}
+      <WaterRipple position={[-7.7, POOL_WATER_Y + 0.008, 10.15]} phase={0} />
+      <WaterRipple position={[-1.5, POOL_WATER_Y + 0.008, 12.95]} phase={1.1} />
+      <WaterRipple position={[-4.7, POOL_WATER_Y + 0.008, 9.4]} phase={2.0} />
+
+      {/* ---------- 3 orang SANTAI di lounger pinggir kolam ---------- */}
+      <PoolsideRelaxer
+        position={[-13.4, 0.18, 7.2]}
+        rotationY={Math.PI / 2}
+        variant="rpm_female_b"
+        topColor="#fda4af"
+        pantsColor="#f8fafc"
+        targetHeight={1.66}
+        phaseOffset={0.4}
+      />
+      <PoolsideRelaxer
+        position={[-9.2, 0.18, 16.3]}
+        rotationY={Math.PI}
+        variant="rb_male_b"
+        topColor="#38bdf8"
+        pantsColor="#e2e8f0"
+        targetHeight={1.74}
+        hasGlasses
+        phaseOffset={1.7}
+      />
+      <PoolsideRelaxer
+        position={[-4.2, 0.18, 16.3]}
+        rotationY={Math.PI}
+        variant="michelle"
+        topColor="#c4b5fd"
+        pantsColor="#312e81"
+        targetHeight={1.65}
+        hasHijab
+        phaseOffset={2.9}
+      />
+    </group>
+  );
+}
+
 /** Live animated Trading Terminal canvas texture rendered INSIDE the Bot Trading laptop screen */
 function createTradingChartTexture() {
   const canvas = document.createElement("canvas");
@@ -398,12 +630,11 @@ function PoolsideTradingBot({
   position,
   rotationY = Math.PI / 2,
   isNight,
-  showLabel,
 }: {
   position: [number, number, number];
   rotationY?: number;
   isNight: boolean;
-  showLabel: boolean;
+  showLabel?: boolean;
 }) {
   const headRef = useRef<THREE.Group>(null);
   const leftHandRef = useRef<THREE.Mesh>(null);
@@ -593,14 +824,6 @@ function PoolsideTradingBot({
         </group>
       </group>
 
-      {/* Clean Floating Pill Label */}
-      {showLabel && (
-        <Html position={[0, 1.38, -0.15]} center distanceFactor={14} zIndexRange={[10, 0]}>
-          <div className="pointer-events-none select-none whitespace-nowrap rounded-full border border-emerald-400/70 bg-slate-950/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-300 shadow-lg">
-            📈 BOT TRADING · AUTO
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
@@ -1889,6 +2112,9 @@ export function CyberOutdoorCampus({
       <SunLounger position={[-9.2, 0.18, 16.3]} rotationY={Math.PI} />
       <SunLounger position={[-4.2, 0.18, 16.3]} rotationY={Math.PI} />
       <SunLounger position={[2.6, 0.18, 16.3]} rotationY={Math.PI} />
+
+      {/* Orang berenang di kolam + santai di pinggir kolam */}
+      <PoolLife />
 
       {/* Poolside Trading Bot Reclining Perfectly on the Center West Pool Sun Lounger (Facing Pool!) */}
       <PoolsideTradingBot
