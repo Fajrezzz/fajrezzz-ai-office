@@ -1,0 +1,41 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1440
+PlayResY: 2560
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Inter,69,&H00F2F6FF,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,400,1
+Style: Accent,Inter,69,&H00FFE035,&H00F2F6FF,&HAA05070C,&H7A000000,-1,0,0,0,100,100,0,0,1,8,4,2,127,127,400,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.06,0:00:02.58,Default,,0,0,0,,Orang lihatnya cuma satu kolom chat.
+Dialogue: 0,0:00:02.58,0:00:05.10,Default,,0,0,0,,Padahal di balik satu jawaban agent,
+Dialogue: 0,0:00:05.10,0:00:08.82,Default,,0,0,0,,ada kerjaan panjang yang nggak kelihatan sama sekali.
+Dialogue: 0,0:00:09.46,0:00:11.72,Default,,0,0,0,,AI agent bukan tombol ajaib.
+Dialogue: 0,0:00:11.72,0:00:16.56,Default,,0,0,0,,Dia rantai keputusan: pilih model, susun konteks, cek hasil,
+Dialogue: 0,0:00:16.56,0:00:20.18,Default,,0,0,0,,lalu ulang dari awal kalau jawabannya ngawur.
+Dialogue: 0,0:00:20.83,0:00:26.45,Default,,0,0,0,,Gua pegang tiga provider sekaligus: Gemini, Groq, dan OpenRouter.
+Dialogue: 0,0:00:26.45,0:00:27.74,Default,,0,0,0,,Tiga kunci API.
+Dialogue: 0,0:00:27.74,0:00:29.21,Default,,0,0,0,,Satu kunci bocor,
+Dialogue: 0,0:00:29.21,0:00:32.15,Default,,0,0,0,,tagihan dan reputasi jalan bareng.
+Dialogue: 0,0:00:32.79,0:00:35.06,Default,,0,0,0,,Tiap jawaban itu ada harganya.
+Dialogue: 0,0:00:35.06,0:00:36.80,Default,,0,0,0,,Tanpa pembatas {\rAccent}request,{\rDefault}
+Dialogue: 0,0:00:36.80,0:00:41.48,Default,,0,0,0,,satu orang iseng bisa menghabiskan kuota gratis dalam semalam.
+Dialogue: 0,0:00:42.13,0:00:45.99,Default,,0,0,0,,Dan yang paling sering gagal itu bukan modelnya,
+Dialogue: 0,0:00:45.99,0:00:50.26,Default,,0,0,0,,tapi keadaannya: timeout, kuota habis, jawaban ngaco.
+Dialogue: 0,0:00:50.26,0:00:53.23,Default,,0,0,0,,Jadi harus selalu ada jalur cadangan.
+Dialogue: 0,0:00:53.89,0:00:57.46,Default,,0,0,0,,Makanya gua nggak percaya kalimat sudah jadi.
+Dialogue: 0,0:00:57.46,0:00:59.21,Default,,0,0,0,,Harus ada file, angka,
+Dialogue: 0,0:00:59.21,0:01:02.70,Default,,0,0,0,,dan {\rAccent}tes{\rDefault} yang bisa gua buka ulang kapan saja.
+Dialogue: 0,0:01:03.36,0:01:05.29,Default,,0,0,0,,Jadi kalau kelihatan capek,
+Dialogue: 0,0:01:05.29,0:01:08.87,Default,,0,0,0,,itu karena gua yang nanggung kalau hasilnya jelek.
+Dialogue: 0,0:01:08.87,0:01:10.81,Default,,0,0,0,,Agent nggak bisa dimarahin,
+Dialogue: 0,0:01:10.81,0:01:12.67,Default,,0,0,0,,dan nggak bisa minta maaf.
+Dialogue: 0,0:01:13.33,0:01:14.91,Default,,0,0,0,,Fajrezzz AI Office.
+Dialogue: 0,0:01:14.91,0:01:16.66,Default,,0,0,0,,Agent boleh otomatis,
+Dialogue: 0,0:01:16.66,0:01:19.91,Default,,0,0,0,,tapi keputusan tetap di tangan manusia.
+Dialogue: 0,0:01:19.91,0:01:23.33,Default,,0,0,0,,Itu harga dari hasil yang bisa dipercaya.

@@ -19,7 +19,8 @@ Kalau salah satu gagal → **belum selesai**. Jangan menutupi kegagalan dengan k
 ## 2. Batas wewenang (permissions)
 
 - **Jangan** commit API key, token, atau kredensial apa pun. Gunakan environment variable.
-  Gerbang otomatis: `tests/security-scan-v9.test.ts` (memakai `src/lib/security/secret-scan.ts`).
+  Gerbang otomatis: tes "tidak ada API key hardcoded" di `tests/ai-resilience-v9.test.ts` (memakai `src/lib/security/secret-scan.ts`).
+  Penjaga `/api/*` (rate limit + blokir tulis lintas-situs): `src/middleware.ts`, dites di `tests/api-guard-v11.test.ts`.
 - **Jangan** menambah lantai gedung (kantor tetap 3 lantai, atap fungsional).
 - **Jangan** menurunkan kualitas tekstur/tekstur realistis untuk "mengatasi blur".
 - **Jangan** mengaktifkan kembali Pollinations; hanya Gemini, Groq, OpenRouter.

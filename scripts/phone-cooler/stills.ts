@@ -2,7 +2,7 @@
  * Cek visual cepat: render satu frame per scene (tanpa audio) ke PNG
  * supaya komposisi & keterbacaan bisa dinilai sebelum encode penuh.
  *
- * Pemakaian: FFMPEG_PATH=... node --experimental-strip-types scripts/phone-cooler/stills.ts [--at 0.5] [--tiktok]
+ * Pemakaian: FFMPEG_PATH=... node --experimental-strip-types scripts/phone-cooler/stills.ts [--at 0.5] [--tiktok|--agent]
  *
  * Resolusi keluaran ikut OUTPUT_WIDTH (default 1440 = 2K vertikal).
  */
@@ -14,8 +14,17 @@ import { spawnSync } from "node:child_process";
 import { SCENES as LONG_SCENES, FPS } from "./scenes.ts";
 import { Frame, RW, RH, drawScene } from "./visuals.ts";
 
-const MODE = process.argv.includes("--tiktok") ? "tiktok" : "long";
-const SCENES = MODE === "tiktok" ? (await import("./scenes-tiktok.ts")).SCENES : LONG_SCENES;
+const MODE = process.argv.includes("--tiktok")
+  ? "tiktok"
+  : process.argv.includes("--agent")
+    ? "agent"
+    : "long";
+const SCENES =
+  MODE === "tiktok"
+    ? (await import("./scenes-tiktok.ts")).SCENES
+    : MODE === "agent"
+      ? (await import("./scenes-agent.ts")).SCENES
+      : LONG_SCENES;
 const OUT_W = Number(process.env.OUTPUT_WIDTH ?? 1440);
 const OUT_H = Math.round((OUT_W * 16) / 9);
 
