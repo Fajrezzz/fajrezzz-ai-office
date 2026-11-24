@@ -23,7 +23,8 @@ export type HumanAvatarPose =
   | "running"
   | "seated"
   | "typing"
-  | "swimming";
+  | "swimming"
+  | "lying";
 
 export interface RealisticHumanAvatarProps {
   variant: HumanAvatarVariant;
@@ -877,6 +878,20 @@ function LoadedHumanAvatar({
         rotateBoneInCharSpace(bones.RightForeArm, root, _axisX, -0.42 * seatW);
         rotateBoneInCharSpace(bones.Head, root, _axisY, Math.sin(t * 0.55) * 0.18 * seatW);
       }
+    } else if (pose === "lying") {
+      // Rebahan santai di lounger/matras: badan lurus, tangan sedikit terbuka,
+      // kaki rileks, dada naik-turun pelan, kepala menoleh sesekali.
+      rotateBoneInCharSpace(bones.Spine1, root, _axisX, Math.sin(t * 0.9) * 0.022);
+      rotateBoneInCharSpace(bones.LeftArm, root, _axisZ, 0.17);
+      rotateBoneInCharSpace(bones.RightArm, root, _axisZ, -0.17);
+      rotateBoneInCharSpace(bones.LeftForeArm, root, _axisX, -0.16);
+      rotateBoneInCharSpace(bones.RightForeArm, root, _axisX, -0.16);
+      rotateBoneInCharSpace(bones.LeftUpLeg, root, _axisX, -0.05);
+      rotateBoneInCharSpace(bones.RightUpLeg, root, _axisX, -0.05);
+      rotateBoneInCharSpace(bones.LeftLeg, root, _axisX, 0.12);
+      rotateBoneInCharSpace(bones.RightLeg, root, _axisX, 0.12);
+      rotateBoneInCharSpace(bones.Head, root, _axisX, 0.1);
+      rotateBoneInCharSpace(bones.Head, root, _axisY, Math.sin(t * 0.45) * 0.12);
     } else if (pose === "swimming") {
       const stroke = Math.sin(t * 5.2);
       rotateBoneInCharSpace(bones.Spine, root, _axisX, 0.52);

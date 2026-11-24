@@ -379,21 +379,34 @@ function PoolsideRelaxer({
   targetHeight?: number;
   phaseOffset?: number;
 }) {
+  /**
+   * REBAHAN di lounger pinggir kolam.
+   * `position` = titik lounger (permukaan dek). Badan diputar horizontal
+   * (rotasi X -90°) supaya benar-benar tergeletak di matras, bukan duduk
+   * mengambang. Kepala mengarah ke sandaran lounger (sisi -Z lokal).
+   */
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <RealisticHumanAvatar
-        variant={variant}
-        pose="seated"
-        topColor={topColor}
-        pantsColor={pantsColor}
-        hairColor={hairColor}
-        hasHijab={hasHijab}
-        hasGlasses={hasGlasses}
-        targetHeight={targetHeight}
-        phaseOffset={phaseOffset}
-      />
-      {/* Coconut drink on the deck next to the lounger */}
-      <group position={[0.62, -0.72, -0.1]}>
+      <group position={[0, 0.72, 0.98]} rotation={[-Math.PI / 2, 0, 0]}>
+        <RealisticHumanAvatar
+          variant={variant}
+          pose="lying"
+          topColor={topColor}
+          pantsColor={pantsColor}
+          hairColor={hairColor}
+          hasHijab={hasHijab}
+          hasGlasses={hasGlasses}
+          targetHeight={targetHeight}
+          phaseOffset={phaseOffset}
+        />
+      </group>
+      {/* Handuk pantai tergelar di ujung kaki */}
+      <mesh position={[0, 0.44, 0.92]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[0.62, 0.42]} />
+        <meshStandardMaterial color="#7dd3fc" roughness={0.94} />
+      </mesh>
+      {/* Es kelapa di dek sebelah lounger */}
+      <group position={[0.62, 0, 0.2]}>
         <mesh position={[0, 0.07, 0]} castShadow>
           <cylinderGeometry args={[0.075, 0.065, 0.14, 12]} />
           <meshStandardMaterial color="#f5efe2" roughness={0.7} />
@@ -447,7 +460,7 @@ function PoolLife() {
 
       {/* ---------- 3 orang SANTAI di lounger pinggir kolam ---------- */}
       <PoolsideRelaxer
-        position={[-13.4, 1.02, 7.2]}
+        position={[-13.4, 0.18, 7.2]}
         rotationY={Math.PI / 2}
         variant="rpm_female_b"
         topColor="#fda4af"
@@ -456,7 +469,7 @@ function PoolLife() {
         phaseOffset={0.4}
       />
       <PoolsideRelaxer
-        position={[-9.2, 1.02, 16.3]}
+        position={[-9.2, 0.18, 16.3]}
         rotationY={Math.PI}
         variant="rb_male_b"
         topColor="#38bdf8"
@@ -466,7 +479,7 @@ function PoolLife() {
         phaseOffset={1.7}
       />
       <PoolsideRelaxer
-        position={[-4.2, 1.02, 16.3]}
+        position={[-4.2, 0.18, 16.3]}
         rotationY={Math.PI}
         variant="michelle"
         topColor="#c4b5fd"
