@@ -53,3 +53,11 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(168, 85, 247, 0.55);
 }
+
+/* Kantor 3D layar penuh (tombol Maximize di HUD): buang radius & isi viewport */
+#office-3d-stage:fullscreen {
+  border-radius: 0;
+  border: 0;
+  width: 100vw;
+  height: 100dvh;
+}

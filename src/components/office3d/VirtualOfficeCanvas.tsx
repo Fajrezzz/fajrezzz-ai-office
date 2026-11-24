@@ -5,9 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { AlertTriangle, Box, RotateCcw } from "lucide-react";
 import { OfficeScene } from "@/components/office3d/OfficeScene";
-import { NandaSimulatorHUD } from "@/components/office3d/NandaSimulatorHUD";
 import { SceneControlsHUD } from "@/components/office3d/SceneControlsHUD";
-import { LiftRideHUD } from "@/components/office3d/LiftRideHUD";
 import { useOffice } from "@/store/OfficeContext";
 import { resolvePixelRatio } from "@/lib/perf/render-telemetry";
 
@@ -94,6 +92,7 @@ export function VirtualOfficeCanvas({
 
   return (
     <div
+      id="office-3d-stage"
       className={`relative w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-[#0b1324] shadow-2xl ${className}`}
     >
       {!readyToRender ? (
@@ -173,9 +172,7 @@ export function VirtualOfficeCanvas({
           >
             <OfficeScene />
           </Canvas>
-          <NandaSimulatorHUD />
           <SceneControlsHUD compact={compactHud} />
-          <LiftRideHUD compact={compactHud} />
         </CanvasErrorBoundary>
       )}
     </div>
