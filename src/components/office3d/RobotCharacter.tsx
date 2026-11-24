@@ -184,7 +184,7 @@ export function RobotCharacter({
   onFocusPoint,
   onArrive,
 }: RobotCharacterProps) {
-  const { thinkingAgentId, agentThoughts } = useOffice();
+  const { thinkingAgentId } = useOffice();
   const rootRef = useRef<THREE.Group>(null);
 
   const initialPos = useMemo(() => {
@@ -367,7 +367,6 @@ export function RobotCharacter({
   }, [agent.id, isFemale, suitColor, pantsColor, hairColor]);
 
   const isThinkingNow = thinkingAgentId === agent.id;
-  const latestThought = agentThoughts[agent.id];
 
   const statusDotColor = isThinkingNow
     ? "#00f0ff"
@@ -434,42 +433,6 @@ export function RobotCharacter({
         phaseOffset={phaseOffset}
         isSimulationRunning={isSimulationRunning}
       />
-
-      {/* Live Autonomous AI Thought Bubble above Character Head */}
-      {showLabels && (isThinkingNow || (latestThought && (isSelected || labelTier === "near"))) && (
-        <Html
-          position={[0, roleOffsetY + 0.34, 0]}
-          center
-          distanceFactor={12}
-          zIndexRange={[35, 22]}
-        >
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(agent.id);
-            }}
-            className={`pointer-events-auto max-w-[210px] cursor-pointer rounded-xl border px-2.5 py-1 text-[9px] leading-snug shadow-xl backdrop-blur-md ${
-              isThinkingNow
-                ? "animate-pulse border-cyan-400/80 bg-cyan-950/90 text-cyan-100"
-                : "border-fuchsia-400/60 bg-slate-950/90 text-slate-100"
-            }`}
-          >
-            {isThinkingNow ? (
-              <span className="font-bold">🧠 Sedang berpikir mandiri (AI)...</span>
-            ) : (
-              <div>
-                <div className="mb-0.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-cyan-300">
-                  <span>🧠 {latestThought.provider}</span>
-                  <span className="text-slate-400">· {latestThought.timestamp}</span>
-                </div>
-                <div className="line-clamp-2 font-medium text-white">
-                  {latestThought.chatBubble}
-                </div>
-              </div>
-            )}
-          </div>
-        </Html>
-      )}
 
       {showLabels && (isSelected || labelTier !== "far") && (
         <Html

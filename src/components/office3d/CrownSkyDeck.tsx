@@ -5,6 +5,7 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { FLOOR_1_Y, ROOF_Y } from "@/lib/data/initial-office-data";
 import { RooftopAttractions } from "@/components/office3d/RooftopAttractions";
+import { CozyBalcony } from "@/components/office3d/CozyBalcony";
 import type { FloorView, Vector3Tuple } from "@/types/office";
 
 interface CrownSkyDeckProps {
@@ -250,6 +251,10 @@ export function CrownSkyDeck({
               </mesh>
             </group>
           ))}
+
+          {/* COZY BALCONY — sudut santai estetik ala balkon rumah (beanbag, sofa rotan,
+              kursi gantung, karpet jute, tanaman pot, fairy lights, pagar kaca) */}
+          <CozyBalcony position={[14.7, 0, -7.35]} isNight={isNight} />
 
           {/* Crown Signage — sekarang di DEPAN, tepat di atas lantai 3, menghadap jalan */}
           <group position={[0, 0, 4.85]}>
